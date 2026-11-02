@@ -34,7 +34,7 @@ of two modes:
 | Dev environment | Docker Compose, `node:22-alpine`, source bind-mounted | Decided | Vite runs with `--host 0.0.0.0`; `server.watch.usePolling` is needed on Docker Desktop (Mac/Windows). Port 5173. |
 | 3D rendering (non-trame) | three.js | Decided | Fields uploaded as textures, colormapped in a fragment shader (GPU, not CPU). A 2D map can reuse the same shader on a plane with an orthographic camera. |
 | 2D plots | Observable Plot + d3 utilities | Decided | Add uPlot only if a specific time-series view proves too slow. |
-| UI layer | Svelte 5 + Vite (plain Svelte, not SvelteKit) | **Proposed, awaiting confirmation** | Alternative considered: Lit. See section 5. |
+| UI layer | Svelte 5 + Vite (plain Svelte, not SvelteKit) | Decided (in use) | Alternative considered: Lit. See section 5. |
 | Data format | Zarr v3, core codecs only (`bytes` + `gzip`) | Decided, verify in spike 1 | Fallback: Zarr v2 + gzip. |
 | Browser Zarr reader | zarrita.js | Decided, verify in spike 1 | Reads over HTTP range requests. |
 | trame integration | Option A: iframe to an external trame server | Decided | See section 7. |
@@ -162,7 +162,7 @@ hydroviewer/
 ├── CLAUDE.md
 ├── README.md
 ├── docs/llm/DEV_PLAN.md
-├── docker-compose.yml          # browser service (tools profile) exists; web and trame to be added
+├── docker-compose.yml          # web, browser (tools profile); trame to be added
 ├── Dockerfile                  # node:22-alpine dev image
 ├── package.json, vite.config.ts, tsconfig.json
 ├── src/
@@ -184,14 +184,13 @@ Directories under `trame/` and `prep/` are created only when first needed. `src/
 Each spike answers a question that could change the plan. Do them in order.
 
 1. **Data path spike.** Write one precipitation variable as Zarr v3 (`bytes` + `gzip`, map layout). Serve it from a bucket with CORS. Read it with zarrita and render it as a texture on a three.js sphere with a shader colormap. Confirms: zarrita v3 and gzip support, consolidated metadata, chunk size, fill-value handling.
-2. **Dev kit.** Docker Compose + Vite + Svelte + TypeScript with HMR working in the container; a GitHub Actions workflow deploying to Pages with the correct `base`.
-3. **Viewport contract.** Implement the registry, shared state module and URL-hash sync with two trivial viewports (three.js, Plot) to prove the contract.
+2. **Dev kit (done, except the Pages workflow).** Docker Compose + Vite + Svelte + TypeScript with HMR working in the container; a GitHub Actions workflow deploying to Pages with the correct `base`.
+3. **Viewport contract (partly done: contract, shared state and one placeholder viewport exist; registry and URL-hash sync do not).** Implement the registry, shared state module and URL-hash sync with two trivial viewports (three.js, Plot) to prove the contract.
 4. **trame spike.** Minimal trame app in the `trame` Compose profile, embedded via iframe from the deployed Pages origin. Confirms HTTPS, framing and Safari/localhost behaviour, and that the app builds identically with the URL unset.
 5. **Shared-instance spike** (only if needed). Launcher, session caps and measured per-session cost.
 
 ## 10. Open questions
 
-- Confirm Svelte 5 as the UI layer (proposed, not yet accepted).
 - Which longitude range and latitude ordering is the canonical grid?
 - Bucket provider and CDN, and who owns CORS and access configuration.
 - Where the shared trame instance will be hosted, and whether the public Pages build should expose it at all.

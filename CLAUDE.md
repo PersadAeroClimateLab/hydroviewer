@@ -10,26 +10,34 @@ change.
 
 ## Project state
 
-Planning only. No application code, Dockerfile or package.json exists yet. Commands below describe the
-intended setup and do not work until the dev-kit phase (plan section 9, spike 2) is complete. Do not
-assume files exist; check first.
+Front-end shell only: a Svelte page with one placeholder viewport driven by shared state. No data
+loading, three.js, Observable Plot, trame viewport, Pages workflow or URL-hash sync yet. Remaining
+work is in the plan (section 9).
 
 ## Stack (see the plan for detail)
 
-- Vite + TypeScript, Svelte 5 (plain Svelte, not SvelteKit; UI choice still awaiting confirmation)
+- Vite + TypeScript, Svelte 5 (plain Svelte, not SvelteKit)
 - three.js for 3D, Observable Plot + d3 utilities for 2D
 - zarrita.js reading Zarr v3 (`bytes` + `gzip` only) over HTTP
 - Docker Compose for dev (`node:22-alpine`, Vite on port 5173, bind-mounted source)
 - trame as an optional iframe viewport pointing at an external server
 
-## Intended commands
+## Commands
 
 ```bash
-docker compose up                      # dev server with HMR
-docker compose --profile trame up      # also start the local trame server
-docker compose run --rm web npm run build
-docker compose run --rm web npm run check   # type-check
+docker compose up -d web                          # dev server with HMR on http://localhost:5173
+docker compose logs -f web
+docker compose run --rm --no-deps web npm run check   # svelte-check (type check)
+docker compose run --rm --no-deps web npm run build   # production build into dist/
+docker compose build web                          # after changing package.json or the Dockerfile
 ```
+
+- Dependencies live in the image at `/node_modules` (the repo is bind-mounted at `/app`), so there is
+  no `node_modules` on the host and no volume to clear. Rebuild the image after any dependency change.
+- Edits to `src/` hot-reload. Set `VITE_USE_POLLING=true` on Docker Desktop (Mac/Windows).
+- Vite only accepts the `localhost` and `web` hosts (`allowedHosts`); add others in `vite.config.ts`.
+- `docker compose --profile trame up` is planned but the trame service does not exist yet.
+- The sandbox does not publish ports to the host by itself; see the parent CLAUDE.md (`sbx ports`).
 
 ## Browser tool (works now)
 

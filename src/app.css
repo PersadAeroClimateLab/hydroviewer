@@ -1,0 +1,32 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1a1d21;
+  --border: #d5d9de;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171a;
+    --fg: #e6e8eb;
+    --border: #2d3238;
+  }
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.4 system-ui, sans-serif;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+}
