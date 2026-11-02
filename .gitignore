@@ -1,0 +1,4 @@
+node_modules/
+.shots/
+# Machine-specific proxy CA for image builds; see tools/browser/Dockerfile.
+tools/browser/certs/*.crt
