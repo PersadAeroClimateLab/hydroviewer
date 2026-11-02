@@ -77,6 +77,9 @@ VITE_TRAME_URL=http://localhost:8080 docker compose up -d web   # turn the trame
 - **Shape is owned by the front end.** The browser-side camera ignores parallel projection and the
   horizontal view angle, and keeps a 30 degree view angle. So the pages assume a fixed shape (flat 2:1,
   globe 1:1) and `trameFrame.ts` letterboxes the iframe to it.
+- **Flat map relief (C only):** the trame flat map also rises with the dummy uncertainty (`FLAT_RELIEF` in
+  `trame/scene.py`, headlight-shaded, coastlines lifted); the three.js flat map (A) deliberately has none, so
+  A and C differ. Viewed top-down the relief shows as shading; drag in the viewport to tilt it.
 - **Shared state:** one trame process shares `server.state` across every connected browser, so this is
   single-user. Multi-user needs the launcher or a container per session (see the plan).
 - `/paraview/` returning 405 in the browser tool report is the trame client probing; pass

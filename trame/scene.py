@@ -26,6 +26,7 @@ LUT_SIZE = 256
 # makes it readable. Mirrors RELIEF_SCALE and AMBIENT in src/viewports/fieldLayer.ts.
 GLOBE_BACKGROUND = (0xC9 / 255, 0xCE / 255, 0xD4 / 255)  # GLOBE_BACKGROUND in fieldLayer.ts: the page is opaque
 RELIEF_SCALE = 0.2
+FLAT_RELIEF = RELIEF_SCALE * 90  # height of the flat map at full uncertainty, in degrees (half the map height)
 AMBIENT = 0.45
 
 
@@ -148,10 +149,12 @@ def window(*actors: vtkActor, background=None) -> tuple[vtkGenericOpenGLRenderWi
 
 def flat_map(field: Field, colormap: str) -> vtkGenericOpenGLRenderWindow:
     lon, lat, v = pad(field, field.values)
+    _, _, height = pad(field, field.uncertainty)
     lon_g, lat_g = np.meshgrid(lon, lat)
-    xyz = np.dstack([lon_g, lat_g, np.zeros_like(lon_g)])
-    lines = coastlines(lambda lo, la: np.column_stack([lo, la, np.full_like(lo, 1.0)]))
-    win, renderer = window(actor(surface(xyz, v), lookup_table(colormap, field.vmax)), actor(lines))
+    xyz = np.dstack([lon_g, lat_g, FLAT_RELIEF * height])
+    # Coastlines sit just above the relief.
+    lines = coastlines(lambda lo, la: np.column_stack([lo, la, FLAT_RELIEF * sample(field.uncertainty, lo, la) + 1.0]))
+    win, renderer = window(actor(surface(xyz, v), lookup_table(colormap, field.vmax), lit=True), actor(lines))
     # The page is shown at 2:1 (the front end sizes the iframe), and the browser-side renderer
     # ignores parallel projection. A flat plane facing a perspective camera is just a uniform
     # scale, so fit the 180 degree height at the default 30 degree view angle.
