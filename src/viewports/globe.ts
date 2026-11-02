@@ -20,6 +20,8 @@ const FOV = 35; // vertical field of view, widened for portrait viewports so the
 
 // The month on a unit sphere, drag to rotate and scroll to zoom. Redraws only when something changes.
 export const globe: Viewport = {
+  name: 'Globe',
+  engine: 'three.js',
   mount(el, initial) {
     const renderer = new WebGLRenderer({ alpha: true });
     renderer.setPixelRatio(devicePixelRatio);

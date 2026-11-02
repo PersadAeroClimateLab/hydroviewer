@@ -22,13 +22,14 @@
   style:--rows="repeat({rows.length}, minmax(0, 1fr))"
 >
   {#each cells as cell (cell)}
+    {@const viewport = viewports[cell] ?? placeholder}
     <section style:--area={cell}>
       <header>
-        <h3>Viewport {cell.toUpperCase()}</h3>
-        <span>Dataset · Variable · Period</span>
+        <h3>{cell.toUpperCase()} · {viewport.name}</h3>
+        <span>{viewport.engine}</span>
       </header>
       <div class="body">
-        <ViewportHost viewport={viewports[cell] ?? placeholder} />
+        <ViewportHost {viewport} />
       </div>
     </section>
   {/each}

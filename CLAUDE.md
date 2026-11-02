@@ -12,7 +12,8 @@ change.
 
 Front-end shell only: a collapsible left sidebar (layout presets 1, 1×2, 2×2, 1+2; colormap) and a CSS
 grid of placeholder viewports driven by shared state. Desktop first; below 720px the sidebar starts
-collapsed and cells stack in one column. Each cell has a dummy header. Layout and colormap are mirrored
+collapsed and cells stack in one column. Each cell header shows the viewport's name and rendering engine
+(`Viewport.name` / `Viewport.engine`). Layout and colormap are mirrored
 to the URL hash (`#layout=2x2&colormap=magma`; `src/state/hash.svelte.ts`), and unknown values are
 ignored. Cell A draws a flat map of one month (GFDL-CM4 historical precipitation, 1850-01) read with
 zarrita from the bucket emulator and rendered with three.js (`src/viewports/flatMap.ts`); cell B shows

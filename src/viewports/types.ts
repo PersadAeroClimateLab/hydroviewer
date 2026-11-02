@@ -7,5 +7,7 @@ export interface ViewportHandle {
 }
 
 export interface Viewport {
+  name: string; // shown in the cell header
+  engine: string; // rendering library, shown in the cell header
   mount(el: HTMLElement, state: SharedState): ViewportHandle;
 }

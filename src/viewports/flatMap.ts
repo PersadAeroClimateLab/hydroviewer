@@ -7,6 +7,8 @@ import type { Viewport } from './types';
 
 // Flat equirectangular map of one month: a 2:1 plane under an orthographic camera.
 export const flatMap: Viewport = {
+  name: 'Flat map',
+  engine: 'three.js',
   mount(el, initial) {
     const renderer = new WebGLRenderer({ alpha: true });
     renderer.setPixelRatio(devicePixelRatio);

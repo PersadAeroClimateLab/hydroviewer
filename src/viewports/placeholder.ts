@@ -3,6 +3,8 @@ import type { Viewport } from './types';
 
 // Stand-in until real renderers exist: a colormap ramp that follows the shared state.
 export const placeholder: Viewport = {
+  name: 'Placeholder',
+  engine: 'canvas 2D',
   mount(el, initial) {
     const canvas = document.createElement('canvas');
     el.append(canvas);
