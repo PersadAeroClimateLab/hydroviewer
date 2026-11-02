@@ -1,6 +1,6 @@
 <script lang="ts">
   import { layouts, ui } from '../state/layout.svelte';
-  import { map2d } from '../viewports/map2d';
+  import { flatMap } from '../viewports/flatMap';
   import { placeholder } from '../viewports/placeholder';
   import ViewportHost from './ViewportHost.svelte';
 
@@ -23,7 +23,7 @@
         <span>Dataset · Variable · Period</span>
       </header>
       <div class="body">
-        <ViewportHost viewport={cell === 'a' ? map2d : placeholder} />
+        <ViewportHost viewport={cell === 'a' ? flatMap : placeholder} />
       </div>
     </section>
   {/each}
