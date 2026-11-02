@@ -15,10 +15,12 @@ grid of placeholder viewports driven by shared state. Desktop first; below 720px
 collapsed and cells stack in one column. Each cell has a dummy header. Layout and colormap are mirrored
 to the URL hash (`#layout=2x2&colormap=magma`; `src/state/hash.svelte.ts`), and unknown values are
 ignored. Cell A draws a flat map of one month (GFDL-CM4 historical precipitation, 1850-01) read with
-zarrita from the bucket emulator and rendered with three.js (`src/viewports/flatMap.ts`: float
-texture, colormap lookup in the fragment shader, orthographic camera); the other cells are still
-placeholders. The colour scale max (99th percentile of the month) is still computed in the client; it
-belongs in prep once there is a time control. No time control, globe, catalog.json, Observable Plot,
+zarrita from the bucket emulator and rendered with three.js (`src/viewports/flatMap.ts`); cell B shows
+the same month on a rotatable, zoomable globe (`globe.ts`, OrbitControls); the other cells are still
+placeholders. Both share `fieldLayer.ts` (float texture, colormap lookup in the fragment shader, any
+geometry with equirectangular UVs) and redraw only on change. No coastlines yet, so orientation relies
+on the data pattern. The colour scale max (99th percentile of the month) is still computed in the client; it
+belongs in prep once there is a time control. No time control, catalog.json, Observable Plot,
 trame viewport or Pages workflow yet. Remaining work is in the plan (section 9).
 
 ## Stack (see the plan for detail)

@@ -1,8 +1,13 @@
 <script lang="ts">
   import { layouts, ui } from '../state/layout.svelte';
   import { flatMap } from '../viewports/flatMap';
+  import { globe } from '../viewports/globe';
   import { placeholder } from '../viewports/placeholder';
+  import type { Viewport } from '../viewports/types';
   import ViewportHost from './ViewportHost.svelte';
+
+  // Until cells can be assigned a viewport type, A is the flat map and B the globe.
+  const viewports: Record<string, Viewport> = { a: flatMap, b: globe };
 
   const layout = $derived(layouts.find((l) => l.id === ui.layoutId)!);
   const rows = $derived(layout.areas.map((row) => row.split(' ')));
@@ -23,7 +28,7 @@
         <span>Dataset · Variable · Period</span>
       </header>
       <div class="body">
-        <ViewportHost viewport={cell === 'a' ? flatMap : placeholder} />
+        <ViewportHost viewport={viewports[cell] ?? placeholder} />
       </div>
     </section>
   {/each}
