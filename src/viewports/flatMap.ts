@@ -1,5 +1,6 @@
 import { LinearSRGBColorSpace, Mesh, OrthographicCamera, PlaneGeometry, Scene, WebGLRenderer } from 'three';
 import { loadMonth } from '../data/cmip6';
+import { createCoastlines, disposeCoastlines } from './coastlines';
 import { createFieldLayer } from './fieldLayer';
 import { createOverlay } from './overlay';
 import type { Viewport } from './types';
@@ -19,7 +20,8 @@ export const flatMap: Viewport = {
     const mesh = new Mesh(geometry, layer.material);
     mesh.visible = false; // until the field arrives
     const scene = new Scene().add(mesh);
-    const camera = new OrthographicCamera(-1, 1, 0.5, -0.5, 0, 1);
+    const camera = new OrthographicCamera(-1, 1, 0.5, -0.5, 0, 2);
+    camera.position.z = 1; // the plane is at z = 0, the coastlines just in front of it
 
     const render = () => renderer.render(scene, camera);
 
@@ -38,6 +40,13 @@ export const flatMap: Viewport = {
     observer.observe(el);
 
     let alive = true;
+    let coast: Awaited<ReturnType<typeof createCoastlines>> | undefined;
+    createCoastlines((lon, lat) => [lon / 180, lat / 180, 0.01]).then((lines) => {
+      if (!alive) return disposeCoastlines(lines);
+      coast = lines;
+      scene.add(lines);
+      render();
+    });
     loadMonth(0).then(
       (f) => {
         if (!alive) return;
@@ -57,6 +66,7 @@ export const flatMap: Viewport = {
       destroy() {
         alive = false;
         observer.disconnect();
+        if (coast) disposeCoastlines(coast);
         layer.dispose();
         geometry.dispose();
         renderer.dispose();

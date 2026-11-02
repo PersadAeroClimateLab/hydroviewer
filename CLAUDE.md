@@ -18,8 +18,9 @@ ignored. Cell A draws a flat map of one month (GFDL-CM4 historical precipitation
 zarrita from the bucket emulator and rendered with three.js (`src/viewports/flatMap.ts`); cell B shows
 the same month on a rotatable, zoomable globe (`globe.ts`, OrbitControls); the other cells are still
 placeholders. Both share `fieldLayer.ts` (float texture, colormap lookup in the fragment shader, any
-geometry with equirectangular UVs) and redraw only on change. No coastlines yet, so orientation relies
-on the data pattern. The colour scale max (99th percentile of the month) is still computed in the client; it
+geometry with equirectangular UVs) and redraw only on change. Both draw Natural Earth 110m coastlines
+(`src/viewports/coastlines.ts`, data from `src/assets/coastlines.json`, loaded lazily as its own
+chunk). The colour scale max (99th percentile of the month) is still computed in the client; it
 belongs in prep once there is a time control. No time control, catalog.json, Observable Plot,
 trame viewport or Pages workflow yet. Remaining work is in the plan (section 9).
 
@@ -66,6 +67,9 @@ docker compose build web                          # after changing package.json 
 - **App side:** `src/data/config.ts` picks the bucket URL (`?data=URL` > `VITE_DATA_URL` >
   `http://localhost:9000`); `src/data/cmip6.ts` opens the store with zarrita (explicit
   `zarr.open.v3`, v3 consolidated metadata) and memoizes one month per fetch.
+- **Coastlines** are a committed app asset, not bucket data. Regenerate `src/assets/coastlines.json`
+  (Natural Earth 110m, pinned to tag v5.1.2, densified to 1° steps) with
+  `docker compose --profile prep run --rm --entrypoint python -v "$PWD/src/assets:/assets" prep make_coastlines.py /assets/coastlines.json`.
 - The browser tool container reaches the emulator with `?data=http://data:9000`, e.g.
   `browser 'http://web:5173/?data=http://data:9000' --settle 1500 --shot map.png`. This is
   cross-origin, so CORS is genuinely exercised.
