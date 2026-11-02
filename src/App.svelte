@@ -1,41 +1,58 @@
 <script lang="ts">
-  import { shared, type Colormap } from './state/shared.svelte';
-  import ViewportHost from './ui/ViewportHost.svelte';
-  import { placeholder } from './viewports/placeholder';
-
-  const colormaps: Colormap[] = ['viridis', 'magma'];
+  import { ui } from './state/layout.svelte';
+  import Sidebar from './ui/Sidebar.svelte';
+  import ViewportGrid from './ui/ViewportGrid.svelte';
 </script>
 
 <header>
+  <button
+    class="toggle"
+    aria-label="Toggle controls"
+    aria-expanded={ui.sidebarOpen}
+    onclick={() => (ui.sidebarOpen = !ui.sidebarOpen)}
+  >
+    ☰
+  </button>
   <h1>Hydroviewer</h1>
-  <label>
-    Colormap
-    <select bind:value={shared.colormap}>
-      {#each colormaps as name}
-        <option value={name}>{name}</option>
-      {/each}
-    </select>
-  </label>
 </header>
 
-<main>
-  <ViewportHost viewport={placeholder} />
-</main>
+<div class="body">
+  {#if ui.sidebarOpen}
+    <Sidebar />
+  {/if}
+  <ViewportGrid />
+</div>
 
 <style>
   header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
     border-bottom: 1px solid var(--border);
   }
   h1 {
     margin: 0;
     font-size: 1.125rem;
   }
-  main {
+  .toggle {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    padding: 0.125rem 0.5rem;
+    cursor: pointer;
+  }
+  .body {
     flex: 1;
     min-height: 0;
+    display: flex;
+  }
+  @media (max-width: 720px) {
+    .body {
+      flex-direction: column;
+      overflow-y: auto;
+    }
   }
 </style>

@@ -1,7 +1,11 @@
 :root {
   --bg: #ffffff;
   --fg: #1a1d21;
+  --panel: #f5f6f8;
   --border: #d5d9de;
+  --muted: #5b6470;
+  --accent: #2563eb;
+  --on-accent: #ffffff;
   color-scheme: light dark;
 }
 
@@ -9,7 +13,11 @@
   :root {
     --bg: #14171a;
     --fg: #e6e8eb;
+    --panel: #1b1f23;
     --border: #2d3238;
+    --muted: #9aa4af;
+    --accent: #6ea8fe;
+    --on-accent: #0b1220;
   }
 }
 
