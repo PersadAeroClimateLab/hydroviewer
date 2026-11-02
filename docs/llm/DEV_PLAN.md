@@ -35,8 +35,8 @@ of two modes:
 | 3D rendering (non-trame) | three.js | Decided | Fields uploaded as textures, colormapped in a fragment shader (GPU, not CPU). A 2D map can reuse the same shader on a plane with an orthographic camera. |
 | 2D plots | Observable Plot + d3 utilities | Decided | Add uPlot only if a specific time-series view proves too slow. |
 | UI layer | Svelte 5 + Vite (plain Svelte, not SvelteKit) | Decided (in use) | Alternative considered: Lit. See section 5. |
-| Data format | Zarr v3, core codecs only (`bytes` + `gzip`) | Decided, verify in spike 1 | Fallback: Zarr v2 + gzip. |
-| Browser Zarr reader | zarrita.js | Decided, verify in spike 1 | Reads over HTTP range requests. |
+| Data format | Zarr v3, core codecs only (`bytes` + `gzip`) | Decided, verified in spike 1 | zarr-python writes it; v3 consolidated metadata works. |
+| Browser Zarr reader | zarrita.js 0.7.5 | Decided, verified in spike 1 | Reads v2/v3 over HTTP. It bundles WASM codecs (blosc, lz4, zstd) as lazy chunks that our gzip data never loads. |
 | trame integration | Option A: iframe to an external trame server | Decided | See section 7. |
 
 ## 4. Architecture
@@ -99,8 +99,22 @@ Data is prepared offline (xarray, dask, regridding tools) and written to a publi
 ### Grid
 
 - Regular lat/lon, **1°**, cell-centered: 360 × 180.
-- One lon range and one lat order, fixed for every dataset (choose once and record it here).
-- Regridding happens in prep, never in the client.
+- Longitude **-180..180**, west to east; latitude south to north. Fixed for every dataset; prep wraps and asserts.
+- Regridding happens in prep, never in the client. **Not implemented yet:** the first slice (GFDL-CM4, 180 × 288) keeps its native grid, and the stored lat/lon arrays describe it.
+- Time is stored as integers counted from the first month (`units: "months since 1850-01-01"`), so the client needs no calendar code (the source uses a `noleap` calendar with hours since 1850).
+- Precipitation is stored in mm/day (source: kg m-2 s-1).
+
+### Source data and key layout
+
+The public `cmip6-pds` bucket is a **source**, not something the app can read directly. Its stores are Zarr v2 with blosc/lz4 and chunks of `(600, nlat, nlon)`: for GFDL-CM4 `pr`, about 102 MB compressed per chunk, so one month would cost a 100 MB download. It also has a `1e20` fill value, a `noleap` calendar and CORS that exposes only `ETag`.
+
+Our bucket mirrors its key path: `CMIP6/<activity>/<institution>/<model>/<experiment>/<member>/<table>/<variable>/<grid>/<version>/`, with our stores inside the version directory (`map.zarr`, later `series.zarr`) and other datasets (ERA5, MERRA, observations) under their own top-level prefix. A root `catalog.json` (not written yet) is how the app discovers stores.
+
+### Dev bucket emulator
+
+The `data` compose service is nginx serving `./data` with S3-style read behaviour (config in `tools/bucket/default.conf`): `Access-Control-Allow-Origin: *`, preflight, `Range`, ETag, `Content-Range` exposed, no compression, 404 for missing keys. The real bucket's CORS must expose `Content-Range` and `Content-Length` too, which the public bucket does not. A real S3 server was rejected because listing and signed URLs are unused and the common images are not available here.
+
+`prep/` (Python in Docker, opt-in compose profile) writes into `./data`; see CLAUDE.md for commands. The page reaches the emulator at `http://localhost:9000` (override with `?data=` or `VITE_DATA_URL`).
 
 ### Sizes (float32, 1°)
 
@@ -183,7 +197,7 @@ Directories under `trame/` and `prep/` are created only when first needed. `src/
 
 Each spike answers a question that could change the plan. Do them in order.
 
-1. **Data path spike.** Write one precipitation variable as Zarr v3 (`bytes` + `gzip`, map layout). Serve it from a bucket with CORS. Read it with zarrita and render it as a texture on a three.js sphere with a shader colormap. Confirms: zarrita v3 and gzip support, consolidated metadata, chunk size, fill-value handling.
+1. **Data path spike (done except the 3D part).** The first slice works end to end with a flat 2D map in place of the three.js sphere: GFDL-CM4 historical `pr`, 600 months, prepped to Zarr v3 + gzip (107 MB), served by the emulator, read by zarrita, drawn in cell A. Still to do: the three.js sphere with a shader colormap and float textures, a time control, series layout and aggregates, regridding, `catalog.json`. Original goal: Write one precipitation variable as Zarr v3 (`bytes` + `gzip`, map layout). Serve it from a bucket with CORS. Read it with zarrita and render it as a texture on a three.js sphere with a shader colormap. Confirms: zarrita v3 and gzip support, consolidated metadata, chunk size, fill-value handling.
 2. **Dev kit (done, except the Pages workflow).** Docker Compose + Vite + Svelte + TypeScript with HMR working in the container; a GitHub Actions workflow deploying to Pages with the correct `base`.
 3. **Viewport contract (partly done: contract, shared state, URL-hash sync and one placeholder viewport exist; registry does not).** Implement the registry, shared state module and URL-hash sync with two trivial viewports (three.js, Plot) to prove the contract.
 4. **trame spike.** Minimal trame app in the `trame` Compose profile, embedded via iframe from the deployed Pages origin. Confirms HTTPS, framing and Safari/localhost behaviour, and that the app builds identically with the URL unset.
@@ -191,11 +205,10 @@ Each spike answers a question that could change the plan. Do them in order.
 
 ## 10. Open questions
 
-- Which longitude range and latitude ordering is the canonical grid?
 - Bucket provider and CDN, and who owns CORS and access configuration.
 - Where the shared trame instance will be hosted, and whether the public Pages build should expose it at all.
-- Zarr store granularity: one store per variable, or per dataset/experiment with several variables. Affects metadata fetches and the catalog schema.
-- How ensembles and scenarios (CMIP6 models, experiments, members) are represented: separate stores or a dimension.
+- Resolved for now: one store per variable per version, at the mirrored CMIP6 key path. Revisit if metadata fetches matter.
+- Resolved for now: ensembles, scenarios and models are separate stores, identified by the key path. Multi-member views would need catalog support.
 
 ## 11. Out of scope for now
 

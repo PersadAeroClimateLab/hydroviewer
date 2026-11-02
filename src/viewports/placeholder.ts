@@ -1,10 +1,5 @@
-import type { Colormap } from '../state/shared.svelte';
+import { STOPS } from './colormaps';
 import type { Viewport } from './types';
-
-const STOPS: Record<Colormap, string[]> = {
-  viridis: ['#440154', '#3b528b', '#21908d', '#5dc863', '#fde725'],
-  magma: ['#000004', '#51127c', '#b73779', '#fc8961', '#fcfdbf'],
-};
 
 // Stand-in until real renderers exist: a colormap ramp that follows the shared state.
 export const placeholder: Viewport = {

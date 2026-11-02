@@ -14,8 +14,11 @@ Front-end shell only: a collapsible left sidebar (layout presets 1, 1×2, 2×2, 
 grid of placeholder viewports driven by shared state. Desktop first; below 720px the sidebar starts
 collapsed and cells stack in one column. Each cell has a dummy header. Layout and colormap are mirrored
 to the URL hash (`#layout=2x2&colormap=magma`; `src/state/hash.svelte.ts`), and unknown values are
-ignored. No data loading, three.js, Observable Plot, trame viewport or Pages workflow yet. Remaining
-work is in the plan (section 9).
+ignored. Cell A draws a flat map of one month (GFDL-CM4 historical precipitation, 1850-01) read with
+zarrita from the bucket emulator; the other cells are still placeholders. The map colormaps on the CPU
+in a 2D canvas as a stopgap until three.js lands (rule 3 applies to the real renderers). No time
+control, catalog.json, three.js, Observable Plot, trame viewport or Pages workflow yet. Remaining work
+is in the plan (section 9).
 
 ## Stack (see the plan for detail)
 
@@ -28,7 +31,7 @@ work is in the plan (section 9).
 ## Commands
 
 ```bash
-docker compose up -d web                          # dev server with HMR on http://localhost:5173
+docker compose up -d web data                     # dev server (HMR) on :5173 and bucket emulator on :9000
 docker compose logs -f web
 docker compose run --rm --no-deps web npm run check   # svelte-check (type check)
 docker compose run --rm --no-deps web npm run build   # production build into dist/
@@ -41,6 +44,28 @@ docker compose build web                          # after changing package.json 
 - Vite only accepts the `localhost` and `web` hosts (`allowedHosts`); add others in `vite.config.ts`.
 - `docker compose --profile trame up` is planned but the trame service does not exist yet.
 - The sandbox does not publish ports to the host by itself; see the parent CLAUDE.md (`sbx ports`).
+  Publish both 5173 and 9000: the page in your browser fetches data from `http://localhost:9000`.
+
+## Data path
+
+- **Source:** the public `cmip6-pds` S3 bucket (Zarr v2, blosc, chunks of ~100 MB). It is only a
+  source: the app cannot use it directly. Keys are
+  `CMIP6/<activity>/<institution>/<model>/<experiment>/<member>/<table>/<variable>/<grid>/<version>/`.
+- **Prep** (`prep/`, Python in Docker, opt-in profile) converts a slice into our bucket format under
+  the same key path, as `.../<version>/map.zarr` in `./data` (gitignored):
+  `docker compose --profile prep build prep`, then
+  `docker compose --profile prep run --rm prep CMIP6/CMIP/NOAA-GFDL/GFDL-CM4/historical/r1i1p1f1/Amon/pr/gr1/v20180701 --months 600`
+  (about 10 s, 107 MB output). Rebuild the prep image after editing `prep/*.py` (the script is copied in).
+- **Bucket emulator:** the `data` service is nginx serving `./data` with S3-style headers (any-origin
+  CORS incl. preflight, byte ranges, ETag, `Content-Range` exposed, no compression, 404 for missing
+  keys). Config: `tools/bucket/default.conf`. Plain S3 API features (listing, signed URLs) are not
+  emulated and not needed.
+- **App side:** `src/data/config.ts` picks the bucket URL (`?data=URL` > `VITE_DATA_URL` >
+  `http://localhost:9000`); `src/data/cmip6.ts` opens the store with zarrita (explicit
+  `zarr.open.v3`, v3 consolidated metadata) and memoizes one month per fetch.
+- The browser tool container reaches the emulator with `?data=http://data:9000`, e.g.
+  `browser 'http://web:5173/?data=http://data:9000' --settle 1500 --shot map.png`. This is
+  cross-origin, so CORS is genuinely exercised.
 
 ## Browser tool (works now)
 
@@ -66,6 +91,7 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
 - Smoke test: `docker compose --profile tools run --rm --entrypoint node browser --test test/smoke.mjs`.
   Run it only after changing `tools/browser/src/`.
 - Behind the sandbox proxy, a domain the firewall blocks shows up as `ERR_NAME_NOT_RESOLVED`.
+  Dotless host names (compose services like `web`, `data`) bypass the proxy.
 - If you change the Playwright version, change `package.json` and the image tag in the Dockerfile
   together, then rebuild.
 - A proxy CA for image builds, if needed, goes in `tools/browser/certs/*.crt` (gitignored).
@@ -92,10 +118,13 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
 
 ## Data contract summary
 
-- Regular 1° lat/lon, cell-centered (360 × 180), one fixed lon range and lat order for all datasets
-  (not yet chosen; see open questions).
-- Per variable: a map layout (chunks `(12, 180, 360)`), a series layout (`(all time, ~12, ~12)`),
-  and small precomputed aggregates.
+- Target: regular 1° lat/lon, cell-centered (360 × 180). Fixed for all datasets: longitude
+  -180..180 (west to east), latitude south to north. Regridding is not implemented yet; the first
+  slice keeps the native GFDL-CM4 grid (180 × 288).
+- Per variable: a map layout (chunks `(12, nlat, nlon)`, written), a series layout
+  (`(all time, ~12, ~12)`) and small precomputed aggregates (neither written yet).
+- Time is stored as integers counted from the first month (`units: "months since 1850-01-01"`), so
+  the client needs no calendar code. Precipitation is stored in mm/day.
 - float32, no NaN in data read by shaders (use a fill value or mask), CF attributes on all arrays,
   and a root `catalog.json`.
 - Bucket needs public read and CORS with `Range`. Do not depend on `Content-Encoding` for chunks.
@@ -119,7 +148,7 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
   sparse and explain why, not what.
 - Pin exact dependency versions (no `latest`); prefer versions at least two weeks old.
 - Python (trame app, data prep) lives in `trame/` and `prep/`, each with its own Dockerfile and
-  dependency file. Create these directories only when first needed.
+  dependency file. `prep/` exists; create `trame/` only when first needed.
 - Docs written for LLM/agent context go in `docs/llm/`.
 
 ## Environment notes
@@ -131,7 +160,8 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
 
 ## Facts still unverified
 
-These came from memory or inconclusive searches. Confirm them in the relevant spike before relying on
-them: zarrita Zarr v3 codec and consolidated-metadata support; trame launcher status and
-multi-session behaviour; trame-vtklocal / VTK version compatibility; Safari behaviour for an HTTPS
-page framing `http://localhost`.
+Verified: zarrita 0.7.5 reads our Zarr v3 + gzip store including v3 consolidated metadata; the app
+loads it cross-origin from the emulator. Still from memory or inconclusive searches, so confirm in the
+relevant spike: trame launcher status and multi-session behaviour; trame-vtklocal / VTK version
+compatibility; Safari behaviour for an HTTPS page framing `http://localhost`; whether the real bucket's
+CORS config will match the emulator's.

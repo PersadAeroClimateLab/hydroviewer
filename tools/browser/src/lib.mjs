@@ -12,12 +12,13 @@ import { chromium } from 'playwright-core';
 // Software-GL chatter and the favicon, which the dev server does not serve.
 const NOISE = [/GL Driver Message/, /favicon\.ico/];
 
-// Chromium does not read HTTP(S)_PROXY, so pass it explicitly. The target host goes direct
-// (e.g. an in-network container name the proxy cannot route to).
+// Chromium does not read HTTP(S)_PROXY, so pass it explicitly. The target host and dotless
+// names (<local>: compose service names like web and data, which the proxy cannot route to)
+// go direct.
 function proxyFor(url) {
   const server = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
   if (!server) return undefined;
-  const bypass = [...(process.env.NO_PROXY ?? '').split(',').filter(Boolean), new URL(url).hostname];
+  const bypass = [...(process.env.NO_PROXY ?? '').split(',').filter(Boolean), new URL(url).hostname, '<local>'];
   return { server, bypass: bypass.join(',') };
 }
 

@@ -1,4 +1,13 @@
 services:
+  # Stand-in for the data bucket: serves ./data on http://localhost:9000 with S3-style headers.
+  data:
+    image: nginx:1.29-alpine
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./tools/bucket:/etc/nginx/conf.d:ro
+      - ./data:/data:ro
+
   # Dev server with hot reload: http://localhost:5173
   web:
     build:
@@ -34,3 +43,18 @@ services:
       - ./tools/browser/src:/opt/browser/src:ro
       - ./tools/browser/test:/opt/browser/test:ro
       - ./.shots:/out
+
+  # Converts source data into our bucket format, into ./data. Opt-in:
+  #   docker compose --profile prep run --rm prep CMIP6/CMIP/NOAA-GFDL/GFDL-CM4/historical/r1i1p1f1/Amon/pr/gr1/v20180701
+  prep:
+    profiles: [prep]
+    build:
+      context: prep
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment: [HTTP_PROXY, HTTPS_PROXY, NO_PROXY]
+    volumes:
+      - ./data:/data

@@ -1,0 +1,6 @@
+aiohttp==3.14.5
+fsspec==2026.9.0
+numcodecs==0.17.0
+numpy==2.5.4
+xarray==2026.9.0
+zarr==3.4.1
