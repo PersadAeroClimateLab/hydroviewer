@@ -1,8 +1,6 @@
 <script lang="ts">
   import { layouts, ui } from '../state/layout.svelte';
-  import { shared, type Colormap } from '../state/shared.svelte';
-
-  const colormaps: Colormap[] = ['viridis', 'magma'];
+  import { colormaps, shared } from '../state/shared.svelte';
 </script>
 
 <aside>

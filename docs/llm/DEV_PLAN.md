@@ -185,7 +185,7 @@ Each spike answers a question that could change the plan. Do them in order.
 
 1. **Data path spike.** Write one precipitation variable as Zarr v3 (`bytes` + `gzip`, map layout). Serve it from a bucket with CORS. Read it with zarrita and render it as a texture on a three.js sphere with a shader colormap. Confirms: zarrita v3 and gzip support, consolidated metadata, chunk size, fill-value handling.
 2. **Dev kit (done, except the Pages workflow).** Docker Compose + Vite + Svelte + TypeScript with HMR working in the container; a GitHub Actions workflow deploying to Pages with the correct `base`.
-3. **Viewport contract (partly done: contract, shared state and one placeholder viewport exist; registry and URL-hash sync do not).** Implement the registry, shared state module and URL-hash sync with two trivial viewports (three.js, Plot) to prove the contract.
+3. **Viewport contract (partly done: contract, shared state, URL-hash sync and one placeholder viewport exist; registry does not).** Implement the registry, shared state module and URL-hash sync with two trivial viewports (three.js, Plot) to prove the contract.
 4. **trame spike.** Minimal trame app in the `trame` Compose profile, embedded via iframe from the deployed Pages origin. Confirms HTTPS, framing and Safari/localhost behaviour, and that the app builds identically with the URL unset.
 5. **Shared-instance spike** (only if needed). Launcher, session caps and measured per-session cost.
 

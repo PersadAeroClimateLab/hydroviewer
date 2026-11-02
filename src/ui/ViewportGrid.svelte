@@ -17,7 +17,10 @@
 >
   {#each cells as cell (cell)}
     <section style:--area={cell}>
-      <header>{cell.toUpperCase()}</header>
+      <header>
+        <h3>Viewport {cell.toUpperCase()}</h3>
+        <span>Dataset · Variable · Period</span>
+      </header>
       <div class="body">
         <ViewportHost viewport={placeholder} />
       </div>
@@ -47,12 +50,27 @@
     overflow: hidden;
   }
   header {
-    padding: 0.25rem 0.625rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.375rem 0.625rem;
     font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--muted);
     background: var(--panel);
     border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  header span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted);
   }
   .body {
     position: relative;

@@ -4,7 +4,7 @@ export const layouts = [
   { id: '1', label: '1', areas: ['a'] },
   { id: '1x2', label: '1×2', areas: ['a b'] },
   { id: '2x2', label: '2×2', areas: ['a b', 'c d'] },
-  { id: '1+2', label: '1+2', areas: ['a b', 'a c'] },
+  { id: '1p2', label: '1+2', areas: ['a b', 'a c'] }, // id avoids '+', which URLs encode
 ] as const;
 
 export type LayoutId = (typeof layouts)[number]['id'];

@@ -12,8 +12,10 @@ change.
 
 Front-end shell only: a collapsible left sidebar (layout presets 1, 1×2, 2×2, 1+2; colormap) and a CSS
 grid of placeholder viewports driven by shared state. Desktop first; below 720px the sidebar starts
-collapsed and cells stack in one column. No data loading, three.js, Observable Plot, trame viewport,
-Pages workflow or URL-hash sync yet. Remaining work is in the plan (section 9).
+collapsed and cells stack in one column. Each cell has a dummy header. Layout and colormap are mirrored
+to the URL hash (`#layout=2x2&colormap=magma`; `src/state/hash.svelte.ts`), and unknown values are
+ignored. No data loading, three.js, Observable Plot, trame viewport or Pages workflow yet. Remaining
+work is in the plan (section 9).
 
 ## Stack (see the plan for detail)
 
