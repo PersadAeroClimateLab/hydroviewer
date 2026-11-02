@@ -22,6 +22,8 @@ services:
     environment:
       # Set to true on Docker Desktop (Mac/Windows), where bind mounts deliver no file events.
       VITE_USE_POLLING: ${VITE_USE_POLLING:-false}
+      # Set to e.g. http://localhost:8080 to show the trame viewports in cells C and D.
+      VITE_TRAME_URL: ${VITE_TRAME_URL:-}
     volumes:
       - .:/app
 
@@ -58,3 +60,22 @@ services:
     environment: [HTTP_PROXY, HTTPS_PROXY, NO_PROXY]
     volumes:
       - ./data:/data
+
+  # trame server: VTK scenes rendered in the browser by vtk.js. Opt-in:
+  #   docker compose --profile trame up -d trame     (http://localhost:8080)
+  trame:
+    profiles: [trame]
+    build:
+      context: trame
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    ports:
+      - "8080:8080"
+    environment:
+      DATA_URL: http://data:9000 # server-side fetches use the service name, so no CORS
+    volumes:
+      - ./trame:/app
+      - ./src/assets:/assets:ro

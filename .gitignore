@@ -4,3 +4,8 @@ node_modules/
 tools/browser/certs/*.crt
 dist/
 /data/
+# Local compose settings (e.g. VITE_TRAME_URL to show the trame viewports)
+.env
+# Python bytecode
+__pycache__/
+*.pyc

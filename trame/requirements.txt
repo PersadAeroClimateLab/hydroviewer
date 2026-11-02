@@ -1,0 +1,11 @@
+aiohttp==3.14.5
+fsspec==2026.9.0
+numcodecs==0.17.0
+numpy==2.5.4
+trame==4.0.0
+trame-client==4.1.4
+trame-server==4.1.0
+trame-vtk==2.11.17
+vtk==9.7.1
+xarray==2026.9.0
+zarr==3.4.1

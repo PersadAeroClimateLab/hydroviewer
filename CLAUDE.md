@@ -18,7 +18,7 @@ to the URL hash (`#layout=2x2&colormap=magma`; `src/state/hash.svelte.ts`), and 
 ignored. Cell A draws a flat map of one month (GFDL-CM4 historical precipitation, 1850-01) read with
 zarrita from the bucket emulator and rendered with three.js (`src/viewports/flatMap.ts`); cell B shows
 the same month on a rotatable, zoomable globe (`globe.ts`, OrbitControls); the other cells are still
-placeholders. Both share `fieldLayer.ts` (float texture, colormap lookup in the fragment shader, any
+placeholders unless a trame server is configured (see Trame below). Both share `fieldLayer.ts` (float texture, colormap lookup in the fragment shader, any
 geometry with equirectangular UVs) and redraw only on change. Both draw Natural Earth 110m coastlines
 (`src/viewports/coastlines.ts`, data from `src/assets/coastlines.json`, loaded lazily as its own
 chunk). The colour scale max (99th percentile of the month) is still computed in the client; it
@@ -50,6 +50,37 @@ docker compose build web                          # after changing package.json 
 - `docker compose --profile trame up` is planned but the trame service does not exist yet.
 - The sandbox does not publish ports to the host by itself; see the parent CLAUDE.md (`sbx ports`).
   Publish both 5173 and 9000: the page in your browser fetches data from `http://localhost:9000`.
+
+## Trame
+
+`trame/` is a Python trame server (opt-in compose profile `trame`, port 8080) that rebuilds the flat map and
+globe as VTK scenes from the same Zarr store. Cells C and D show them in iframes (`src/viewports/trameFrame.ts`).
+
+```bash
+docker compose --profile trame up -d trame                  # restart it after editing trame/*.py
+VITE_TRAME_URL=http://localhost:8080 docker compose up -d web   # turn the trame viewports on
+# or, per page: http://web:5173/?trame=http://trame:8080  (what the browser tool container uses)
+```
+
+- **Off by default.** Without `VITE_TRAME_URL` or `?trame=`, C and D are placeholders and no trame code runs.
+  Publish port 8080 too (`sbx ports`) for your own browser.
+- **Local rendering only** (`VtkLocalView`): the server builds VTK scenes and the browser draws them with
+  vtk.js, so the server needs no GPU or X11. Use `vtkGenericOpenGLRenderWindow`; the plain `vtkRenderWindow`
+  segfaults in the container.
+- **State in the URL, picked by layout:** `index.html?ui=<view>-<colormap>` (e.g. `ui=flat-magma`); the app
+  registers one layout per combination. A colormap change in the sidebar reloads the iframe with
+  `location.replace`. There is no live sync. Adding options such as time needs a different mechanism
+  (client-side state from the URL), since layouts multiply.
+- **Shape is owned by the front end.** The browser-side camera ignores parallel projection and the
+  horizontal view angle, and keeps a 30 degree view angle. So the pages assume a fixed shape (flat 2:1,
+  globe 1:1) and `trameFrame.ts` letterboxes the iframe to it.
+- **Shared state:** one trame process shares `server.state` across every connected browser, so this is
+  single-user. Multi-user needs the launcher or a container per session (see the plan).
+- `/paraview/` returning 405 in the browser tool report is the trame client probing; pass
+  `--ignore '/paraview/'`.
+- `trame/scene.py` mirrors the three.js scenes (grid padding to exactly -180..180 / -90..90, per-pixel
+  colormap lookup, unlit surfaces, coastlines). Colormap stops are shared in `src/assets/colormaps.json`.
+  The colour max is computed in Python for now, as in the browser.
 
 ## Data path
 
@@ -165,6 +196,10 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
   firewall, git auth, port publishing). It applies here. In particular, dev servers must bind to
   `0.0.0.0` and be published with `sbx ports` to be reachable from the host.
 - Use `bash -l -c "..."` if a tool is not found on PATH.
+- **Docker's disk is small (about 9.8 GB).** The Playwright image alone is 3.6 GB and build cache piles up.
+  If a build fails with "no space left on device", run `docker builder prune -af` (safe, only slows the
+  next build), and if needed remove the rebuildable `hydroviewer-browser` image.
+- `apt` to Debian mirrors is blocked by the firewall, so images must not `apt-get install`.
 
 ## Facts still unverified
 

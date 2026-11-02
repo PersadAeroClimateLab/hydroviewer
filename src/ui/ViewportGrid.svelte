@@ -1,13 +1,20 @@
 <script lang="ts">
   import { layouts, ui } from '../state/layout.svelte';
+  import { trameBase } from '../data/config';
   import { flatMap } from '../viewports/flatMap';
   import { globe } from '../viewports/globe';
   import { placeholder } from '../viewports/placeholder';
+  import { trameView } from '../viewports/trameFrame';
   import type { Viewport } from '../viewports/types';
   import ViewportHost from './ViewportHost.svelte';
 
-  // Until cells can be assigned a viewport type, A is the flat map and B the globe.
-  const viewports: Record<string, Viewport> = { a: flatMap, b: globe };
+  // Until cells can be assigned a viewport type, A and B are three.js (flat map, globe) and, when a
+  // trame server is configured, C and D are the same two views rendered by trame.
+  const viewports: Record<string, Viewport> = {
+    a: flatMap,
+    b: globe,
+    ...(trameBase && { c: trameView('flat'), d: trameView('globe') }),
+  };
 
   const layout = $derived(layouts.find((l) => l.id === ui.layoutId)!);
   const rows = $derived(layout.areas.map((row) => row.split(' ')));

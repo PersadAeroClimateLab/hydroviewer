@@ -1,9 +1,8 @@
+import stops from '../assets/colormaps.json';
 import type { Colormap } from '../state/shared.svelte';
 
-export const STOPS: Record<Colormap, string[]> = {
-  viridis: ['#440154', '#3b528b', '#21908d', '#5dc863', '#fde725'],
-  magma: ['#000004', '#51127c', '#b73779', '#fc8961', '#fcfdbf'],
-};
+// Shared with the trame server (trame/scene.py), so both render the same colours.
+export const STOPS: Record<Colormap, string[]> = stops;
 
 const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 
