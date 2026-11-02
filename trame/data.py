@@ -16,6 +16,7 @@ class Field:
     lon: np.ndarray  # degrees east, -180..180, west to east
     lat: np.ndarray  # degrees north, south to north
     values: np.ndarray  # (lat, lon)
+    uncertainty: np.ndarray  # (lat, lon), 0..1, synthetic: globe relief
     vmax: float  # colour scale maximum
     units: str
     label: str  # e.g. "1850-01"
@@ -32,6 +33,8 @@ def load_month(index: int = 0) -> Field:
         lon=ds["lon"].values,
         lat=ds["lat"].values,
         values=values,
+        # stores prepped before the relief was added have none: the globe is then flat, as in the browser
+        uncertainty=ds["uncertainty"].values.astype("float32") if "uncertainty" in ds else np.zeros_like(values),
         vmax=vmax,
         units=ds["pr"].attrs["units"],
         label=f"{at // 12}-{at % 12 + 1:02d}",

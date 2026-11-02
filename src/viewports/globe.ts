@@ -9,16 +9,19 @@ import {
   WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { loadMonth } from '../data/cmip6';
+import { loadMonth, loadUncertainty } from '../data/cmip6';
 import { createCoastlines, disposeCoastlines } from './coastlines';
-import { createFieldLayer } from './fieldLayer';
+import { createFieldLayer, GLOBE_BACKGROUND, RELIEF_SCALE } from './fieldLayer';
 import { createOverlay } from './overlay';
+import { reliefAt } from './relief';
 import type { Viewport } from './types';
 
-const DISTANCE = 3.6; // camera distance from the centre of the unit sphere
 const FOV = 35; // vertical field of view, widened for portrait viewports so the sphere always fits
+// Camera distance from the centre: the highest possible peak just fits the frame.
+const DISTANCE = (1 + RELIEF_SCALE) / Math.sin(MathUtils.degToRad(FOV / 2));
 
-// The month on a unit sphere, drag to rotate and scroll to zoom. Redraws only when something changes.
+// The month on a sphere that rises with (dummy) uncertainty, drag to rotate and scroll to zoom.
+// Redraws only when something changes.
 export const globe: Viewport = {
   name: 'Globe',
   engine: 'three.js',
@@ -26,12 +29,13 @@ export const globe: Viewport = {
     const renderer = new WebGLRenderer({ alpha: true });
     renderer.setPixelRatio(devicePixelRatio);
     renderer.outputColorSpace = LinearSRGBColorSpace; // the colormap already holds display colours
+    el.style.background = GLOBE_BACKGROUND; // the canvas is transparent
     el.append(renderer.domElement);
     const overlay = createOverlay(el);
     overlay.textContent = 'Loading…';
 
-    const layer = createFieldLayer(renderer, initial.colormap);
-    const geometry = new SphereGeometry(1, 128, 64);
+    const layer = createFieldLayer(renderer, initial.colormap, true);
+    const geometry = new SphereGeometry(1, 288, 180); // one segment per cell of the 180 x 288 grid
     const mesh = new Mesh(geometry, layer.material);
     mesh.visible = false; // until the field arrives
     const world = new Group().add(mesh);
@@ -65,17 +69,31 @@ export const globe: Viewport = {
 
     let alive = true;
     let coast: Awaited<ReturnType<typeof createCoastlines>> | undefined;
-    // Same longitude/latitude mapping as SphereGeometry's UVs, just above the surface.
-    createCoastlines((lon, lat) => {
-      const phi = MathUtils.degToRad(lon + 180);
-      const theta = MathUtils.degToRad(90 - lat);
-      return [-1.003 * Math.cos(phi) * Math.sin(theta), 1.003 * Math.cos(theta), 1.003 * Math.sin(phi) * Math.sin(theta)];
-    }).then((lines) => {
-      if (!alive) return disposeCoastlines(lines);
-      coast = lines;
-      world.add(lines);
-      render();
-    });
+    // The globe still draws, flat, if the uncertainty array is missing.
+    loadUncertainty()
+      .then(
+        (grid) => {
+          layer.setRelief(grid);
+          render();
+          return reliefAt(grid);
+        },
+        () => () => 0,
+      )
+      // Same longitude/latitude mapping as SphereGeometry's UVs, just above the displaced surface.
+      .then((height) =>
+        createCoastlines((lon, lat) => {
+          const r = 1.003 + RELIEF_SCALE * height(lon, lat);
+          const phi = MathUtils.degToRad(lon + 180);
+          const theta = MathUtils.degToRad(90 - lat);
+          return [-r * Math.cos(phi) * Math.sin(theta), r * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta)];
+        }),
+      )
+      .then((lines) => {
+        if (!alive) return disposeCoastlines(lines);
+        coast = lines;
+        world.add(lines);
+        render();
+      });
     loadMonth(0).then(
       (f) => {
         if (!alive) return;

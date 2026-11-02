@@ -5,7 +5,8 @@ hydroviewer map layout (docs/llm/DEV_PLAN.md, section 6), under the same key pat
 
 Writes <out>/<path>/map.zarr as Zarr v3 with gzip (the only codec the browser decodes
 natively). The grid stays native for now (no regridding), but longitude is wrapped to
--180..180 and latitude must run south to north. No series layout or aggregates yet.
+-180..180 and latitude must run south to north. Also writes a synthetic `uncertainty` field
+(lat, lon) for testing globe relief. No series layout or aggregates yet.
 """
 
 import argparse
@@ -19,6 +20,29 @@ from zarr.codecs import GzipCodec
 SOURCE = "https://cmip6-pds.s3.amazonaws.com"
 MONTHS_PER_CHUNK = 12  # one year per chunk: stepping through months within a year costs no extra fetch
 KEEP_ATTRS = ["source_id", "experiment_id", "variant_label", "grid_label", "nominal_resolution", "table_id", "version_id"]
+
+
+def dummy_uncertainty(lat: np.ndarray, lon: np.ndarray) -> np.ndarray:
+    """Rough synthetic 0..1 noise for testing globe relief. It is NOT a real uncertainty.
+
+    Fractal noise (power-law spectrum, so rough at every scale) plus a little white noise, skewed so
+    most of the surface is low with sharp peaks. Fixed seed, so every run gives the same field.
+    Longitude is periodic; towards the poles the noise fades to the zonal mean, so the poles are
+    single points.
+    """
+    rng = np.random.default_rng(7)
+    ny, nx = len(lat), len(lon)
+    k = np.hypot(np.fft.fftfreq(ny)[:, None], np.fft.fftfreq(nx)[None, :])
+    k[0, 0] = 1
+    amplitude = k**-1.0
+    amplitude[0, 0] = 0
+    fractal = np.fft.ifft2(np.fft.fft2(rng.standard_normal((ny, nx))) * amplitude).real
+    noise = fractal / fractal.std() + 0.35 * rng.standard_normal((ny, nx))
+    u = np.exp(0.8 * noise)  # skew: broad lows, sharp highs
+    zonal = u.mean(axis=1, keepdims=True)
+    u = zonal + np.cos(np.radians(lat))[:, None] * (u - zonal)
+    lo, hi = np.percentile(u, [2, 99.5])
+    return np.clip((u - lo) / (hi - lo), 0, 1).astype("float32")
 
 
 def main() -> None:
@@ -65,7 +89,12 @@ def main() -> None:
                     "long_name": src.attrs["long_name"],
                     "standard_name": src.attrs["standard_name"],
                 },
-            )
+            ),
+            "uncertainty": (
+                ("lat", "lon"),
+                dummy_uncertainty(lat, lon[west_to_east]),
+                {"units": "1", "long_name": "Dummy uncertainty (synthetic, for relief testing)"},
+            ),
         },
         coords={
             "time": ("time", np.arange(len(time), dtype="int32"), {"units": f"months since {year:04d}-{month:02d}-01"}),
@@ -84,6 +113,7 @@ def main() -> None:
         consolidated=True,
         encoding={
             variable: {"chunks": (MONTHS_PER_CHUNK, out.sizes["lat"], out.sizes["lon"]), "compressors": gzip},
+            "uncertainty": {"chunks": (out.sizes["lat"], out.sizes["lon"]), "compressors": gzip},
             "time": {"compressors": gzip},
             "lat": {"compressors": gzip},
             "lon": {"compressors": gzip},

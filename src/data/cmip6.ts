@@ -4,10 +4,13 @@ import { dataBase } from './config';
 // One hard-coded store until catalog.json exists.
 const STORE = 'CMIP6/CMIP/NOAA-GFDL/GFDL-CM4/historical/r1i1p1f1/Amon/pr/gr1/v20180701/map.zarr';
 
-export interface Field {
+export interface Grid {
   values: Float32Array; // row-major, south to north, west to east
   width: number;
   height: number;
+}
+
+export interface Field extends Grid {
   units: string;
   label: string; // e.g. "1850-01"
 }
@@ -20,8 +23,20 @@ const opened = (async () => {
     zarr.open.v3(root.resolve('time'), { kind: 'array' }),
   ]);
   const [year, month] = String(time.attrs.units).match(/since (\d{4})-(\d{2})/)!.slice(1).map(Number);
-  return { pr, year, month };
+  return { root, pr, year, month };
 })();
+
+let uncertainty: Promise<Grid> | undefined;
+
+// A synthetic 0..1 uncertainty field (see prep/prep_cmip6.py), used for globe relief.
+export function loadUncertainty(): Promise<Grid> {
+  uncertainty ??= opened.then(async ({ root }) => {
+    const array = await zarr.open.v3(root.resolve('uncertainty'), { kind: 'array' });
+    const grid = await zarr.get(array);
+    return { values: grid.data as Float32Array, height: array.shape[0], width: array.shape[1] };
+  });
+  return uncertainty;
+}
 
 const months = new Map<number, Promise<Field>>();
 

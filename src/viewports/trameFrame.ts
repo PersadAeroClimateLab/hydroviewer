@@ -1,4 +1,5 @@
 import { trameBase } from '../data/config';
+import { GLOBE_BACKGROUND } from './fieldLayer';
 import type { Viewport } from './types';
 
 // The trame pages assume a fixed shape (see trame/app.py), so the iframe is letterboxed to it.
@@ -25,6 +26,8 @@ export function trameView(kind: keyof typeof ASPECT): Viewport {
         url = next;
       };
       show(initial.colormap);
+      // The trame page is transparent and letterboxed, so the cell behind it is the backdrop.
+      if (kind === 'globe') el.style.background = GLOBE_BACKGROUND;
       el.append(frame);
 
       const resize = () => {

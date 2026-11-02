@@ -17,7 +17,10 @@ collapsed and cells stack in one column. Each cell header shows the viewport's n
 to the URL hash (`#layout=2x2&colormap=magma`; `src/state/hash.svelte.ts`), and unknown values are
 ignored. Cell A draws a flat map of one month (GFDL-CM4 historical precipitation, 1850-01) read with
 zarrita from the bucket emulator and rendered with three.js (`src/viewports/flatMap.ts`); cell B shows
-the same month on a rotatable, zoomable globe (`globe.ts`, OrbitControls); the other cells are still
+the same month on a rotatable, zoomable globe (`globe.ts`, OrbitControls) whose surface rises with a
+**dummy uncertainty** field (see Data path; relief scale `RELIEF_SCALE` in `fieldLayer.ts`, mirrored in
+`trame/scene.py`) with simple headlight shading, coastlines lifted to match, on a light gray backdrop (`GLOBE_BACKGROUND` in
+`fieldLayer.ts`, mirrored in `trame/scene.py` because the trame page is opaque); the other cells are still
 placeholders unless a trame server is configured (see Trame below). Both share `fieldLayer.ts` (float texture, colormap lookup in the fragment shader, any
 geometry with equirectangular UVs) and redraw only on change. Both draw Natural Earth 110m coastlines
 (`src/viewports/coastlines.ts`, data from `src/assets/coastlines.json`, loaded lazily as its own
@@ -99,6 +102,10 @@ VITE_TRAME_URL=http://localhost:8080 docker compose up -d web   # turn the trame
 - **App side:** `src/data/config.ts` picks the bucket URL (`?data=URL` > `VITE_DATA_URL` >
   `http://localhost:9000`); `src/data/cmip6.ts` opens the store with zarrita (explicit
   `zarr.open.v3`, v3 consolidated metadata) and memoizes one month per fetch.
+- **Dummy uncertainty** (`uncertainty`, 0..1, (lat, lon), next to `pr` in `map.zarr`) is synthetic rough
+  fractal noise from `dummy_uncertainty()` in `prep/prep_cmip6.py`, only to exercise globe relief: it is not real
+  uncertainty. Stores prepped before it existed still work (flat globes); re-run prep to get relief.
+  Both globes read it from the store, so the two engines show the same terrain.
 - **Coastlines** are a committed app asset, not bucket data. Regenerate `src/assets/coastlines.json`
   (Natural Earth 110m, pinned to tag v5.1.2, densified to 1° steps) with
   `docker compose --profile prep run --rm --entrypoint python -v "$PWD/src/assets:/assets" prep make_coastlines.py /assets/coastlines.json`.
