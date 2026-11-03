@@ -71,6 +71,15 @@ export function loadMonth(index: number): Promise<Field> {
 }
 
 let aggregates: ReturnType<typeof openStore> | undefined;
+
+// One array of aggregates.zarr, whole, with its attributes.
+async function readAggregate(name: string) {
+  const root = await (aggregates ??= openStore('aggregates.zarr'));
+  const array = await zarr.open.v3(root.resolve(name), { kind: 'array' });
+  const { data } = await zarr.get(array);
+  return { array, data: data as Float32Array, attrs: array.attrs as Record<string, string & [number, number]> };
+}
+
 const fields = new Map<Source, Promise<Field>>();
 
 // Memoized per source, like loadMonth.
@@ -78,21 +87,50 @@ export function loadField(source: Source): Promise<Field> {
   if (source === 'month') return loadMonth(0);
   let field = fields.get(source);
   if (!field) {
-    aggregates ??= openStore('aggregates.zarr');
-    field = aggregates.then(async (root) => {
-      const array = await zarr.open.v3(root.resolve(source), { kind: 'array' });
-      const grid = await zarr.get(array);
-      const { units, long_name, period, display_range } = array.attrs as Record<string, string & [number, number]>;
-      return {
-        values: grid.data as Float32Array,
-        height: array.shape[0],
-        width: array.shape[1],
-        units,
-        label: `${long_name} · ${period}`,
-        range: display_range,
-      };
-    });
+    field = readAggregate(source).then(({ array, data, attrs }) => ({
+      values: data,
+      height: array.shape[0],
+      width: array.shape[1],
+      units: attrs.units,
+      label: `${attrs.long_name} · ${attrs.period}`,
+      range: attrs.display_range,
+    }));
     fields.set(source, field);
   }
   return field;
+}
+
+// 1D series from aggregates.zarr, each over its own coordinate (years, or histogram bin starts).
+export type SeriesSource = 'pr_global_mean' | 'pr_wettest_month_hist';
+
+export interface Series {
+  x: number[];
+  y: number[];
+  label: string; // e.g. "Global-mean precipitation · 1850–2014"
+  units: string; // of y
+  xLabel: string;
+  binWidth?: number; // set for histograms
+  range?: [number, number]; // colour scale of the matching map
+}
+
+const series = new Map<SeriesSource, Promise<Series>>();
+
+export function loadSeries(source: SeriesSource): Promise<Series> {
+  let promise = series.get(source);
+  if (!promise) {
+    promise = readAggregate(source).then(async ({ array, data, attrs }) => {
+      const x = await readAggregate(array.dimensionNames![0]!);
+      return {
+        x: Array.from(x.data),
+        y: Array.from(data),
+        label: `${attrs.long_name} · ${attrs.period}`,
+        units: attrs.units,
+        xLabel: x.attrs.units ? `${x.attrs.long_name} (${x.attrs.units})` : x.attrs.long_name,
+        binWidth: Number(x.attrs.bin_width) || undefined,
+        range: attrs.display_range,
+      };
+    });
+    series.set(source, promise);
+  }
+  return promise;
 }

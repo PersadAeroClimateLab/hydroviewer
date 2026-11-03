@@ -2,6 +2,7 @@
   import { analyses, type Panel } from '../state/analyses';
   import { layouts, ui } from '../state/layout.svelte';
   import { trame } from '../state/trame.svelte';
+  import { chart } from '../viewports/chart';
   import { flatMap } from '../viewports/flatMap';
   import { globe } from '../viewports/globe';
   import { needsTrame, placeholder } from '../viewports/placeholder';
@@ -13,18 +14,14 @@
   const made = new Map<string, Viewport>();
   const once = (key: string, make: () => Viewport) => made.get(key) ?? made.set(key, make()).get(key)!;
 
-  // 2D panels default to three.js and 3D panels to trame; trame panels show a notice while no server answers.
-  const resolve = (
-    { view, engine = view === 'flat' ? 'three.js' : 'trame', data = 'month' }: Panel,
-    url: string | undefined,
-  ) =>
-    engine === 'three.js'
-      ? view === 'flat'
-        ? once(`flat:${data}`, () => flatMap(data))
-        : globe
-      : url
-        ? trameView(view, url)
-        : needsTrame(view === 'flat' ? 'Flat map' : 'Globe');
+  // Charts are Plot. 2D maps default to three.js and 3D panels to trame; trame panels show a notice while no
+  // server answers.
+  const resolve = (panel: Panel, url: string | undefined): Viewport => {
+    if (panel.view === 'chart') return once(`chart:${panel.data}`, () => chart(panel.data));
+    const { view, engine = view === 'flat' ? 'three.js' : 'trame', data = 'month' } = panel;
+    if (engine === 'three.js') return view === 'flat' ? once(`flat:${data}`, () => flatMap(data)) : globe;
+    return url ? trameView(view, url) : needsTrame(view === 'flat' ? 'Flat map' : 'Globe');
+  };
 
   const analysis = $derived(analyses.find((a) => a.id === ui.analysisId) ?? analyses[0]);
   const viewports = $derived(

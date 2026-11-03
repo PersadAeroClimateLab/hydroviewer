@@ -46,35 +46,53 @@ def dummy_uncertainty(lat: np.ndarray, lon: np.ndarray) -> np.ndarray:
     return np.clip((u - lo) / (hi - lo), 0, 1).astype("float32")
 
 
-def aggregates(values: np.ndarray, year: int) -> dict[str, tuple[np.ndarray, dict]]:
-    """Per-cell (lat, lon) statistics over the whole years in `values` (time, lat, lon), mm/day.
+def aggregates(values: np.ndarray, year: int, lat: np.ndarray) -> dict[str, tuple]:
+    """Statistics over the whole years in `values` (time, lat, lon), mm/day, as xarray variables.
 
-    Each array carries `display_range` (the colour scale the browser uses as is) and `period`.
-    Annual means are plain means of the 12 months (not weighted by month length).
+    Maps are (lat, lon) and carry `display_range` (the colour scale the browser uses as is); series
+    are 1D over their own coordinate (`year`, `bin`). All carry `period`. Annual means are plain means
+    of the 12 months (not weighted by month length); global means and areas are weighted by cos(lat).
     """
     years = values.shape[0] // 12
     by_year = values[: years * 12].reshape(years, 12, *values.shape[1:])
     period = f"{year}–{year + years - 1}"
+    area = np.broadcast_to(np.cos(np.radians(lat))[:, None], values.shape[1:])
 
-    annual = by_year.mean(axis=1).reshape(years, -1)
-    trend = (np.polyfit(np.arange(years), annual, 1)[0] * 10).reshape(values.shape[1:]).astype("float32")
+    annual = by_year.mean(axis=1)
+    trend = (np.polyfit(np.arange(years), annual.reshape(years, -1), 1)[0] * 10).reshape(area.shape)
     r = float(np.percentile(np.abs(trend), 98))  # symmetric, so zero sits in the middle of a diverging scale
+    global_mean = (annual * area).sum(axis=(1, 2)) / area.sum()
 
-    wettest = by_year.max(axis=1).mean(axis=0).astype("float32")
+    wettest = by_year.max(axis=1).mean(axis=0)
+    wettest_range = [0.0, float(np.percentile(wettest, 99))]
+    edges = np.arange(0, np.ceil(wettest.max()) + 1)  # 1 mm/day bins
+    share, _ = np.histogram(wettest, bins=edges, weights=area)
+
+    f32 = lambda a: np.asarray(a, dtype="float32")  # noqa: E731
     return {
         "pr_trend": (
-            trend,
+            ("lat", "lon"),
+            f32(trend),
             {"units": "mm day-1 decade-1", "long_name": "Precipitation trend", "display_range": [-r, r], "period": period},
         ),
         "pr_wettest_month": (
-            wettest,
-            {
-                "units": "mm day-1",
-                "long_name": "Mean wettest month",
-                "display_range": [0.0, float(np.percentile(wettest, 99))],
-                "period": period,
-            },
+            ("lat", "lon"),
+            f32(wettest),
+            {"units": "mm day-1", "long_name": "Mean wettest month", "display_range": wettest_range, "period": period},
         ),
+        "pr_global_mean": (
+            ("year",),
+            f32(global_mean),
+            {"units": "mm day-1", "long_name": "Global-mean precipitation", "period": period},
+        ),
+        # Bars coloured like the wettest-month map, so it shares that map's display range.
+        "pr_wettest_month_hist": (
+            ("bin",),
+            f32(100 * share / area.sum()),
+            {"units": "% of area", "long_name": "Area by mean wettest month", "display_range": wettest_range, "period": period},
+        ),
+        "year": (("year",), np.arange(year, year + years, dtype="int32"), {"long_name": "year"}),
+        "bin": (("bin",), f32(edges[:-1]), {"units": "mm day-1", "long_name": "Mean wettest month", "bin_width": 1.0}),
     }
 
 
@@ -155,20 +173,16 @@ def main() -> None:
     print(f"wrote {dest}: {variable} {values.shape}, {values.nbytes / 1e6:.0f} MB raw")
 
     assert month == 1, "aggregates assume the series starts in January"
-    stats = aggregates(values, year)
+    stats = aggregates(values, year, lat)
     dest = dest.parent / "aggregates.zarr"
-    xr.Dataset(
-        {name: (("lat", "lon"), data, attrs) for name, (data, attrs) in stats.items()},
-        coords={"lat": out["lat"], "lon": out["lon"]},
-        attrs=out.attrs,
-    ).to_zarr(
+    xr.Dataset(stats, coords={"lat": out["lat"], "lon": out["lon"]}, attrs=out.attrs).to_zarr(
         dest,
         mode="w",
         zarr_format=3,
         consolidated=True,
         encoding={name: {"compressors": gzip} for name in [*stats, "lat", "lon"]},
     )
-    print(f"wrote {dest}: {', '.join(stats)} over {stats['pr_trend'][1]['period']}")
+    print(f"wrote {dest}: {', '.join(stats)} over {stats['pr_trend'][2]['period']}")
 
 
 if __name__ == "__main__":
