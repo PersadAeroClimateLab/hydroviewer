@@ -1,16 +1,15 @@
 // What each analysis shows, per cell (area letter). A comes first in every analysis because the
 // one-cell layout shows only A. By default flat maps are 2D and drawn with three.js, and globes are 3D
 // and drawn by trame, which needs a connected server (see ViewportGrid.svelte). `engine` overrides that.
-// `data` (default: the first month) only applies to three.js flat maps so far.
-import type { Source } from '../data/cmip6';
+// `data` (default: the first month) only applies to three.js flat maps so far. Charts are 2D and
+// drawn with Observable Plot.
+import type { SeriesSource, Source } from '../data/cmip6';
 
 export type Engine = 'three.js' | 'trame';
 
-export interface Panel {
-  view: 'flat' | 'globe';
-  engine?: Engine;
-  data?: Source;
-}
+export type Panel =
+  | { view: 'flat' | 'globe'; engine?: Engine; data?: Source }
+  | { view: 'chart'; data: SeriesSource };
 
 export interface Analysis {
   id: string;
@@ -21,8 +20,16 @@ export interface Analysis {
 export const analyses: Analysis[] = [
   { id: 'total', label: 'Total Precip.', cells: { a: { view: 'flat' }, b: { view: 'globe' } } },
   // Statistics over the whole historical run, computed in prep (aggregates.zarr).
-  { id: 'trend', label: 'Trend', cells: { a: { view: 'flat', data: 'pr_trend' } } },
-  { id: 'extremes', label: 'Extremes', cells: { a: { view: 'flat', data: 'pr_wettest_month' } } },
+  {
+    id: 'trend',
+    label: 'Trend',
+    cells: { a: { view: 'flat', data: 'pr_trend' }, c: { view: 'chart', data: 'pr_global_mean' } },
+  },
+  {
+    id: 'extremes',
+    label: 'Extremes',
+    cells: { a: { view: 'flat', data: 'pr_wettest_month' }, c: { view: 'chart', data: 'pr_wettest_month_hist' } },
+  },
   // Kept on purpose: the same views from both engines side by side, for the rendering-library discussion.
   {
     id: 'engines',
