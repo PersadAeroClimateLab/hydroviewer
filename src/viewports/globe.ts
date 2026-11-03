@@ -12,7 +12,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { loadMonth, loadUncertainty } from '../data/cmip6';
 import { createCoastlines, disposeCoastlines } from './coastlines';
 import { createFieldLayer, GLOBE_BACKGROUND, RELIEF_SCALE } from './fieldLayer';
-import { createOverlay } from './overlay';
+import { createColorbar, createOverlay, createReliefNote } from './overlay';
 import { reliefAt } from './relief';
 import type { Viewport } from './types';
 
@@ -33,6 +33,7 @@ export const globe: Viewport = {
     el.append(renderer.domElement);
     const overlay = createOverlay(el);
     overlay.textContent = 'Loading…';
+    const colorbar = createColorbar(el, initial.colormap);
 
     const layer = createFieldLayer(renderer, initial.colormap, true);
     const geometry = new SphereGeometry(1, 288, 180); // one segment per cell of the 180 x 288 grid
@@ -69,11 +70,13 @@ export const globe: Viewport = {
 
     let alive = true;
     let coast: Awaited<ReturnType<typeof createCoastlines>> | undefined;
-    // The globe still draws, flat, if the uncertainty array is missing.
+    let note: HTMLDivElement | undefined;
+    // The globe still draws, flat and without the note, if the uncertainty array is missing.
     loadUncertainty()
       .then(
         (grid) => {
           layer.setRelief(grid);
+          if (alive) note = createReliefNote(el);
           render();
           return reliefAt(grid);
         },
@@ -98,7 +101,8 @@ export const globe: Viewport = {
       (f) => {
         if (!alive) return;
         const vmax = layer.setField(f);
-        overlay.textContent = `pr · ${f.label} · 0–${vmax.toFixed(1)} ${f.units}`;
+        overlay.textContent = `pr · ${f.label}`;
+        colorbar.setRange(vmax, f.units);
         mesh.visible = true;
         render();
       },
@@ -108,6 +112,7 @@ export const globe: Viewport = {
     return {
       update(state) {
         layer.setColormap(state.colormap);
+        colorbar.setColormap(state.colormap);
         render();
       },
       destroy() {
@@ -121,6 +126,8 @@ export const globe: Viewport = {
         renderer.forceContextLoss();
         renderer.domElement.remove();
         overlay.remove();
+        colorbar.remove();
+        note?.remove();
       },
     };
   },

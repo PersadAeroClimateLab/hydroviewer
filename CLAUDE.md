@@ -24,7 +24,10 @@ the same month on a rotatable, zoomable globe (`globe.ts`, OrbitControls) whose 
 placeholders unless a trame server is configured (see Trame below). Both share `fieldLayer.ts` (float texture, colormap lookup in the fragment shader, any
 geometry with equirectangular UVs) and redraw only on change. Both draw Natural Earth 110m coastlines
 (`src/viewports/coastlines.ts`, data from `src/assets/coastlines.json`, loaded lazily as its own
-chunk). The colour scale max (99th percentile of the month) is still computed in the client; it
+chunk). Every map has theme-aware chips (`src/viewports/overlay.ts`, mirrored in `trame/app.py`): variable
+and month top left, a colour bar (0 to the colour max, CSS gradient of the same stops) bottom left, and
+"Elevation = uncertainty (dummy data)" top right on the views with relief (B, C, D) when the store has it.
+The colour scale max (99th percentile of the month) is still computed in the client; it
 belongs in prep once there is a time control. No time control, catalog.json, Observable Plot,
 trame viewport or Pages workflow yet. Remaining work is in the plan (section 9).
 
