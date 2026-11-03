@@ -2,7 +2,7 @@ import { LinearSRGBColorSpace, Mesh, OrthographicCamera, PlaneGeometry, Scene, W
 import { loadMonth } from '../data/cmip6';
 import { createCoastlines, disposeCoastlines } from './coastlines';
 import { createFieldLayer } from './fieldLayer';
-import { createOverlay } from './overlay';
+import { createColorbar, createOverlay } from './overlay';
 import type { Viewport } from './types';
 
 // Flat equirectangular map of one month: a 2:1 plane under an orthographic camera.
@@ -16,6 +16,7 @@ export const flatMap: Viewport = {
     el.append(renderer.domElement);
     const overlay = createOverlay(el);
     overlay.textContent = 'Loading…';
+    const colorbar = createColorbar(el, initial.colormap);
 
     const layer = createFieldLayer(renderer, initial.colormap);
     const geometry = new PlaneGeometry(2, 1);
@@ -53,7 +54,8 @@ export const flatMap: Viewport = {
       (f) => {
         if (!alive) return;
         const vmax = layer.setField(f);
-        overlay.textContent = `pr · ${f.label} · 0–${vmax.toFixed(1)} ${f.units}`;
+        overlay.textContent = `pr · ${f.label}`;
+        colorbar.setRange(vmax, f.units);
         mesh.visible = true;
         render();
       },
@@ -63,6 +65,7 @@ export const flatMap: Viewport = {
     return {
       update(state) {
         layer.setColormap(state.colormap);
+        colorbar.setColormap(state.colormap);
         render();
       },
       destroy() {
@@ -75,6 +78,7 @@ export const flatMap: Viewport = {
         renderer.forceContextLoss();
         renderer.domElement.remove();
         overlay.remove();
+        colorbar.remove();
       },
     };
   },
