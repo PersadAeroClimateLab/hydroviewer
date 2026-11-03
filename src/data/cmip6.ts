@@ -100,8 +100,8 @@ export function loadField(source: Source): Promise<Field> {
   return field;
 }
 
-// 1D series from aggregates.zarr, each over its own coordinate (years, or histogram bin starts).
-export type SeriesSource = 'pr_global_mean' | 'pr_wettest_month_hist';
+// 1D series from aggregates.zarr, each over its own coordinate (years, latitudes or histogram bin starts).
+export type SeriesSource = 'pr_global_mean' | 'pr_trend_zonal' | 'pr_wettest_month_global' | 'pr_wettest_month_hist';
 
 export interface Series {
   x: number[];

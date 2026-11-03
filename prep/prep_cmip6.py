@@ -50,7 +50,7 @@ def aggregates(values: np.ndarray, year: int, lat: np.ndarray) -> dict[str, tupl
     """Statistics over the whole years in `values` (time, lat, lon), mm/day, as xarray variables.
 
     Maps are (lat, lon) and carry `display_range` (the colour scale the browser uses as is); series
-    are 1D over their own coordinate (`year`, `bin`). All carry `period`. Annual means are plain means
+    are 1D over their own coordinate (`year`, `bin`, `lat`). All carry `period`. Annual means are plain means
     of the 12 months (not weighted by month length); global means and areas are weighted by cos(lat).
     """
     years = values.shape[0] // 12
@@ -63,7 +63,9 @@ def aggregates(values: np.ndarray, year: int, lat: np.ndarray) -> dict[str, tupl
     r = float(np.percentile(np.abs(trend), 98))  # symmetric, so zero sits in the middle of a diverging scale
     global_mean = (annual * area).sum(axis=(1, 2)) / area.sum()
 
-    wettest = by_year.max(axis=1).mean(axis=0)
+    wettest_by_year = by_year.max(axis=1)
+    wettest = wettest_by_year.mean(axis=0)
+    wettest_global = (wettest_by_year * area).sum(axis=(1, 2)) / area.sum()
     wettest_range = [0.0, float(np.percentile(wettest, 99))]
     edges = np.arange(0, np.ceil(wettest.max()) + 1)  # 1 mm/day bins
     share, _ = np.histogram(wettest, bins=edges, weights=area)
@@ -84,6 +86,16 @@ def aggregates(values: np.ndarray, year: int, lat: np.ndarray) -> dict[str, tupl
             ("year",),
             f32(global_mean),
             {"units": "mm day-1", "long_name": "Global-mean precipitation", "period": period},
+        ),
+        "pr_trend_zonal": (
+            ("lat",),
+            f32(trend.mean(axis=1)),
+            {"units": "mm day-1 decade-1", "long_name": "Zonal-mean precipitation trend", "period": period},
+        ),
+        "pr_wettest_month_global": (
+            ("year",),
+            f32(wettest_global),
+            {"units": "mm day-1", "long_name": "Global-mean wettest month", "period": period},
         ),
         # Bars coloured like the wettest-month map, so it shares that map's display range.
         "pr_wettest_month_hist": (

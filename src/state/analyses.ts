@@ -27,6 +27,7 @@ export const analyses: Analysis[] = [
       a: { view: 'flat', data: 'pr_trend' },
       b: { view: 'globe', data: 'pr_trend' },
       c: { view: 'chart', data: 'pr_global_mean' },
+      d: { view: 'chart', data: 'pr_trend_zonal' },
     },
   },
   {
@@ -36,6 +37,7 @@ export const analyses: Analysis[] = [
       a: { view: 'flat', data: 'pr_wettest_month' },
       b: { view: 'globe', data: 'pr_wettest_month' },
       c: { view: 'chart', data: 'pr_wettest_month_hist' },
+      d: { view: 'chart', data: 'pr_wettest_month_global' },
     },
   },
   // Kept on purpose: the same views from both engines side by side, for the rendering-library discussion.

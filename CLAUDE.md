@@ -33,8 +33,9 @@ chunk). Every map has theme-aware chips (`src/viewports/overlay.ts`, mirrored in
 and month top left, a colour bar (0 to the colour max, CSS gradient of the same stops) bottom left, and
 "Elevation = uncertainty (dummy data)" under the label on views with relief when the store has it.
 Trend (A: linear trend of annual means, mm/day per decade, diverging BrBG with dark coastlines; C: global-mean
-annual series with Plot's least-squares line) and Extremes (A: mean wettest month; C: area histogram, bars in the
-map's colours) fill A and C so far, maps read from `aggregates.zarr` with the colour range prep wrote
+annual series with Plot's least-squares line; D: zonal-mean trend by latitude) and Extremes (A: mean wettest month;
+C: area histogram, bars in the map's colours; D: global-mean wettest month per year with its least-squares line)
+fill all four cells (B is the trame globe of the same field), maps read from `aggregates.zarr` with the colour range prep wrote
 (`display_range`). For the monthly map the colour max (99th percentile of the month) is still computed in the
 client; it belongs in prep once there is a time control. No time control (decided: not yet), catalog.json
 or Pages workflow yet. Remaining work is in the plan (section 9).
@@ -125,8 +126,8 @@ VITE_TRAME_URL=http://localhost:8080 docker compose up -d web   # turn the trame
   `docker compose --profile prep run --rm prep CMIP6/CMIP/NOAA-GFDL/GFDL-CM4/historical/r1i1p1f1/Amon/pr/gr1/v20180701 --months 1980`
   (the whole 1850–2014 historical run; about 25 s, 351 MB output).
   `aggregates.zarr` holds statistics over whole years: maps (lat, lon: `pr_trend`, `pr_wettest_month`) with
-  `display_range`, and 1D series over their own coordinate (`pr_global_mean` over `year`, cos(lat)-weighted;
-  `pr_wettest_month_hist` over `bin`, % of area per 1 mm/day bin, `bin_width` on the coordinate). All carry
+  `display_range`, and 1D series over their own coordinate (`pr_global_mean` and `pr_wettest_month_global` over `year`,
+  cos(lat)-weighted; `pr_trend_zonal` over `lat`; `pr_wettest_month_hist` over `bin`, % of area per 1 mm/day bin, `bin_width` on the coordinate). All carry
   `units`, `long_name` and `period`. Rebuild the prep image after editing `prep/*.py` (the script is copied in).
 - **Bucket emulator:** the `data` service is nginx serving `./data` with S3-style headers (any-origin
   CORS incl. preflight, byte ranges, ETag, `Content-Range` exposed, no compression, 404 for missing
