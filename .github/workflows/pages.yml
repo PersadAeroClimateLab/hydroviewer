@@ -1,0 +1,51 @@
+# Builds the static app and publishes dist/ to GitHub Pages on every push to main.
+# Repository setup (once): Settings > Pages > Source: "GitHub Actions".
+# Optional repository variables (Settings > Secrets and variables > Actions > Variables):
+#   DATA_URL   public bucket URL; unset, the page reads http://localhost:9000 (a local emulator)
+#   TRAME_URL  default trame server; unset, trame is off until set in the sidebar box
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; let a running one finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22 # same as the dev image (node:22-alpine)
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      # A project page lives under /<repo>/, so assets must be resolved from there.
+      - run: npm run build -- --base=/${{ github.event.repository.name }}/
+        env:
+          VITE_DATA_URL: ${{ vars.DATA_URL }}
+          VITE_TRAME_URL: ${{ vars.TRAME_URL }}
+      - uses: actions/upload-pages-artifact@v5.0.0
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5.0.1

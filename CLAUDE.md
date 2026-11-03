@@ -37,8 +37,8 @@ annual series with Plot's least-squares line; D: zonal-mean trend by latitude) a
 C: area histogram, bars in the map's colours; D: global-mean wettest month per year with its least-squares line)
 fill all four cells (B is the trame globe of the same field), maps read from `aggregates.zarr` with the colour range prep wrote
 (`display_range`). For the monthly map the colour max (99th percentile of the month) is still computed in the
-client; it belongs in prep once there is a time control. No time control (decided: not yet), catalog.json
-or Pages workflow yet. Remaining work is in the plan (section 9).
+client; it belongs in prep once there is a time control. No time control (decided: not yet) or catalog.json yet.
+The Pages workflow exists but has not run on GitHub yet (see Deploy). Remaining work is in the plan (section 9).
 
 ## Stack (see the plan for detail)
 
@@ -58,6 +58,14 @@ docker compose run --rm --no-deps web npm run build   # production build into di
 docker compose build web                          # after changing package.json or the Dockerfile
 ```
 
+- **Deploy:** `.github/workflows/pages.yml` runs on every push to main: `npm ci`, `npm run check`, then
+  `npm run build -- --base=/<repo>/`, published with `upload-pages-artifact`/`deploy-pages`. Repo setting once:
+  Settings > Pages > Source: GitHub Actions. Repository variables `DATA_URL` / `TRAME_URL` become
+  `VITE_DATA_URL` / `VITE_TRAME_URL`; with `DATA_URL` unset the page reads `http://localhost:9000` (only useful
+  next to a local emulator; `?data=` still overrides). To check a Pages-like build locally:
+  `docker compose exec web sh -c 'npm run build -- --base=/hydroviewer/'`, then
+  `docker compose exec -d web vite preview --host --port 4173 --base /hydroviewer/` and open
+  `http://web:4173/hydroviewer/` with the browser tool.
 - Dependencies live in the image at `/node_modules` (the repo is bind-mounted at `/app`), so there is
   no `node_modules` on the host and no volume to clear. Rebuild the image after any dependency change.
 - Edits to `src/` hot-reload. Set `VITE_USE_POLLING=true` on Docker Desktop (Mac/Windows).
@@ -181,7 +189,7 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
 
 1. **Everything must work on GitHub Pages.** Static output only. No server code, no custom response
    headers (so no `SharedArrayBuffer`/COOP/COEP), no client-side router or SPA fallback, no large
-   data files in the repo. Vite `base` must match the Pages path.
+   data files in the repo. Vite `base` must match the Pages path (the workflow passes `--base=/<repo>/`).
 2. **trame stays decoupled.** The app must build, run and deploy with trame completely absent.
    - trame viewports are used only while a configured server answers; 3D panels show a notice otherwise.
    - It is an iframe. Do not import trame/VTK code into the main bundle, and do not add live
@@ -248,5 +256,9 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
 Verified: zarrita 0.7.5 reads our Zarr v3 + gzip store including v3 consolidated metadata; the app
 loads it cross-origin from the emulator. Still from memory or inconclusive searches, so confirm in the
 relevant spike: trame launcher status and multi-session behaviour; trame-vtklocal / VTK version
-compatibility; Safari behaviour for an HTTPS page framing `http://localhost`; whether the real bucket's
-CORS config will match the emulator's.
+compatibility; Safari behaviour for an HTTPS page framing `http://localhost`.
+
+Verified 2026-11-03: a temporary Cloudflare R2 bucket (public `r2.dev` URL, CORS for the Pages origin and
+`http://localhost:5173`, `Range` allowed, `Content-Range`/`Content-Length`/`ETag` exposed) behaves like the
+emulator (200 with CORS, 206 ranges, 204 preflight, 404 for missing keys) and the app loads from it with
+`?data=`. Its CORS does not allow `http://web:5173`, so the browser tool needs a localhost forwarder for it.
