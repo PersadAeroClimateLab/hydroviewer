@@ -1,4 +1,3 @@
-import { trameBase } from '../data/config';
 import { GLOBE_BACKGROUND } from './fieldLayer';
 import type { Viewport } from './types';
 
@@ -8,7 +7,7 @@ const NAME = { flat: 'Flat map', globe: 'Globe' } as const;
 
 // A trame page in an iframe. Only the initial state travels in the URL: the page is picked by
 // view and colormap, and a colormap change reloads it. Nothing is synced live.
-export function trameView(kind: keyof typeof ASPECT): Viewport {
+export function trameView(kind: keyof typeof ASPECT, base: string): Viewport {
   return {
     name: NAME[kind],
     engine: 'trame',
@@ -18,7 +17,7 @@ export function trameView(kind: keyof typeof ASPECT): Viewport {
       frame.style.cssText = 'position:absolute;border:0;background:transparent';
       let url = '';
       const show = (colormap: string) => {
-        const next = `${trameBase}/index.html?ui=${kind}-${colormap}`;
+        const next = `${base}/index.html?ui=${kind}-${colormap}`;
         if (next === url) return;
         // replace() rather than setting src, so reloads do not add browser history entries
         if (url) frame.contentWindow?.location.replace(next);

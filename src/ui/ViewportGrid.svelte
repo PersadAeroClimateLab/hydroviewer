@@ -1,6 +1,6 @@
 <script lang="ts">
   import { layouts, ui } from '../state/layout.svelte';
-  import { trameBase } from '../data/config';
+  import { trame } from '../state/trame.svelte';
   import { flatMap } from '../viewports/flatMap';
   import { globe } from '../viewports/globe';
   import { placeholder } from '../viewports/placeholder';
@@ -8,13 +8,13 @@
   import type { Viewport } from '../viewports/types';
   import ViewportHost from './ViewportHost.svelte';
 
-  // Until cells can be assigned a viewport type, A and B are three.js (flat map, globe) and, when a
-  // trame server is configured, C and D are the same two views rendered by trame.
-  const viewports: Record<string, Viewport> = {
+  // Until cells can be assigned a viewport type, A and B are three.js (flat map, globe) and, while a
+  // trame server answers, C and D are the same two views rendered by trame.
+  const viewports: Record<string, Viewport> = $derived({
     a: flatMap,
     b: globe,
-    ...(trameBase && { c: trameView('flat'), d: trameView('globe') }),
-  };
+    ...(trame.url && { c: trameView('flat', trame.url), d: trameView('globe', trame.url) }),
+  });
 
   const layout = $derived(layouts.find((l) => l.id === ui.layoutId)!);
   const rows = $derived(layout.areas.map((row) => row.split(' ')));
@@ -36,7 +36,9 @@
         <span>{viewport.engine}</span>
       </header>
       <div class="body">
-        <ViewportHost {viewport} />
+        {#key viewport}
+          <ViewportHost {viewport} />
+        {/key}
       </div>
     </section>
   {/each}

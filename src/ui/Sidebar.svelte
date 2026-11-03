@@ -1,6 +1,14 @@
 <script lang="ts">
   import { layouts, ui } from '../state/layout.svelte';
   import { colormaps, shared } from '../state/shared.svelte';
+  import { connect, trame } from '../state/trame.svelte';
+
+  const messages = {
+    off: 'Off: cells C and D show placeholders.',
+    checking: 'Checking…',
+    ready: 'Connected: C and D use trame.',
+    unreachable: 'Not reachable (or blocked by the browser). Start the server, then Connect.',
+  } as const;
 </script>
 
 <aside>
@@ -26,6 +34,20 @@
         <option value={name}>{name}</option>
       {/each}
     </select>
+  </section>
+
+  <section>
+    <h2><label for="trame-url">Trame server</label></h2>
+    <form
+      onsubmit={(e) => {
+        e.preventDefault();
+        connect(trame.input);
+      }}
+    >
+      <input id="trame-url" type="text" placeholder="http://localhost:8080" bind:value={trame.input} />
+      <button type="submit">Connect</button>
+    </form>
+    <p class="status" data-status={trame.status} role="status">{messages[trame.status]}</p>
   </section>
 </aside>
 
@@ -56,7 +78,8 @@
     gap: 0.25rem;
   }
   button,
-  select {
+  select,
+  input {
     font: inherit;
     color: inherit;
     background: var(--bg);
@@ -72,8 +95,23 @@
     border-color: var(--accent);
     color: var(--on-accent);
   }
-  select {
+  select,
+  input {
     width: 100%;
+    box-sizing: border-box;
+  }
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+  .status {
+    margin: 0.5rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+  .status[data-status='ready'] {
+    color: var(--fg);
   }
   @media (max-width: 720px) {
     aside {

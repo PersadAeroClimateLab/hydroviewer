@@ -65,8 +65,17 @@ VITE_TRAME_URL=http://localhost:8080 docker compose up -d web   # turn the trame
 # or, per page: http://web:5173/?trame=http://trame:8080  (what the browser tool container uses)
 ```
 
-- **Off by default.** Without `VITE_TRAME_URL` or `?trame=`, C and D are placeholders and no trame code runs.
+- **A sidebar box sets the server** (`src/state/trame.svelte.ts`). Enter `http://localhost:8080` (or
+  `localhost:8080`) and Connect: a no-cors fetch checks that something answers, and only then do C and D
+  become trame; otherwise (or while it is down) they stay placeholders and the status says "not reachable".
+  What you type is saved in localStorage and reconnected on load. The startup value is `?trame=` (one page
+  load, not saved) over a saved value over `VITE_TRAME_URL` (the build-time default; `.env` sets it for
+  dev). Empty box means off. There is no automatic re-check: press Connect after starting the server.
   Publish port 8080 too (`sbx ports`) for your own browser.
+- **On GitHub Pages (HTTPS) with a local server** the iframe is `http://localhost:8080`. Chrome and Firefox
+  treat localhost as secure, so mixed content should be allowed; Safari blocks it, and recent Chrome may ask
+  for "local network access" permission. Not tested here (only http to http). A non-local trame server must
+  be HTTPS. The trame server already allows being framed.
 - **Local rendering only** (`VtkLocalView`): the server builds VTK scenes and the browser draws them with
   vtk.js, so the server needs no GPU or X11. Use `vtkGenericOpenGLRenderWindow`; the plain `vtkRenderWindow`
   segfaults in the container.
