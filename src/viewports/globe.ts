@@ -100,9 +100,9 @@ export const globe: Viewport = {
     loadMonth(0).then(
       (f) => {
         if (!alive) return;
-        const vmax = layer.setField(f);
-        overlay.textContent = `pr · ${f.label}`;
-        colorbar.setRange(vmax, f.units);
+        const [vmin, vmax] = layer.setField(f);
+        overlay.textContent = f.label;
+        colorbar.setRange(vmin, vmax, f.units);
         mesh.visible = true;
         render();
       },

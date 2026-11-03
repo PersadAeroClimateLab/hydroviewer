@@ -1,11 +1,15 @@
 // What each analysis shows, per cell (area letter). A comes first in every analysis because the
 // one-cell layout shows only A. By default flat maps are 2D and drawn with three.js, and globes are 3D
 // and drawn by trame, which needs a connected server (see ViewportGrid.svelte). `engine` overrides that.
+// `data` (default: the first month) only applies to three.js flat maps so far.
+import type { Source } from '../data/cmip6';
+
 export type Engine = 'three.js' | 'trame';
 
 export interface Panel {
   view: 'flat' | 'globe';
   engine?: Engine;
+  data?: Source;
 }
 
 export interface Analysis {
@@ -16,6 +20,9 @@ export interface Analysis {
 
 export const analyses: Analysis[] = [
   { id: 'total', label: 'Total Precip.', cells: { a: { view: 'flat' }, b: { view: 'globe' } } },
+  // Statistics over the whole historical run, computed in prep (aggregates.zarr).
+  { id: 'trend', label: 'Trend', cells: { a: { view: 'flat', data: 'pr_trend' } } },
+  { id: 'extremes', label: 'Extremes', cells: { a: { view: 'flat', data: 'pr_wettest_month' } } },
   // Kept on purpose: the same views from both engines side by side, for the rendering-library discussion.
   {
     id: 'engines',

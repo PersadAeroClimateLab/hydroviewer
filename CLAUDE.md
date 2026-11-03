@@ -11,8 +11,8 @@ change.
 ## Project state
 
 Front-end shell only: a collapsible left sidebar (analysis, layout presets 1, 1×2, 2×2, 1+2; colormap; trame
-server) and a CSS grid of viewports driven by shared state. The **analysis** (`src/state/analyses.ts`, "Total Precip."
-and "Engines"; plan section 9, item 6) decides what each cell shows: by default 2D maps are three.js and 3D panels
+server) and a CSS grid of viewports driven by shared state. The **analysis** (`src/state/analyses.ts`: "Total Precip.",
+"Trend", "Extremes", "Engines"; plan section 9, item 6) decides what each cell shows: by default 2D maps are three.js and 3D panels
 (globes) are trame; a cell's `engine` overrides that. trame cells show a "needs a trame server" notice without one; cells an analysis leaves empty are
 placeholders. Desktop first; below 720px the sidebar starts
 collapsed and cells stack in one column. Each cell header shows the viewport's name and rendering engine
@@ -31,8 +31,10 @@ geometry with equirectangular UVs) and redraw only on change. Both draw Natural 
 chunk). Every map has theme-aware chips (`src/viewports/overlay.ts`, mirrored in `trame/app.py`): variable
 and month top left, a colour bar (0 to the colour max, CSS gradient of the same stops) bottom left, and
 "Elevation = uncertainty (dummy data)" under the label on views with relief when the store has it.
-The colour scale max (99th percentile of the month) is still computed in the client; it
-belongs in prep once there is a time control. No time control (decided: not yet), catalog.json, Observable Plot
+Trend (linear trend of annual means, mm/day per decade, diverging BrBG with dark coastlines) and Extremes
+(mean wettest month) show only their A map so far, read from `aggregates.zarr` with the colour range prep wrote
+(`display_range`). For the monthly map the colour max (99th percentile of the month) is still computed in the
+client; it belongs in prep once there is a time control. No time control (decided: not yet), catalog.json, Observable Plot
 or Pages workflow yet. Remaining work is in the plan (section 9).
 
 ## Stack (see the plan for detail)
@@ -111,17 +113,20 @@ VITE_TRAME_URL=http://localhost:8080 docker compose up -d web   # turn the trame
   source: the app cannot use it directly. Keys are
   `CMIP6/<activity>/<institution>/<model>/<experiment>/<member>/<table>/<variable>/<grid>/<version>/`.
 - **Prep** (`prep/`, Python in Docker, opt-in profile) converts a slice into our bucket format under
-  the same key path, as `.../<version>/map.zarr` in `./data` (gitignored):
+  the same key path, as `.../<version>/map.zarr` plus `aggregates.zarr` in `./data` (gitignored):
   `docker compose --profile prep build prep`, then
-  `docker compose --profile prep run --rm prep CMIP6/CMIP/NOAA-GFDL/GFDL-CM4/historical/r1i1p1f1/Amon/pr/gr1/v20180701 --months 600`
-  (about 10 s, 107 MB output). Rebuild the prep image after editing `prep/*.py` (the script is copied in).
+  `docker compose --profile prep run --rm prep CMIP6/CMIP/NOAA-GFDL/GFDL-CM4/historical/r1i1p1f1/Amon/pr/gr1/v20180701 --months 1980`
+  (the whole 1850–2014 historical run; about 25 s, 351 MB output).
+  `aggregates.zarr` holds per-cell (lat, lon) statistics over whole years (`pr_trend`, `pr_wettest_month`), each
+  with `units`, `long_name`, `period` and `display_range` attributes. Rebuild the prep image after editing `prep/*.py` (the script is copied in).
 - **Bucket emulator:** the `data` service is nginx serving `./data` with S3-style headers (any-origin
   CORS incl. preflight, byte ranges, ETag, `Content-Range` exposed, no compression, 404 for missing
   keys). Config: `tools/bucket/default.conf`. Plain S3 API features (listing, signed URLs) are not
   emulated and not needed.
 - **App side:** `src/data/config.ts` picks the bucket URL (`?data=URL` > `VITE_DATA_URL` >
   `http://localhost:9000`); `src/data/cmip6.ts` opens the store with zarrita (explicit
-  `zarr.open.v3`, v3 consolidated metadata) and memoizes one month per fetch.
+  `zarr.open.v3`, v3 consolidated metadata) and memoizes one month per fetch; `loadField(source)` returns the
+  month or an aggregate.
 - **Dummy uncertainty** (`uncertainty`, 0..1, (lat, lon), next to `pr` in `map.zarr`) is synthetic rough
   fractal noise from `dummy_uncertainty()` in `prep/prep_cmip6.py`, only to exercise globe relief: it is not real
   uncertainty. Stores prepped before it existed still work (flat globes); re-run prep to get relief.
@@ -188,7 +193,7 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
   -180..180 (west to east), latitude south to north. Regridding is not implemented yet; the first
   slice keeps the native GFDL-CM4 grid (180 × 288).
 - Per variable: a map layout (chunks `(12, nlat, nlon)`, written), a series layout
-  (`(all time, ~12, ~12)`) and small precomputed aggregates (neither written yet).
+  (`(all time, ~12, ~12)`, not written yet) and small precomputed aggregates (`aggregates.zarr`, written).
 - Time is stored as integers counted from the first month (`units: "months since 1850-01-01"`), so
   the client needs no calendar code. Precipitation is stored in mm/day.
 - float32, no NaN in data read by shaders (use a fill value or mask), CF attributes on all arrays,

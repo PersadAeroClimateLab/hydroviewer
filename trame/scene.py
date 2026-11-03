@@ -17,7 +17,7 @@ from vtkmodules.vtkRenderingOpenGL2 import vtkGenericOpenGLRenderWindow  # no X1
 
 ASSETS = Path("/assets")  # ./src/assets, mounted read-only
 STOPS: dict[str, list[str]] = json.loads((ASSETS / "colormaps.json").read_text())
-COLORMAPS = list(STOPS)
+COLORMAPS = [c for c in STOPS if c != "BrBG"]  # the sidebar's choices; BrBG is for diverging 2D maps only
 COASTLINES: list[list[float]] = json.loads((ASSETS / "coastlines.json").read_text())
 
 LUT_SIZE = 256

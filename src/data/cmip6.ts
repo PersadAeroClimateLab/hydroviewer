@@ -1,8 +1,8 @@
 import * as zarr from 'zarrita';
 import { dataBase } from './config';
 
-// One hard-coded store until catalog.json exists.
-const STORE = 'CMIP6/CMIP/NOAA-GFDL/GFDL-CM4/historical/r1i1p1f1/Amon/pr/gr1/v20180701/map.zarr';
+// One hard-coded dataset until catalog.json exists.
+const PATH = 'CMIP6/CMIP/NOAA-GFDL/GFDL-CM4/historical/r1i1p1f1/Amon/pr/gr1/v20180701';
 
 export interface Grid {
   values: Float32Array; // row-major, south to north, west to east
@@ -12,12 +12,22 @@ export interface Grid {
 
 export interface Field extends Grid {
   units: string;
-  label: string; // e.g. "1850-01"
+  label: string; // e.g. "pr · 1850-01"
+  range?: [number, number]; // colour scale from prep; without it the client picks one
 }
 
+// What a panel can show: the first month, or an aggregate written by prep (aggregates.zarr).
+export type Source = 'month' | 'pr_trend' | 'pr_wettest_month';
+
+const openStore = async (name: string) => {
+  const store = await zarr.withConsolidatedMetadata(new zarr.FetchStore(`${dataBase}/${PATH}/${name}`), {
+    format: 'v3',
+  });
+  return zarr.open.v3(store, { kind: 'group' });
+};
+
 const opened = (async () => {
-  const store = await zarr.withConsolidatedMetadata(new zarr.FetchStore(`${dataBase}/${STORE}`), { format: 'v3' });
-  const root = await zarr.open.v3(store, { kind: 'group' });
+  const root = await openStore('map.zarr');
   const [pr, time] = await Promise.all([
     zarr.open.v3(root.resolve('pr'), { kind: 'array' }),
     zarr.open.v3(root.resolve('time'), { kind: 'array' }),
@@ -52,10 +62,37 @@ export function loadMonth(index: number): Promise<Field> {
         height: pr.shape[1],
         width: pr.shape[2],
         units: String(pr.attrs.units),
-        label: `${Math.floor(at / 12)}-${String((at % 12) + 1).padStart(2, '0')}`,
+        label: `pr · ${Math.floor(at / 12)}-${String((at % 12) + 1).padStart(2, '0')}`,
       };
     });
     months.set(index, field);
+  }
+  return field;
+}
+
+let aggregates: ReturnType<typeof openStore> | undefined;
+const fields = new Map<Source, Promise<Field>>();
+
+// Memoized per source, like loadMonth.
+export function loadField(source: Source): Promise<Field> {
+  if (source === 'month') return loadMonth(0);
+  let field = fields.get(source);
+  if (!field) {
+    aggregates ??= openStore('aggregates.zarr');
+    field = aggregates.then(async (root) => {
+      const array = await zarr.open.v3(root.resolve(source), { kind: 'array' });
+      const grid = await zarr.get(array);
+      const { units, long_name, period, display_range } = array.attrs as Record<string, string & [number, number]>;
+      return {
+        values: grid.data as Float32Array,
+        height: array.shape[0],
+        width: array.shape[1],
+        units,
+        label: `${long_name} · ${period}`,
+        range: display_range,
+      };
+    });
+    fields.set(source, field);
   }
   return field;
 }
