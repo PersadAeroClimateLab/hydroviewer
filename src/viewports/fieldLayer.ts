@@ -11,8 +11,7 @@ import {
   type WebGLRenderer,
 } from 'three';
 import type { Field, Grid } from '../data/cmip6';
-import type { Colormap } from '../state/shared.svelte';
-import { colorAt } from './colormaps';
+import { colorAt, type Palette } from './colormaps';
 
 const LUT_SIZE = 256;
 
@@ -46,11 +45,12 @@ const vertexShader = /* glsl */ `
 const fragmentShader = /* glsl */ `
   uniform sampler2D field;
   uniform sampler2D lut;
+  uniform float vmin;
   uniform float vmax;
   varying vec2 vUv;
   varying vec3 vView;
   void main() {
-    float t = clamp(texture2D(field, vUv).r / vmax, 0.0, 1.0);
+    float t = clamp((texture2D(field, vUv).r - vmin) / (vmax - vmin), 0.0, 1.0);
     float u = (0.5 + t * ${(LUT_SIZE - 1).toFixed(1)}) / ${LUT_SIZE.toFixed(1)};
     vec3 rgb = texture2D(lut, vec2(u, 0.5)).rgb;
     #ifdef RELIEF
@@ -65,7 +65,7 @@ const fragmentShader = /* glsl */ `
 // A gridded field coloured on the GPU, for any geometry with equirectangular UVs (u: west to
 // east, v: south to north). The field stays a float texture; the colormap is a lookup texture.
 // Pass `relief` for a sphere that rises with a second grid (see setRelief).
-export function createFieldLayer(renderer: WebGLRenderer, colormap: Colormap, relief = false) {
+export function createFieldLayer(renderer: WebGLRenderer, colormap: Palette, relief = false) {
   const lutData = new Uint8Array(LUT_SIZE * 4);
   const lut = new DataTexture(lutData, LUT_SIZE, 1, RGBAFormat, UnsignedByteType);
   lut.minFilter = lut.magFilter = LinearFilter;
@@ -74,6 +74,7 @@ export function createFieldLayer(renderer: WebGLRenderer, colormap: Colormap, re
     uniforms: {
       field: { value: null },
       lut: { value: lut },
+      vmin: { value: 0 },
       vmax: { value: 1 },
       relief: { value: null },
       reliefScale: { value: RELIEF_SCALE },
@@ -95,7 +96,7 @@ export function createFieldLayer(renderer: WebGLRenderer, colormap: Colormap, re
     return texture;
   };
 
-  const setColormap = (c: Colormap) => {
+  const setColormap = (c: Palette) => {
     for (let i = 0; i < LUT_SIZE; i++) {
       lutData.set([...colorAt(c, i / (LUT_SIZE - 1)).map(Math.round), 255], i * 4);
     }
@@ -106,13 +107,14 @@ export function createFieldLayer(renderer: WebGLRenderer, colormap: Colormap, re
   return {
     material,
     setColormap,
-    // Uploads the field and returns the colour scale maximum: the 99th percentile, since
-    // precipitation has a long tail.
-    setField(f: Field): number {
-      const vmax = [...f.values].sort((a, b) => a - b)[Math.floor(0.99 * f.values.length)];
+    // Uploads the field and returns its colour scale: the range from prep, else 0 to the 99th
+    // percentile, since precipitation has a long tail.
+    setField(f: Field): [number, number] {
+      const [vmin, vmax] = f.range ?? [0, [...f.values].sort((a, b) => a - b)[Math.floor(0.99 * f.values.length)]];
       material.uniforms.field.value = gridTexture(f);
+      material.uniforms.vmin.value = vmin;
       material.uniforms.vmax.value = vmax;
-      return vmax;
+      return [vmin, vmax];
     },
     // Heights in 0..1, on the same kind of grid as the field.
     setRelief(grid: Grid) {

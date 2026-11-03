@@ -6,7 +6,8 @@ hydroviewer map layout (docs/llm/DEV_PLAN.md, section 6), under the same key pat
 Writes <out>/<path>/map.zarr as Zarr v3 with gzip (the only codec the browser decodes
 natively). The grid stays native for now (no regridding), but longitude is wrapped to
 -180..180 and latitude must run south to north. Also writes a synthetic `uncertainty` field
-(lat, lon) for testing globe relief. No series layout or aggregates yet.
+(lat, lon) for testing globe relief, and <out>/<path>/aggregates.zarr with per-cell statistics
+over whole years (see aggregates()). No series layout yet.
 """
 
 import argparse
@@ -43,6 +44,38 @@ def dummy_uncertainty(lat: np.ndarray, lon: np.ndarray) -> np.ndarray:
     u = zonal + np.cos(np.radians(lat))[:, None] * (u - zonal)
     lo, hi = np.percentile(u, [2, 99.5])
     return np.clip((u - lo) / (hi - lo), 0, 1).astype("float32")
+
+
+def aggregates(values: np.ndarray, year: int) -> dict[str, tuple[np.ndarray, dict]]:
+    """Per-cell (lat, lon) statistics over the whole years in `values` (time, lat, lon), mm/day.
+
+    Each array carries `display_range` (the colour scale the browser uses as is) and `period`.
+    Annual means are plain means of the 12 months (not weighted by month length).
+    """
+    years = values.shape[0] // 12
+    by_year = values[: years * 12].reshape(years, 12, *values.shape[1:])
+    period = f"{year}–{year + years - 1}"
+
+    annual = by_year.mean(axis=1).reshape(years, -1)
+    trend = (np.polyfit(np.arange(years), annual, 1)[0] * 10).reshape(values.shape[1:]).astype("float32")
+    r = float(np.percentile(np.abs(trend), 98))  # symmetric, so zero sits in the middle of a diverging scale
+
+    wettest = by_year.max(axis=1).mean(axis=0).astype("float32")
+    return {
+        "pr_trend": (
+            trend,
+            {"units": "mm day-1 decade-1", "long_name": "Precipitation trend", "display_range": [-r, r], "period": period},
+        ),
+        "pr_wettest_month": (
+            wettest,
+            {
+                "units": "mm day-1",
+                "long_name": "Mean wettest month",
+                "display_range": [0.0, float(np.percentile(wettest, 99))],
+                "period": period,
+            },
+        ),
+    }
 
 
 def main() -> None:
@@ -120,6 +153,22 @@ def main() -> None:
         },
     )
     print(f"wrote {dest}: {variable} {values.shape}, {values.nbytes / 1e6:.0f} MB raw")
+
+    assert month == 1, "aggregates assume the series starts in January"
+    stats = aggregates(values, year)
+    dest = dest.parent / "aggregates.zarr"
+    xr.Dataset(
+        {name: (("lat", "lon"), data, attrs) for name, (data, attrs) in stats.items()},
+        coords={"lat": out["lat"], "lon": out["lon"]},
+        attrs=out.attrs,
+    ).to_zarr(
+        dest,
+        mode="w",
+        zarr_format=3,
+        consolidated=True,
+        encoding={name: {"compressors": gzip} for name in [*stats, "lat", "lon"]},
+    )
+    print(f"wrote {dest}: {', '.join(stats)} over {stats['pr_trend'][1]['period']}")
 
 
 if __name__ == "__main__":

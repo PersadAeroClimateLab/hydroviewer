@@ -1,5 +1,4 @@
-import type { Colormap } from '../state/shared.svelte';
-import { STOPS } from './colormaps';
+import { STOPS, type Palette } from './colormaps';
 
 // A small text chip at `place` in a viewport (default top left); follows the page theme.
 // Mirrored by the chips of the trame pages (trame/app.py).
@@ -13,21 +12,27 @@ export function createOverlay(parent: HTMLElement, place = 'left:8px;top:8px'): 
 }
 
 // Evenly spaced stops with linear blending, the same as colorAt and the shader's lookup table.
-export const gradient = (colormap: Colormap) => `linear-gradient(to right, ${STOPS[colormap].join(', ')})`;
+export const gradient = (colormap: Palette) => `linear-gradient(to right, ${STOPS[colormap].join(', ')})`;
 
-// Bottom-left colour bar, 0 to the colour scale max; hidden until the range is known.
-export function createColorbar(parent: HTMLElement, colormap: Colormap) {
+const format = (v: number) => String(Number(v.toPrecision(3)));
+
+// Bottom-left colour bar over the colour scale, units on top so the end ticks stay short (and a
+// middle zero tick centred); hidden until the range is known.
+export function createColorbar(parent: HTMLElement, colormap: Palette) {
   const chip = createOverlay(parent, 'left:8px;bottom:8px;font-size:12px;display:none');
   chip.innerHTML =
-    '<div style="width:160px;height:10px;margin-top:4px"></div>' +
-    '<div style="display:flex;justify-content:space-between"><span>0</span><span></span></div>';
-  const [bar, ticks] = chip.children as HTMLCollectionOf<HTMLElement>;
-  const setColormap = (c: Colormap) => (bar.style.background = gradient(c));
+    '<div></div><div style="width:160px;height:10px;margin-top:2px"></div>' +
+    '<div style="display:flex;justify-content:space-between;gap:12px"></div>';
+  const [unit, bar, ticks] = chip.children as HTMLCollectionOf<HTMLElement>;
+  const setColormap = (c: Palette) => (bar.style.background = gradient(c));
   setColormap(colormap);
   return {
     setColormap,
-    setRange(vmax: number, units: string) {
-      ticks.lastElementChild!.textContent = `${vmax.toFixed(1)} ${units}`;
+    // A range below zero is diverging and symmetric, so zero gets the middle tick.
+    setRange(vmin: number, vmax: number, units: string) {
+      const labels = [format(vmin), ...(vmin < 0 ? ['0'] : []), format(vmax)];
+      unit.textContent = units;
+      ticks.replaceChildren(...labels.map((textContent) => Object.assign(document.createElement('span'), { textContent })));
       chip.style.display = '';
     },
     remove: () => chip.remove(),

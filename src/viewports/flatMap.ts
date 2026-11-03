@@ -1,12 +1,15 @@
 import { LinearSRGBColorSpace, Mesh, OrthographicCamera, PlaneGeometry, Scene, WebGLRenderer } from 'three';
-import { loadMonth } from '../data/cmip6';
+import { loadField, type Source } from '../data/cmip6';
+import { DIVERGING } from './colormaps';
 import { createCoastlines, disposeCoastlines } from './coastlines';
 import { createFieldLayer } from './fieldLayer';
 import { createColorbar, createOverlay } from './overlay';
+import type { SharedState } from '../state/shared.svelte';
 import type { Viewport } from './types';
 
-// Flat equirectangular map of one month: a 2:1 plane under an orthographic camera.
-export const flatMap: Viewport = {
+// Flat equirectangular map of a field: a 2:1 plane under an orthographic camera. A field whose
+// colour scale goes below zero is drawn with the diverging palette, whatever the sidebar colormap.
+export const flatMap = (source: Source = 'month'): Viewport => ({
   name: 'Flat map',
   engine: 'three.js',
   mount(el, initial) {
@@ -44,18 +47,27 @@ export const flatMap: Viewport = {
 
     let alive = true;
     let coast: Awaited<ReturnType<typeof createCoastlines>> | undefined;
+    let diverging = false;
+    const palette = (c: SharedState['colormap']) => (diverging ? DIVERGING : c);
+    // White coastlines vanish in the light middle of the diverging palette.
+    const tint = () => coast?.material.color.set(diverging ? 0x333333 : 0xffffff);
     createCoastlines((lon, lat) => [lon / 180, lat / 180, 0.01]).then((lines) => {
       if (!alive) return disposeCoastlines(lines);
       coast = lines;
+      tint();
       scene.add(lines);
       render();
     });
-    loadMonth(0).then(
+    loadField(source).then(
       (f) => {
         if (!alive) return;
-        const vmax = layer.setField(f);
-        overlay.textContent = `pr · ${f.label}`;
-        colorbar.setRange(vmax, f.units);
+        const [vmin, vmax] = layer.setField(f);
+        diverging = vmin < 0;
+        tint();
+        layer.setColormap(palette(initial.colormap));
+        colorbar.setColormap(palette(initial.colormap));
+        overlay.textContent = f.label;
+        colorbar.setRange(vmin, vmax, f.units);
         mesh.visible = true;
         render();
       },
@@ -64,8 +76,8 @@ export const flatMap: Viewport = {
 
     return {
       update(state) {
-        layer.setColormap(state.colormap);
-        colorbar.setColormap(state.colormap);
+        layer.setColormap(palette(state.colormap));
+        colorbar.setColormap(palette(state.colormap));
         render();
       },
       destroy() {
@@ -82,4 +94,4 @@ export const flatMap: Viewport = {
       },
     };
   },
-};
+});

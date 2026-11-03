@@ -21,8 +21,8 @@ CSS = """
           background: color-mix(in srgb, Canvas 80%, transparent); }
   .note { top: 34px; }
   .colorbar { top: auto; bottom: 8px; font-size: 12px; }
-  .colorbar .bar { width: 160px; height: 10px; margin-top: 4px; }
-  .colorbar .ticks { display: flex; justify-content: space-between; }
+  .colorbar .bar { width: 160px; height: 10px; margin-top: 2px; }
+  .colorbar .ticks { display: flex; justify-content: space-between; gap: 12px; }
 """
 FILL = "position:absolute; inset:0; width:100%; height:100%"
 
@@ -39,10 +39,11 @@ for colormap in COLORMAPS:
             if relief:
                 html.Div("Elevation = uncertainty (dummy data)", classes="chip note")
             with html.Div(classes="chip colorbar"):
+                html.Div(field.units)
                 html.Div(classes="bar", style=f"background: linear-gradient(to right, {', '.join(STOPS[colormap])})")
                 with html.Div(classes="ticks"):
                     html.Span("0")
-                    html.Span(f"{field.vmax:.1f} {field.units}")
+                    html.Span(f"{field.vmax:.1f}")
 
 if __name__ == "__main__":
     # timeout=0: by default trame shuts itself down when no browser is connected for a while.

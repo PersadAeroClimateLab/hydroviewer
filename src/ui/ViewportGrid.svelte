@@ -6,12 +6,22 @@
   import { globe } from '../viewports/globe';
   import { needsTrame, placeholder } from '../viewports/placeholder';
   import { trameView } from '../viewports/trameFrame';
+  import type { Viewport } from '../viewports/types';
   import ViewportHost from './ViewportHost.svelte';
 
+  // One three.js viewport per kind and source, so a cell keeps it (stays mounted) when other cells change.
+  const made = new Map<string, Viewport>();
+  const once = (key: string, make: () => Viewport) => made.get(key) ?? made.set(key, make()).get(key)!;
+
   // 2D panels default to three.js and 3D panels to trame; trame panels show a notice while no server answers.
-  const resolve = ({ view, engine = view === 'flat' ? 'three.js' : 'trame' }: Panel, url: string | undefined) =>
+  const resolve = (
+    { view, engine = view === 'flat' ? 'three.js' : 'trame', data = 'month' }: Panel,
+    url: string | undefined,
+  ) =>
     engine === 'three.js'
-      ? { flat: flatMap, globe }[view]
+      ? view === 'flat'
+        ? once(`flat:${data}`, () => flatMap(data))
+        : globe
       : url
         ? trameView(view, url)
         : needsTrame(view === 'flat' ? 'Flat map' : 'Globe');
