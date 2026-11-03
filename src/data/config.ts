@@ -4,7 +4,8 @@
 export const dataBase: string =
   new URLSearchParams(location.search).get('data') ?? import.meta.env.VITE_DATA_URL ?? 'http://localhost:9000';
 
-// Base URL of the trame server, or undefined when trame is off (the default). Like the data URL,
-// `?trame=URL` overrides the build setting, e.g. http://trame:8080 from the browser tool container.
-export const trameBase: string | undefined =
-  new URLSearchParams(location.search).get('trame') || import.meta.env.VITE_TRAME_URL || undefined;
+// Where to look for a trame server at startup; the sidebar box (src/state/trame.svelte.ts) can change
+// it. `?trame=URL` is for one page load, e.g. http://trame:8080 from the browser tool container;
+// VITE_TRAME_URL is a build-time default. Both are undefined when trame is off (the default).
+export const trameFromUrl: string | undefined = new URLSearchParams(location.search).get('trame') || undefined;
+export const trameFromEnv: string | undefined = import.meta.env.VITE_TRAME_URL || undefined;
