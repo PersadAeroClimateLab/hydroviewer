@@ -9,7 +9,8 @@ export const layouts = [
 
 export type LayoutId = (typeof layouts)[number]['id'];
 
-export const ui = $state<{ layoutId: LayoutId; sidebarOpen: boolean }>({
+export const ui = $state<{ analysisId: string; layoutId: LayoutId; sidebarOpen: boolean }>({
+  analysisId: 'total',
   layoutId: '2x2',
   sidebarOpen: !matchMedia('(max-width: 720px)').matches,
 });

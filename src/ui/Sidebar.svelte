@@ -1,17 +1,33 @@
 <script lang="ts">
+  import { analyses } from '../state/analyses';
   import { layouts, ui } from '../state/layout.svelte';
   import { colormaps, shared } from '../state/shared.svelte';
   import { connect, trame } from '../state/trame.svelte';
 
   const messages = {
-    off: 'Off: cells C and D show placeholders.',
+    off: 'Off: views drawn by trame show a notice.',
     checking: 'Checking…',
-    ready: 'Connected: C and D use trame.',
+    ready: 'Connected: trame views are live.',
     unreachable: 'Not reachable (or blocked by the browser). Start the server, then Connect.',
   } as const;
 </script>
 
 <aside>
+  <section>
+    <h2>Analysis</h2>
+    <div class="segments stacked">
+      {#each analyses as analysis}
+        <button
+          data-analysis={analysis.id}
+          aria-pressed={ui.analysisId === analysis.id}
+          onclick={() => (ui.analysisId = analysis.id)}
+        >
+          {analysis.label}
+        </button>
+      {/each}
+    </div>
+  </section>
+
   <section>
     <h2>Layout</h2>
     <div class="segments">
@@ -76,6 +92,9 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 0.25rem;
+  }
+  .stacked {
+    grid-template-columns: 1fr; /* analysis labels are longer than layout labels */
   }
   button,
   select,

@@ -13,13 +13,13 @@ from trame.ui.html import DivLayout
 from trame.widgets import client, html
 from trame.widgets import vtk as vtk_widgets
 
-# Chips mirror src/viewports/overlay.ts: label top left, relief note top right, colour bar bottom left.
+# Chips mirror src/viewports/overlay.ts: label top left, relief note under it, colour bar bottom left.
 CSS = """
   html, body { margin: 0; height: 100%; background: transparent; color-scheme: light dark; }
   .chip { position: absolute; left: 8px; top: 8px; padding: 2px 8px; border-radius: 4px;
           font: 14px system-ui, sans-serif; color: CanvasText; pointer-events: none;
           background: color-mix(in srgb, Canvas 80%, transparent); }
-  .note { left: auto; right: 8px; }
+  .note { top: 34px; }
   .colorbar { top: auto; bottom: 8px; font-size: 12px; }
   .colorbar .bar { width: 160px; height: 10px; margin-top: 4px; }
   .colorbar .ticks { display: flex; justify-content: space-between; }
