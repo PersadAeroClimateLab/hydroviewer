@@ -20,7 +20,7 @@
     if (panel.view === 'chart') return once(`chart:${panel.data}`, () => chart(panel.data));
     const { view, engine = view === 'flat' ? 'three.js' : 'trame', data = 'month' } = panel;
     if (engine === 'three.js') return view === 'flat' ? once(`flat:${data}`, () => flatMap(data)) : globe;
-    return url ? trameView(view, url) : needsTrame(view === 'flat' ? 'Flat map' : 'Globe');
+    return url ? trameView(view, url, data) : needsTrame(view === 'flat' ? 'Flat map' : 'Globe');
   };
 
   const analysis = $derived(analyses.find((a) => a.id === ui.analysisId) ?? analyses[0]);

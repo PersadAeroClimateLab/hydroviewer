@@ -68,8 +68,9 @@ docker compose build web                          # after changing package.json 
 ## Trame
 
 `trame/` is a Python trame server (opt-in compose profile `trame`, port 8080) that rebuilds the flat map and
-globe as VTK scenes from the same Zarr store. 3D panels show them in iframes (`src/viewports/trameFrame.ts`);
-Total Precip. uses the globe; Engines uses both (C, D).
+globe as VTK scenes from the same Zarr stores (the month and the aggregate maps, `trame/data.py`). 3D panels show
+them in iframes (`src/viewports/trameFrame.ts`): the B globes of Total Precip., Trend and Extremes, and C and D of
+Engines.
 
 ```bash
 docker compose --profile trame up -d trame                  # restart it after editing trame/*.py
@@ -91,10 +92,13 @@ VITE_TRAME_URL=http://localhost:8080 docker compose up -d web   # turn the trame
 - **Local rendering only** (`VtkLocalView`): the server builds VTK scenes and the browser draws them with
   vtk.js, so the server needs no GPU or X11. Use `vtkGenericOpenGLRenderWindow`; the plain `vtkRenderWindow`
   segfaults in the container.
-- **State in the URL, picked by layout:** `index.html?ui=<view>-<colormap>` (e.g. `ui=flat-magma`); the app
-  registers one layout per combination. A colormap change in the sidebar reloads the iframe with
-  `location.replace`. There is no live sync. Adding options such as time needs a different mechanism
-  (client-side state from the URL), since layouts multiply.
+- **State in the URL, picked by layout:** `index.html?ui=<view>-<data>-<colormap>` (e.g. `ui=globe-pr-trend-magma`;
+  data ids as `Source` with `_` written `-`); the app builds one static layout per combination at startup (2 views ×
+  3 fields × 2 colormaps = 12, about 2.5 s). A colormap change in the sidebar reloads the iframe with
+  `location.replace`. There is no live sync. Static scenes are deliberate: trame shares `server.state` across
+  every page, and a plain server never sees the URL beyond `?ui=` (the client only sends its URL parameters
+  through the launcher). A time control would multiply layouts past this; that is when to move to the
+  launcher (a process per session, which receives the URL parameters).
 - **Shape is owned by the front end.** The browser-side camera ignores parallel projection and the
   horizontal view angle, and keeps a 30 degree view angle. So the pages assume a fixed shape (flat 2:1,
   globe 1:1) and `trameFrame.ts` letterboxes the iframe to it.
@@ -107,7 +111,8 @@ VITE_TRAME_URL=http://localhost:8080 docker compose up -d web   # turn the trame
   `--ignore '/paraview/'`.
 - `trame/scene.py` mirrors the three.js scenes (grid padding to exactly -180..180 / -90..90, per-pixel
   colormap lookup, unlit surfaces, coastlines). Colormap stops are shared in `src/assets/colormaps.json`.
-  The colour max is computed in Python for now, as in the browser.
+  For the month the colour max is computed in Python, as in the browser; aggregates use prep's `display_range`,
+  and a range below zero uses the diverging BrBG palette with dark coastlines, as in the browser.
 
 ## Data path
 
