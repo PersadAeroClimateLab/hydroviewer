@@ -1,7 +1,7 @@
 // What each analysis shows, per cell (area letter). A comes first in every analysis because the
 // one-cell layout shows only A. By default flat maps are 2D and drawn with three.js, and globes are 3D
 // and drawn by trame, which needs a connected server (see ViewportGrid.svelte). `engine` overrides that.
-// `data` (default: the first month) only applies to three.js flat maps so far. Charts are 2D and
+// `data` (default: the first month) applies to flat maps and trame views; the three.js globe shows the month. Charts are 2D and
 // drawn with Observable Plot.
 import type { SeriesSource, Source } from '../data/cmip6';
 
@@ -23,12 +23,20 @@ export const analyses: Analysis[] = [
   {
     id: 'trend',
     label: 'Trend',
-    cells: { a: { view: 'flat', data: 'pr_trend' }, c: { view: 'chart', data: 'pr_global_mean' } },
+    cells: {
+      a: { view: 'flat', data: 'pr_trend' },
+      b: { view: 'globe', data: 'pr_trend' },
+      c: { view: 'chart', data: 'pr_global_mean' },
+    },
   },
   {
     id: 'extremes',
     label: 'Extremes',
-    cells: { a: { view: 'flat', data: 'pr_wettest_month' }, c: { view: 'chart', data: 'pr_wettest_month_hist' } },
+    cells: {
+      a: { view: 'flat', data: 'pr_wettest_month' },
+      b: { view: 'globe', data: 'pr_wettest_month' },
+      c: { view: 'chart', data: 'pr_wettest_month_hist' },
+    },
   },
   // Kept on purpose: the same views from both engines side by side, for the rendering-library discussion.
   {

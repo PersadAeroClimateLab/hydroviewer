@@ -1,13 +1,15 @@
-"""trame server for the C and D viewports: the same month as the three.js flat map and globe.
+"""trame server for the 3D viewports: flat maps and globes of the fields the browser also shows.
 
-One layout per view and colormap, chosen by the page URL: /index.html?ui=flat-viridis
+One static layout per view, field and colormap, chosen by the page URL:
+/index.html?ui=globe-pr-trend-viridis (field ids as in data.SOURCES, "_" written as "-"). Static
+scenes keep the shared server state out of it, so several iframes and browsers can use one server.
 
 The pages assume a fixed shape, which the front end provides by sizing the iframe: 2:1 for the flat
 map and square for the globe.
 """
 
-from data import load_month
-from scene import COLORMAPS, STOPS, flat_map, globe
+from data import SOURCES, load
+from scene import COLORMAPS, DIVERGING, STOPS, flat_map, globe
 from trame.app import get_server
 from trame.ui.html import DivLayout
 from trame.widgets import client, html
@@ -27,23 +29,27 @@ CSS = """
 FILL = "position:absolute; inset:0; width:100%; height:100%"
 
 server = get_server(client_type="vue3")
-field = load_month(0)
-relief = bool(field.uncertainty.any())  # stores prepped before the relief have none
 
-for colormap in COLORMAPS:
-    for view, build in (("flat", flat_map), ("globe", globe)):
-        with DivLayout(server, template_name=f"{view}-{colormap}"):
-            client.Style(CSS)
-            vtk_widgets.VtkLocalView(build(field, colormap), style=FILL)
-            html.Div(f"pr · {field.label}", classes="chip")
-            if relief:
-                html.Div("Elevation = uncertainty (dummy data)", classes="chip note")
-            with html.Div(classes="chip colorbar"):
-                html.Div(field.units)
-                html.Div(classes="bar", style=f"background: linear-gradient(to right, {', '.join(STOPS[colormap])})")
-                with html.Div(classes="ticks"):
-                    html.Span("0")
-                    html.Span(f"{field.vmax:.1f}")
+for source in SOURCES:
+    field = load(source)
+    relief = bool(field.uncertainty.any())  # stores prepped before the relief have none
+    diverging = field.vmin < 0  # symmetric: zero gets the middle tick, as in the browser
+    ticks = [f"{field.vmin:.3g}", *(["0"] if diverging else []), f"{field.vmax:.3g}"]
+    for colormap in COLORMAPS:
+        palette = DIVERGING if diverging else colormap
+        for view, build in (("flat", flat_map), ("globe", globe)):
+            with DivLayout(server, template_name=f"{view}-{source.replace('_', '-')}-{colormap}"):
+                client.Style(CSS)
+                vtk_widgets.VtkLocalView(build(field, colormap), style=FILL)
+                html.Div(field.label, classes="chip")
+                if relief:
+                    html.Div("Elevation = uncertainty (dummy data)", classes="chip note")
+                with html.Div(classes="chip colorbar"):
+                    html.Div(field.units)
+                    html.Div(classes="bar", style=f"background: linear-gradient(to right, {', '.join(STOPS[palette])})")
+                    with html.Div(classes="ticks"):
+                        for tick in ticks:
+                            html.Span(tick)
 
 if __name__ == "__main__":
     # timeout=0: by default trame shuts itself down when no browser is connected for a while.

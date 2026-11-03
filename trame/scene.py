@@ -17,7 +17,8 @@ from vtkmodules.vtkRenderingOpenGL2 import vtkGenericOpenGLRenderWindow  # no X1
 
 ASSETS = Path("/assets")  # ./src/assets, mounted read-only
 STOPS: dict[str, list[str]] = json.loads((ASSETS / "colormaps.json").read_text())
-COLORMAPS = [c for c in STOPS if c != "BrBG"]  # the sidebar's choices; BrBG is for diverging 2D maps only
+DIVERGING = "BrBG"  # for fields whose colour scale goes below zero, whatever the colormap (as in the browser)
+COLORMAPS = [c for c in STOPS if c != DIVERGING]  # the sidebar's choices
 COASTLINES: list[list[float]] = json.loads((ASSETS / "coastlines.json").read_text())
 
 LUT_SIZE = 256
@@ -30,7 +31,7 @@ FLAT_RELIEF = RELIEF_SCALE * 90  # height of the flat map at full uncertainty, i
 AMBIENT = 0.45
 
 
-def lookup_table(colormap: str, vmax: float) -> vtkLookupTable:
+def lookup_table(colormap: str, vmin: float, vmax: float) -> vtkLookupTable:
     stops = np.array([[int(h[i : i + 2], 16) for i in (1, 3, 5)] for h in STOPS[colormap]], dtype=float)
     t = np.linspace(0, 1, LUT_SIZE) * (len(stops) - 1)
     lo = np.minimum(t.astype(int), len(stops) - 2)
@@ -39,7 +40,7 @@ def lookup_table(colormap: str, vmax: float) -> vtkLookupTable:
     lut.SetNumberOfTableValues(LUT_SIZE)
     for i, (r, g, b) in enumerate(colors / 255):
         lut.SetTableValue(i, r, g, b, 1.0)
-    lut.SetRange(0, vmax)
+    lut.SetRange(vmin, vmax)
     return lut
 
 
@@ -108,7 +109,7 @@ def coastlines(project) -> vtkPolyData:
     return out
 
 
-def actor(data: vtkPolyData, lut: vtkLookupTable | None = None, lit: bool = False) -> vtkActor:
+def actor(data: vtkPolyData, lut: vtkLookupTable | None = None, lit: bool = False, color=(1.0, 1.0, 1.0)) -> vtkActor:
     mapper = vtkPolyDataMapper()
     mapper.SetInputData(data)
     if lut:
@@ -130,7 +131,7 @@ def actor(data: vtkPolyData, lut: vtkLookupTable | None = None, lit: bool = Fals
         prop.SetAmbient(1.0)
         prop.SetDiffuse(0.0)
     if not lut:  # coastlines
-        prop.SetColor(1.0, 1.0, 1.0)
+        prop.SetColor(*color)
         prop.SetOpacity(0.75)
         prop.SetLineWidth(1.0)
     return a
@@ -147,6 +148,13 @@ def window(*actors: vtkActor, background=None) -> tuple[vtkGenericOpenGLRenderWi
     return win, renderer
 
 
+def colors(field: Field, colormap: str) -> tuple[vtkLookupTable, tuple[float, float, float]]:
+    """Lookup table and coastline colour: white coastlines vanish in the light middle of the diverging palette."""
+    diverging = field.vmin < 0
+    lut = lookup_table(DIVERGING if diverging else colormap, field.vmin, field.vmax)
+    return lut, (0.2, 0.2, 0.2) if diverging else (1.0, 1.0, 1.0)
+
+
 def flat_map(field: Field, colormap: str) -> vtkGenericOpenGLRenderWindow:
     lon, lat, v = pad(field, field.values)
     _, _, height = pad(field, field.uncertainty)
@@ -154,7 +162,8 @@ def flat_map(field: Field, colormap: str) -> vtkGenericOpenGLRenderWindow:
     xyz = np.dstack([lon_g, lat_g, FLAT_RELIEF * height])
     # Coastlines sit just above the relief.
     lines = coastlines(lambda lo, la: np.column_stack([lo, la, FLAT_RELIEF * sample(field.uncertainty, lo, la) + 1.0]))
-    win, renderer = window(actor(surface(xyz, v), lookup_table(colormap, field.vmax), lit=True), actor(lines))
+    lut, coast = colors(field, colormap)
+    win, renderer = window(actor(surface(xyz, v), lut, lit=True), actor(lines, color=coast))
     # The page is shown at 2:1 (the front end sizes the iframe), and the browser-side renderer
     # ignores parallel projection. A flat plane facing a perspective camera is just a uniform
     # scale, so fit the 180 degree height at the default 30 degree view angle.
@@ -178,9 +187,8 @@ def globe(field: Field, colormap: str) -> vtkGenericOpenGLRenderWindow:
     # The surface rises with uncertainty; coastlines sit just above it.
     lines = coastlines(lambda lo, la: unit_sphere(lo, la, 1.003 + RELIEF_SCALE * sample(field.uncertainty, lo, la)))
     relief = surface(unit_sphere(lon_g, lat_g, 1 + RELIEF_SCALE * height), v)
-    win, renderer = window(
-        actor(relief, lookup_table(colormap, field.vmax), lit=True), actor(lines), background=GLOBE_BACKGROUND
-    )
+    lut, coast = colors(field, colormap)
+    win, renderer = window(actor(relief, lut, lit=True), actor(lines, color=coast), background=GLOBE_BACKGROUND)
     camera = renderer.GetActiveCamera()
     # Shown in a square. The browser-side renderer keeps its default 30 degree view angle, so the
     # distance sets the fit: the highest possible peak just fits the frame, like the three.js globe.
