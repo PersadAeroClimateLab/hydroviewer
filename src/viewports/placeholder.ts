@@ -1,5 +1,17 @@
 import { STOPS } from './colormaps';
+import { createOverlay } from './overlay';
 import type { Viewport } from './types';
+
+// A trame panel while no trame server is connected: the app still works, without it.
+export const needsTrame = (name: string): Viewport => ({
+  name,
+  engine: 'trame (not connected)',
+  mount(el) {
+    const chip = createOverlay(el);
+    chip.textContent = 'This view needs a trame server: set one in the sidebar.';
+    return { update() {}, destroy: () => chip.remove() };
+  },
+});
 
 // Stand-in until real renderers exist: a colormap ramp that follows the shared state.
 export const placeholder: Viewport = {

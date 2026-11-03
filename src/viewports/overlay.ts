@@ -34,9 +34,10 @@ export function createColorbar(parent: HTMLElement, colormap: Colormap) {
   };
 }
 
-// Top-right note on viewports whose surface rises with uncertainty.
+// Note under the top-left chip on viewports whose surface rises with uncertainty; stacked, not
+// side by side, so the two fit in small square globe cells.
 export function createReliefNote(parent: HTMLElement): HTMLDivElement {
-  const chip = createOverlay(parent, 'right:8px;top:8px');
+  const chip = createOverlay(parent, 'left:8px;top:34px');
   chip.textContent = 'Elevation = uncertainty (dummy data)';
   return chip;
 }

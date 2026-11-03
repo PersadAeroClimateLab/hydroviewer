@@ -10,26 +10,30 @@ change.
 
 ## Project state
 
-Front-end shell only: a collapsible left sidebar (layout presets 1, 1×2, 2×2, 1+2; colormap) and a CSS
-grid of placeholder viewports driven by shared state. Desktop first; below 720px the sidebar starts
+Front-end shell only: a collapsible left sidebar (analysis, layout presets 1, 1×2, 2×2, 1+2; colormap; trame
+server) and a CSS grid of viewports driven by shared state. The **analysis** (`src/state/analyses.ts`, "Total Precip."
+and "Engines"; plan section 9, item 6) decides what each cell shows: by default 2D maps are three.js and 3D panels
+(globes) are trame; a cell's `engine` overrides that. trame cells show a "needs a trame server" notice without one; cells an analysis leaves empty are
+placeholders. Desktop first; below 720px the sidebar starts
 collapsed and cells stack in one column. Each cell header shows the viewport's name and rendering engine
-(`Viewport.name` / `Viewport.engine`). Layout and colormap are mirrored
-to the URL hash (`#layout=2x2&colormap=magma`; `src/state/hash.svelte.ts`), and unknown values are
-ignored. Cell A draws a flat map of one month (GFDL-CM4 historical precipitation, 1850-01) read with
-zarrita from the bucket emulator and rendered with three.js (`src/viewports/flatMap.ts`); cell B shows
-the same month on a rotatable, zoomable globe (`globe.ts`, OrbitControls) whose surface rises with a
+(`Viewport.name` / `Viewport.engine`). Analysis, layout and colormap are mirrored
+to the URL hash (`#analysis=total&layout=2x2&colormap=magma`; `src/state/hash.svelte.ts`), and unknown values are
+ignored. In Total Precip., cell A draws a flat map of one month (GFDL-CM4 historical precipitation, 1850-01) read with
+zarrita from the bucket emulator and rendered with three.js (`src/viewports/flatMap.ts`) and cell B is the
+trame globe. Engines keeps the earlier side-by-side comparison on purpose (A/B three.js, C/D trame), to support the
+rendering-library discussion; its three.js globe (`globe.ts`, OrbitControls) shows
+the same month on a rotatable, zoomable sphere whose surface rises with a
 **dummy uncertainty** field (see Data path; relief scale `RELIEF_SCALE` in `fieldLayer.ts`, mirrored in
 `trame/scene.py`) with simple headlight shading, coastlines lifted to match, on a light gray backdrop (`GLOBE_BACKGROUND` in
-`fieldLayer.ts`, mirrored in `trame/scene.py` because the trame page is opaque); the other cells are still
-placeholders unless a trame server is configured (see Trame below). Both share `fieldLayer.ts` (float texture, colormap lookup in the fragment shader, any
+`fieldLayer.ts`, mirrored in `trame/scene.py` because the trame page is opaque); Both share `fieldLayer.ts` (float texture, colormap lookup in the fragment shader, any
 geometry with equirectangular UVs) and redraw only on change. Both draw Natural Earth 110m coastlines
 (`src/viewports/coastlines.ts`, data from `src/assets/coastlines.json`, loaded lazily as its own
 chunk). Every map has theme-aware chips (`src/viewports/overlay.ts`, mirrored in `trame/app.py`): variable
 and month top left, a colour bar (0 to the colour max, CSS gradient of the same stops) bottom left, and
-"Elevation = uncertainty (dummy data)" top right on the views with relief (B, C, D) when the store has it.
+"Elevation = uncertainty (dummy data)" under the label on views with relief when the store has it.
 The colour scale max (99th percentile of the month) is still computed in the client; it
-belongs in prep once there is a time control. No time control, catalog.json, Observable Plot,
-trame viewport or Pages workflow yet. Remaining work is in the plan (section 9).
+belongs in prep once there is a time control. No time control (decided: not yet), catalog.json, Observable Plot
+or Pages workflow yet. Remaining work is in the plan (section 9).
 
 ## Stack (see the plan for detail)
 
@@ -60,7 +64,8 @@ docker compose build web                          # after changing package.json 
 ## Trame
 
 `trame/` is a Python trame server (opt-in compose profile `trame`, port 8080) that rebuilds the flat map and
-globe as VTK scenes from the same Zarr store. Cells C and D show them in iframes (`src/viewports/trameFrame.ts`).
+globe as VTK scenes from the same Zarr store. 3D panels show them in iframes (`src/viewports/trameFrame.ts`);
+Total Precip. uses the globe; Engines uses both (C, D).
 
 ```bash
 docker compose --profile trame up -d trame                  # restart it after editing trame/*.py
@@ -69,8 +74,8 @@ VITE_TRAME_URL=http://localhost:8080 docker compose up -d web   # turn the trame
 ```
 
 - **A sidebar box sets the server** (`src/state/trame.svelte.ts`). Enter `http://localhost:8080` (or
-  `localhost:8080`) and Connect: a no-cors fetch checks that something answers, and only then do C and D
-  become trame; otherwise (or while it is down) they stay placeholders and the status says "not reachable".
+  `localhost:8080`) and Connect: a no-cors fetch checks that something answers, and only then do 3D panels
+  use trame; otherwise (or while it is down) they show a notice and the status says "not reachable".
   What you type is saved in localStorage and reconnected on load. The startup value is `?trame=` (one page
   load, not saved) over a saved value over `VITE_TRAME_URL` (the build-time default; `.env` sets it for
   dev). Empty box means off. There is no automatic re-check: press Connect after starting the server.
@@ -89,9 +94,9 @@ VITE_TRAME_URL=http://localhost:8080 docker compose up -d web   # turn the trame
 - **Shape is owned by the front end.** The browser-side camera ignores parallel projection and the
   horizontal view angle, and keeps a 30 degree view angle. So the pages assume a fixed shape (flat 2:1,
   globe 1:1) and `trameFrame.ts` letterboxes the iframe to it.
-- **Flat map relief (C only):** the trame flat map also rises with the dummy uncertainty (`FLAT_RELIEF` in
+- **Flat map relief (trame only, Engines cell C):** the trame flat map also rises with the dummy uncertainty (`FLAT_RELIEF` in
   `trame/scene.py`, headlight-shaded, coastlines lifted); the three.js flat map (A) deliberately has none, so
-  A and C differ. Viewed top-down the relief shows as shading; drag in the viewport to tilt it.
+  the two flat maps differ. Viewed top-down the relief shows as shading; drag in the viewport to tilt it.
 - **Shared state:** one trame process shares `server.state` across every connected browser, so this is
   single-user. Multi-user needs the launcher or a container per session (see the plan).
 - `/paraview/` returning 405 in the browser tool report is the trame client probing; pass
@@ -163,7 +168,7 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
    headers (so no `SharedArrayBuffer`/COOP/COEP), no client-side router or SPA fallback, no large
    data files in the repo. Vite `base` must match the Pages path.
 2. **trame stays decoupled.** The app must build, run and deploy with trame completely absent.
-   - The trame viewport exists only when `VITE_TRAME_URL` is set.
+   - trame viewports are used only while a configured server answers; 3D panels show a notice otherwise.
    - It is an iframe. Do not import trame/VTK code into the main bundle, and do not add live
      two-way state sync with the iframe. Initial state goes in URL query params only.
 3. **Minimize client compute.** Do reductions, regridding, aggregation and rechunking in data prep,

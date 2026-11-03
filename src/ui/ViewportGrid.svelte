@@ -1,20 +1,25 @@
 <script lang="ts">
+  import { analyses, type Panel } from '../state/analyses';
   import { layouts, ui } from '../state/layout.svelte';
   import { trame } from '../state/trame.svelte';
   import { flatMap } from '../viewports/flatMap';
   import { globe } from '../viewports/globe';
-  import { placeholder } from '../viewports/placeholder';
+  import { needsTrame, placeholder } from '../viewports/placeholder';
   import { trameView } from '../viewports/trameFrame';
-  import type { Viewport } from '../viewports/types';
   import ViewportHost from './ViewportHost.svelte';
 
-  // Until cells can be assigned a viewport type, A and B are three.js (flat map, globe) and, while a
-  // trame server answers, C and D are the same two views rendered by trame.
-  const viewports: Record<string, Viewport> = $derived({
-    a: flatMap,
-    b: globe,
-    ...(trame.url && { c: trameView('flat', trame.url), d: trameView('globe', trame.url) }),
-  });
+  // 2D panels default to three.js and 3D panels to trame; trame panels show a notice while no server answers.
+  const resolve = ({ view, engine = view === 'flat' ? 'three.js' : 'trame' }: Panel, url: string | undefined) =>
+    engine === 'three.js'
+      ? { flat: flatMap, globe }[view]
+      : url
+        ? trameView(view, url)
+        : needsTrame(view === 'flat' ? 'Flat map' : 'Globe');
+
+  const analysis = $derived(analyses.find((a) => a.id === ui.analysisId) ?? analyses[0]);
+  const viewports = $derived(
+    Object.fromEntries(Object.entries(analysis.cells).map(([cell, panel]) => [cell, resolve(panel, trame.url)])),
+  );
 
   const layout = $derived(layouts.find((l) => l.id === ui.layoutId)!);
   const rows = $derived(layout.areas.map((row) => row.split(' ')));
