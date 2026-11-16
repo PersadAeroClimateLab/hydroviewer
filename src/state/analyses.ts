@@ -2,14 +2,16 @@
 // one-cell layout shows only A. By default flat maps are 2D and drawn with three.js, and globes are 3D
 // and drawn by trame, which needs a connected server (see ViewportGrid.svelte). `engine` overrides that.
 // `data` (default: the first month) applies to flat maps and trame views; the three.js globe shows the month. Charts are 2D and
-// drawn with Observable Plot.
+// drawn with Observable Plot. The contour boxplot is its own three.js view, flat or on a globe (an exception
+// to the 3D-uses-trame rule, so the two match).
 import type { SeriesSource, Source } from '../data/cmip6';
 
 export type Engine = 'three.js' | 'trame';
 
 export type Panel =
   | { view: 'flat' | 'globe'; engine?: Engine; data?: Source }
-  | { view: 'chart'; data: SeriesSource };
+  | { view: 'chart'; data: SeriesSource }
+  | { view: 'boxplot'; shape: 'flat' | 'globe' };
 
 export interface Analysis {
   id: string;
@@ -18,7 +20,17 @@ export interface Analysis {
 }
 
 export const analyses: Analysis[] = [
-  { id: 'total', label: 'Total Precip.', cells: { a: { view: 'flat' }, b: { view: 'globe' } } },
+  {
+    id: 'total',
+    label: 'Total Precip.',
+    cells: {
+      a: { view: 'flat' },
+      b: { view: 'globe' },
+      // How the summer rain band varies across years (prep: contour_boxplot()).
+      c: { view: 'boxplot', shape: 'flat' },
+      d: { view: 'boxplot', shape: 'globe' },
+    },
+  },
   // Statistics over the whole historical run, computed in prep (aggregates.zarr).
   {
     id: 'trend',

@@ -20,8 +20,10 @@ collapsed and cells stack in one column. Each cell header shows the viewport's n
 (`Viewport.name` / `Viewport.engine`). Analysis, layout and colormap are mirrored
 to the URL hash (`#analysis=total&layout=2x2&colormap=magma`; `src/state/hash.svelte.ts`), and unknown values are
 ignored. In Total Precip., cell A draws a flat map of one month (GFDL-CM4 historical precipitation, 1850-01) read with
-zarrita from the bucket emulator and rendered with three.js (`src/viewports/flatMap.ts`) and cell B is the
-trame globe. Engines keeps the earlier side-by-side comparison on purpose (A/B three.js, C/D trame), to support the
+zarrita from the bucket emulator and rendered with three.js (`src/viewports/flatMap.ts`), cell B is the
+trame globe, and C/D are a **contour boxplot** (Whitaker et al. 2013) of where June–August mean precipitation exceeds
+5 mm/day, one member per year, 30°S–30°N (`src/viewports/boxplotMap.ts`: bands, median, mean and outlier contours drawn in
+shaders, own colours, ignores the sidebar colormap; C flat, D on a three.js globe, an exception to the 3D-uses-trame rule). Engines keeps the earlier side-by-side comparison on purpose (A/B three.js, C/D trame), to support the
 rendering-library discussion; its three.js globe (`globe.ts`, OrbitControls) shows
 the same month on a rotatable, zoomable sphere whose surface rises with a
 **dummy uncertainty** field (see Data path; relief scale `RELIEF_SCALE` in `fieldLayer.ts`, mirrored in
@@ -135,8 +137,10 @@ VITE_TRAME_URL=http://localhost:8080 docker compose up -d web   # turn the trame
   (the whole 1850–2014 historical run; about 25 s, 351 MB output).
   `aggregates.zarr` holds statistics over whole years: maps (lat, lon: `pr_trend`, `pr_wettest_month`) with
   `display_range`, and 1D series over their own coordinate (`pr_global_mean` and `pr_wettest_month_global` over `year`,
-  cos(lat)-weighted; `pr_trend_zonal` over `lat`; `pr_wettest_month_hist` over `bin`, % of area per 1 mm/day bin, `bin_width` on the coordinate). All carry
-  `units`, `long_name` and `period`. Rebuild the prep image after editing `prep/*.py` (the script is copied in).
+  cos(lat)-weighted; `pr_trend_zonal` over `lat`; `pr_wettest_month_hist` over `bin`, % of area per 1 mm/day bin, `bin_width` on the coordinate), and the contour
+  boxplot from `contour_boxplot()` (`pr_jja_band` nested band levels, `pr_jja_mean_fraction`, `pr_jja_median`,
+  `pr_jja_outliers` over `outlier` years, series `pr_jja_depth` (not shown yet); `threshold`, `lat_range`, `epsilon`, `median_year` in
+  the attributes; see plan section 9, item 6). All carry `units`, `long_name` and `period`. Rebuild the prep image after editing `prep/*.py` (the script is copied in).
 - **Bucket emulator:** the `data` service is nginx serving `./data` with S3-style headers (any-origin
   CORS incl. preflight, byte ranges, ETag, `Content-Range` exposed, no compression, 404 for missing
   keys). Config: `tools/bucket/default.conf`. Plain S3 API features (listing, signed URLs) are not

@@ -2,6 +2,7 @@
   import { analyses, type Panel } from '../state/analyses';
   import { layouts, ui } from '../state/layout.svelte';
   import { trame } from '../state/trame.svelte';
+  import { boxplotMap } from '../viewports/boxplotMap';
   import { chart } from '../viewports/chart';
   import { flatMap } from '../viewports/flatMap';
   import { globe } from '../viewports/globe';
@@ -18,6 +19,7 @@
   // server answers.
   const resolve = (panel: Panel, url: string | undefined): Viewport => {
     if (panel.view === 'chart') return once(`chart:${panel.data}`, () => chart(panel.data));
+    if (panel.view === 'boxplot') return once(`boxplot:${panel.shape}`, () => boxplotMap(panel.shape));
     const { view, engine = view === 'flat' ? 'three.js' : 'trame', data = 'month' } = panel;
     if (engine === 'three.js') return view === 'flat' ? once(`flat:${data}`, () => flatMap(data)) : globe;
     return url ? trameView(view, url, data) : needsTrame(view === 'flat' ? 'Flat map' : 'Globe');

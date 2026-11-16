@@ -108,6 +108,89 @@ def aggregates(values: np.ndarray, year: int, lat: np.ndarray) -> dict[str, tupl
     }
 
 
+SUMMER = slice(5, 8)  # June-August
+RAIN_BAND = 5.0  # mm/day: each summer's boxplot member is the region above this
+BOXPLOT_LAT = 30.0  # tropics only; poleward the storm tracks hover near the threshold and clutter the bands
+
+
+def contour_boxplot(values: np.ndarray, year: int, lat: np.ndarray) -> dict[str, tuple]:
+    """Contour boxplot (Whitaker et al. 2013) of the regions where June-August mean precipitation exceeds
+    RAIN_BAND, one member per year, within BOXPLOT_LAT of the equator.
+
+    Contour band depth with bands of two members and epsilon subsets: a member lies in the band of a pair if
+    it contains their intersection and lies inside their union, each up to a fraction epsilon of area
+    (weighted by cos(lat)). Epsilon is set so the mean depth is 1/6, the paper's rule. Depth-0 members are
+    outliers; the 50% band comes from the deepest half, the 100% band from all but the outliers.
+    """
+    years = values.shape[0] // 12
+    summer = values[: years * 12].reshape(years, 12, *values.shape[1:])[:, SUMMER].mean(axis=1)
+    rows = np.abs(lat) <= BOXPLOT_LAT
+    sets = (summer[:, rows] > RAIN_BAND).reshape(years, -1).astype("float32")
+    w = np.repeat(np.cos(np.radians(lat[rows])), values.shape[2]).astype("float32")
+
+    # Every intersection and union size follows from weighted dot products of the 0/1 masks.
+    size = sets @ w
+    pair = (sets * w) @ sets.T  # |a ∩ b|
+    triple = np.stack([(sets * w * s) @ sets.T for s in sets])  # |a ∩ b ∩ k|
+    a, b = np.triu_indices(years, 1)
+    inter, t = pair[a, b][:, None], triple[a, b]
+    misfit = np.maximum(
+        np.where(inter > 0, (inter - t) / np.maximum(inter, 1e-9), 0),  # intersection outside k
+        (size - (pair[:, a].T + pair[:, b].T - t)) / np.maximum(size, 1e-9),  # k outside the union
+    )
+    own = (np.arange(years) == a[:, None]) | (np.arange(years) == b[:, None])  # pairs containing k
+    eps = float(np.quantile(misfit[~own], 1 / 6))
+    depth = np.where(own, False, misfit <= eps).sum(axis=0) / (len(a) - (years - 1))
+
+    order = np.argsort(-depth, kind="stable")
+    outliers = np.sort(np.flatnonzero(depth == 0))
+    regions = summer > RAIN_BAND
+    half, kept = regions[order[: (years + 1) // 2]], regions[depth > 0]
+    # Nested regions, so one level per cell: 1 or 3 is the 100% band, 2 the 50% band, 4 inside every kept member.
+    level = kept.any(0).astype("float32") + half.any(0) + half.all(0) + kept.all(0)
+    level[~rows] = 0
+
+    f32 = lambda a: np.asarray(a, dtype="float32")  # noqa: E731
+    period = f"{year}–{year + years - 1}"
+    common = {"threshold": RAIN_BAND, "season": "JJA", "lat_range": [-BOXPLOT_LAT, BOXPLOT_LAT], "period": period}
+    return {
+        "pr_jja_band": (
+            ("lat", "lon"),
+            level,
+            common
+            | {
+                "units": "1",
+                "long_name": f"June–August pr > {RAIN_BAND:g} mm/day",
+                "flag_values": [0, 1, 2, 3, 4],
+                "flag_meanings": "outside band_100_outer band_50 band_100_inner inside",
+                "epsilon": eps,
+                "median_year": year + int(order[0]),
+            },
+        ),
+        "pr_jja_mean_fraction": (
+            ("lat", "lon"),
+            f32(regions.mean(axis=0)),
+            common | {"units": "1", "long_name": "Fraction of summers above the threshold (mean contour at 0.5)"},
+        ),
+        "pr_jja_median": (
+            ("lat", "lon"),
+            f32(summer[order[0]]),
+            common | {"units": "mm day-1", "long_name": f"June–August precipitation, median summer {year + int(order[0])}"},
+        ),
+        "pr_jja_outliers": (
+            ("outlier", "lat", "lon"),
+            f32(summer[outliers]),
+            common | {"units": "mm day-1", "long_name": "June–August precipitation, outlier summers"},
+        ),
+        "pr_jja_depth": (
+            ("year",),
+            f32(100 * depth),
+            common | {"units": "% of pairs", "long_name": f"Band depth of June–August > {RAIN_BAND:g} mm/day"},
+        ),
+        "outlier": (("outlier",), (year + outliers).astype("int32"), {"long_name": "outlier year"}),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("path", help="CMIP6/<activity>/.../<variable>/<grid>/<version>")
@@ -185,7 +268,7 @@ def main() -> None:
     print(f"wrote {dest}: {variable} {values.shape}, {values.nbytes / 1e6:.0f} MB raw")
 
     assert month == 1, "aggregates assume the series starts in January"
-    stats = aggregates(values, year, lat)
+    stats = aggregates(values, year, lat) | contour_boxplot(values, year, lat)
     dest = dest.parent / "aggregates.zarr"
     xr.Dataset(stats, coords={"lat": out["lat"], "lon": out["lon"]}, attrs=out.attrs).to_zarr(
         dest,
