@@ -26,7 +26,10 @@ const openStore = async (name: string) => {
   return zarr.open.v3(store, { kind: 'group' });
 };
 
-const opened = (async () => {
+// Opened on first use, so importing this module fetches nothing.
+let opening: ReturnType<typeof openMap> | undefined;
+const opened = () => (opening ??= openMap());
+const openMap = async () => {
   const root = await openStore('map.zarr');
   const [pr, time] = await Promise.all([
     zarr.open.v3(root.resolve('pr'), { kind: 'array' }),
@@ -34,13 +37,13 @@ const opened = (async () => {
   ]);
   const [year, month] = String(time.attrs.units).match(/since (\d{4})-(\d{2})/)!.slice(1).map(Number);
   return { root, pr, year, month };
-})();
+};
 
 let uncertainty: Promise<Grid> | undefined;
 
 // A synthetic 0..1 uncertainty field (see prep/prep_cmip6.py), used for globe relief.
 export function loadUncertainty(): Promise<Grid> {
-  uncertainty ??= opened.then(async ({ root }) => {
+  uncertainty ??= opened().then(async ({ root }) => {
     const array = await zarr.open.v3(root.resolve('uncertainty'), { kind: 'array' });
     const grid = await zarr.get(array);
     return { values: grid.data as Float32Array, height: array.shape[0], width: array.shape[1] };
@@ -54,7 +57,7 @@ const months = new Map<number, Promise<Field>>();
 export function loadMonth(index: number): Promise<Field> {
   let field = months.get(index);
   if (!field) {
-    field = opened.then(async ({ pr, year, month }) => {
+    field = opened().then(async ({ pr, year, month }) => {
       const slab = await zarr.get(pr, [index, null, null]);
       const at = year * 12 + (month - 1) + index;
       return {

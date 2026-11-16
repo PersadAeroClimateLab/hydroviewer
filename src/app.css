@@ -6,6 +6,8 @@
   --muted: #5b6470;
   --accent: #2563eb;
   --on-accent: #ffffff;
+  --stage-inner: #eef1f4; /* behind the globe */
+  --stage-outer: #b9c1cb;
   color-scheme: light dark;
 }
 
@@ -18,6 +20,8 @@
     --muted: #9aa4af;
     --accent: #6ea8fe;
     --on-accent: #0b1220;
+    --stage-inner: #2b323b;
+    --stage-outer: #0c0e11;
   }
 }
 

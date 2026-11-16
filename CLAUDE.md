@@ -10,7 +10,13 @@ change.
 
 ## Project state
 
-Front-end shell only: a collapsible left sidebar (analysis, layout presets 1, 1×2, 2×2, 1+2; colormap; trame
+**Front-end overhaul in progress (branch `frontend-overhaul`, plan section 9, item 7).** `App.svelte` is now a
+full-screen three.js globe (`src/viewports/stageGlobe.ts`) with floating panels (title, colormap, colour bar, month
+slider, collapsible Observable Plot chart), on **mock data** (`src/data/mock.ts`, no bucket needed). The user-facing
+front end is three.js plus Observable Plot only; trame is a development tool. Everything below describes the
+previous grid shell, which is **unwired but kept** (not imported by `App.svelte`, still type-checked) for later re-use:
+
+Previous shell: a collapsible left sidebar (analysis, layout presets 1, 1×2, 2×2, 1+2; colormap; trame
 server) and a CSS grid of viewports driven by shared state. The **analysis** (`src/state/analyses.ts`: "Total Precip.",
 "Trend", "Extremes", "Engines"; plan section 9, item 6) decides what each cell shows: by default 2D maps are three.js and 3D panels
 (globes) are trame; a cell's `engine` overrides that; charts are Observable Plot (`src/viewports/chart.ts`, Plot loaded
@@ -77,6 +83,8 @@ docker compose build web                          # after changing package.json 
   Publish both 5173 and 9000: the page in your browser fetches data from `http://localhost:9000`.
 
 ## Trame
+
+**Development tool only:** the front end no longer embeds trame (the iframe viewport and sidebar box are unwired).
 
 `trame/` is a Python trame server (opt-in compose profile `trame`, port 8080) that rebuilds the flat map and
 globe as VTK scenes from the same Zarr stores (the month and the aggregate maps, `trame/data.py`). 3D panels show

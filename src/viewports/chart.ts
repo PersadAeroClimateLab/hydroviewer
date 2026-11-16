@@ -1,4 +1,4 @@
-import { loadSeries, type SeriesSource } from '../data/cmip6';
+import { loadSeries, type Series, type SeriesSource } from '../data/cmip6';
 import { STOPS } from './colormaps';
 import { createOverlay } from './overlay';
 import type { Viewport } from './types';
@@ -14,8 +14,12 @@ const CHARTS: Record<SeriesSource, { name: string; kind: 'fit' | 'profile' | 'ba
 
 // A 2D chart of a series from prep, drawn with Observable Plot. Plot (with d3) is loaded lazily, as
 // its own chunk, so analyses without charts don't pay for it. Redrawn as SVG on resize and colormap change.
-export const chart = (source: SeriesSource): Viewport => ({
-  name: CHARTS[source].name,
+export const chart = (source: SeriesSource): Viewport =>
+  seriesChart(CHARTS[source].name, CHARTS[source].kind, () => loadSeries(source));
+
+// The same chart for any series, e.g. mock data.
+export const seriesChart = (name: string, kind: 'fit' | 'profile' | 'bars', load: () => Promise<Series>): Viewport => ({
+  name,
   engine: 'Observable Plot',
   mount(el, initial) {
     const overlay = createOverlay(el);
@@ -26,12 +30,11 @@ export const chart = (source: SeriesSource): Viewport => ({
     const observer = new ResizeObserver(() => draw());
 
     let alive = true;
-    Promise.all([import('@observablehq/plot'), loadSeries(source)]).then(
+    Promise.all([import('@observablehq/plot'), load()]).then(
       ([Plot, s]) => {
         if (!alive) return;
         overlay.textContent = `${s.label} · ${s.units}`; // y units here: Plot puts its y label under the chip
         const rows = s.x.map((x, i) => ({ x, y: s.y[i] }));
-        const { kind } = CHARTS[source];
         const width = s.binWidth ?? 0;
         draw = () => {
           if (!el.clientWidth || !el.clientHeight) return;
