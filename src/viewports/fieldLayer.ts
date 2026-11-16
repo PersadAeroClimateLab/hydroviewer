@@ -62,6 +62,17 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
+// A grid as a float texture, filtered linearly where the GPU allows it.
+export function gridTexture(renderer: WebGLRenderer, grid: Grid): DataTexture {
+  const texture = new DataTexture(grid.values, grid.width, grid.height, RedFormat, FloatType);
+  texture.minFilter = texture.magFilter = renderer.extensions.has('OES_texture_float_linear')
+    ? LinearFilter
+    : NearestFilter;
+  texture.wrapS = RepeatWrapping; // longitude is periodic, so filter across the antimeridian
+  texture.needsUpdate = true;
+  return texture;
+}
+
 // A gridded field coloured on the GPU, for any geometry with equirectangular UVs (u: west to
 // east, v: south to north). The field stays a float texture; the colormap is a lookup texture.
 // Pass `relief` for a sphere that rises with a second grid (see setRelief).
@@ -85,13 +96,8 @@ export function createFieldLayer(renderer: WebGLRenderer, colormap: Palette, rel
   });
   const textures: DataTexture[] = [];
 
-  const gridTexture = (grid: Grid) => {
-    const texture = new DataTexture(grid.values, grid.width, grid.height, RedFormat, FloatType);
-    texture.minFilter = texture.magFilter = renderer.extensions.has('OES_texture_float_linear')
-      ? LinearFilter
-      : NearestFilter;
-    texture.wrapS = RepeatWrapping; // longitude is periodic, so filter across the antimeridian
-    texture.needsUpdate = true;
+  const upload = (grid: Grid) => {
+    const texture = gridTexture(renderer, grid);
     textures.push(texture);
     return texture;
   };
@@ -111,14 +117,14 @@ export function createFieldLayer(renderer: WebGLRenderer, colormap: Palette, rel
     // percentile, since precipitation has a long tail.
     setField(f: Field): [number, number] {
       const [vmin, vmax] = f.range ?? [0, [...f.values].sort((a, b) => a - b)[Math.floor(0.99 * f.values.length)]];
-      material.uniforms.field.value = gridTexture(f);
+      material.uniforms.field.value = upload(f);
       material.uniforms.vmin.value = vmin;
       material.uniforms.vmax.value = vmax;
       return [vmin, vmax];
     },
     // Heights in 0..1, on the same kind of grid as the field.
     setRelief(grid: Grid) {
-      material.uniforms.relief.value = gridTexture(grid);
+      material.uniforms.relief.value = upload(grid);
     },
     dispose() {
       textures.forEach((t) => t.dispose());
