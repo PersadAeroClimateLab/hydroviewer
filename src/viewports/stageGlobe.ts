@@ -33,6 +33,7 @@ import type { Viewport } from './types';
 const FOV = 30;
 const FILL = 0.78; // share of the shorter side the globe spans at the start
 const START = { lon: 15, lat: 12 }; // what faces the camera first
+const SPIN = (2 * Math.PI) / 90_000; // radians per millisecond when it spins on its own: a turn in 90 s
 
 const AMBIENT = 0.5; // share of the colour kept on surfaces facing away from the light
 // Light from the upper left of the camera, the usual hillshade direction: slopes read as light and shadow,
@@ -168,7 +169,8 @@ const toXyz = (lon: number, lat: number, r: number): [number, number, number] =>
 // Drag to rotate (the point grabbed stays under the pointer, a flick coasts to a stop), scroll or pinch to zoom.
 // `metrics()` gives the shown node's metrics, whose loaders give the fields for a year (memoized by the caller);
 // they are read again when `node` in the shared state changes. Draws only while
-// something changes: a frame per input event, and frames while a flick or a zoom damps out.
+// something changes: a frame per input event, frames while a flick or a zoom damps out, and every frame while it
+// spins on its own (`spin` in the shared state: eastward, paused while grabbed, after a flick has coasted out).
 export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
   mount(el, initial) {
     const renderer = new WebGLRenderer({ alpha: true, antialias: true });
@@ -244,17 +246,22 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
     };
 
     let frame = 0;
-    let last = 0; // time of the previous frame, for the flick
+    let last = 0; // time of the previous frame, for the flick and the spin
     let spin = [0, 0]; // yaw and pitch per millisecond after a flick
+    let spinning = initial.spin; // turning on its own
     const draw = (now: number) => {
       frame = 0;
       controls.update(); // fires 'change' (and so another frame) while the zoom damps
+      const dt = Math.min(now - last, 50);
       if (!grab && (spin[0] || spin[1])) {
-        const dt = Math.min(now - last, 50);
         [yaw, pitch] = [yaw + spin[0] * dt, MathUtils.clamp(pitch + spin[1] * dt, -Math.PI / 2, Math.PI / 2)];
         turn();
         const decay = Math.exp(-dt / 250);
         spin = spin.map((v) => (Math.abs(v * decay) < 1e-6 ? 0 : v * decay));
+        redraw();
+      } else if (!grab && spinning) {
+        yaw += SPIN * dt; // the surface moves eastward, as the Earth turns
+        turn();
         redraw();
       }
       if (shown[0] !== inset[0] || shown[1] !== inset[1]) {
@@ -441,6 +448,11 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
         }
         thresholds = state.thresholds;
         setThreshold();
+        if (state.spin !== spinning) {
+          spinning = state.spin;
+          last = performance.now(); // no jump from the time it stood still
+          redraw();
+        }
         if (state.stippleSize !== material.uniforms.stippleSpacing.value) {
           material.uniforms.stippleSpacing.value = state.stippleSize;
           redraw();
