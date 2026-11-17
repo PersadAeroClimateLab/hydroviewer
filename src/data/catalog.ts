@@ -58,6 +58,33 @@ async function openStore(path: string) {
   return { open, years };
 }
 
+// The series store's arrays (every member's or ensemble mean's global mean, rows in catalog order), read whole
+// once per metric: one small chunk each.
+const rows = new Map<string, Promise<{ data: Float32Array; width: number }>>();
+function seriesRows(catalog: Catalog, name: string) {
+  let read = rows.get(name);
+  if (!read) {
+    read = opened(catalog.series)
+      .then(({ open }) => open(name))
+      .then(async (array) => ({ data: (await zarr.get(array)).data as Float32Array, width: array.shape[1] }));
+    rows.set(name, read);
+  }
+  return read;
+}
+
+// A node's plume for a metric: its ensemble's members (an ensemble or a member), or the scenario's models'
+// ensemble means (the multi-model mean), keyed by member or model.
+async function plume(catalog: Catalog, node: Node, metric: string): Promise<{ key: string; y: number[] }[]> {
+  const row = ({ data, width }: { data: Float32Array; width: number }, i: number) => Array.from(data.subarray(i * width, (i + 1) * width));
+  if (!node.model) {
+    const all = await seriesRows(catalog, `${metric}_ensemble_global_mean`);
+    return catalog.runs.flatMap((r, i) => (r.scenario === node.scenario ? [{ key: r.model, y: row(all, i) }] : []));
+  }
+  const run = catalog.runs.find((r) => r.scenario === node.scenario && r.model === node.model)!;
+  const all = await seriesRows(catalog, `${metric}_global_mean`);
+  return run.members.map((member, i) => ({ key: member, y: row(all, run.series + i) }));
+}
+
 // A field per year, keeping only the latest request per array: the globe and the PNG export share it.
 function grids(array: zarr.Array<zarr.DataType, zarr.Readable>, years: number[]) {
   const attrs = array.attrs as Attrs;
@@ -117,12 +144,13 @@ export async function openNode(catalog: Catalog, node: Node): Promise<{ dataset:
         range: attrs.display_range,
         load: grids(array, fields.years),
         series: () =>
-          (series ??= zarr.get(mean).then(({ data }) => ({
+          (series ??= Promise.all([zarr.get(mean), plume(catalog, node, id)]).then(([{ data }, lines]) => ({
             x: fields.years,
             y: Array.from(data as Float32Array),
             label: (mean.attrs as Attrs).long_name,
             units: attrs.units,
             xLabel: 'year',
+            plume: lines,
           }))),
         statistics: arrays.map((s, i): Statistic => {
           const a = s.attrs as Attrs;

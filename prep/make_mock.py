@@ -50,7 +50,7 @@ SCENARIOS = [("ssp126", "SSP1-2.6", 0.45), ("ssp245", "SSP2-4.5", 1.0), ("ssp370
 # range of the spread (its stipple threshold is half). ETCCDI indices by their short names.
 TOTALS, EXTREMES, DAYS, SPELLS = "Totals and intensity", "Extremes", "Heavy-precipitation days", "Spells"
 METRICS = [
-    ("pr", "Mean precipitation", TOTALS, "mm/day", [0, 14], 1.6),
+    ("pr", "Precipitation", TOTALS, "mm/day", [0, 14], 1.6),  # the annual mean
     ("prcptot", "Wet-day total (PRCPTOT)", TOTALS, "mm", [0, 5000], 600),
     ("sdii", "Wet-day intensity (SDII)", TOTALS, "mm/day", [0, 25], 2.4),
     ("rx1day", "Wettest day (Rx1day)", EXTREMES, "mm", [0, 70], 8),
@@ -91,7 +91,9 @@ def fields(model: str, member: str, forcing: float) -> dict[str, np.ndarray]:
     plausible shapes, not from daily data: the share of wet days (>= 1 mm) rises with the mean, wet-day amounts are
     taken as exponential with mean SDII (so R10mm and R20mm are tails of it), extremes intensify with warming faster
     than the mean, and dry spells are long where it rains little. A model shifts the band and storm tracks, scales
-    the wetness and the warming; a member has its own phases of the year-to-year wobble.
+    the wetness and the warming; a member has its own phases of the year-to-year wobble, and its own wetter and
+    drier years everywhere at once (a few percent, as in real ensembles; the wobble alone cancels out in a global
+    mean, so members' global-mean lines would coincide).
     """
     m, p = rng(model).uniform(size=5), rng(model, member).uniform(0, 2 * np.pi, size=4)
     sensitivity, band_lat, track_lat, wet = 0.7 + 0.7 * m[0], 4 * m[1] - 2, 6 * m[2] - 3, 0.8 + 0.4 * m[3]
@@ -104,7 +106,8 @@ def fields(model: str, member: str, forcing: float) -> dict[str, np.ndarray]:
     track = 45 + track_lat + 1.5 * warm
     storms = 4 * (1 + 0.04 * warm) * np.exp(-(((np.abs(lat) - track) / 10) ** 2)) * (0.7 + 0.3 * np.cos(2 * lon * RAD + 3 * lat * RAD))
     ripple = 0.8 * np.sin(5 * lon * RAD + 3 * lat * RAD) * np.sin(7 * lat * RAD - 2 * lon * RAD + year * 0.5 + p[2])
-    pr = np.maximum(0, (0.4 + band + storms + ripple) * dry)
+    wetter = 1 + 0.02 * np.sin(year * 2.1 + p[3]) + 0.012 * np.sin(year * 0.53 + 2 * p[3])
+    pr = np.maximum(0, (0.4 + band + storms + ripple) * dry * wetter)
 
     wet_days = 0.04 + 0.6 * (1 - np.exp(-pr / 2.5))  # share of days with >= 1 mm
     prcptot = 365 * 0.95 * pr

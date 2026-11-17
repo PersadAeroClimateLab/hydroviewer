@@ -217,8 +217,12 @@ same reductions real prep will do. The analytic statistics go away.
    picks ends on the last, and the emulator log shows each node reads only its own store (a member's statistics
    from its ensemble's). Deferred until real data needs it: greying out metrics a node lacks, and a year range per
    node (the timeline keeps the first node's).
-5. **Plume on the timeline:** the node's members (or models) as faint lines and the aggregate in bold, hover to
-   identify (a Plot layer; drawing only).
+5. **Plume on the timeline** (built 2026-11-17): the node's members (or models) as faint lines and the aggregate in bold, hover to
+   identify (a Plot layer; drawing only). As built: the plume is part of a node's `Series` (one read per metric of
+   the series store, cached); the selected member is highlighted from `shared.selection` (so also without maps), the
+   hovered line is named with its value; both live in an overlay, so neither redraws the chart. The mock first had
+   members whose global means coincided (its year-to-year variability only moved the rain band), so members now
+   also have a few percent of wetter and drier years everywhere at once.
 6. **Docs:** CLAUDE.md, DEV_PLAN (data contract: catalog, node stores, series store).
 
 ## 10. Decisions (all made 2026-11-17)

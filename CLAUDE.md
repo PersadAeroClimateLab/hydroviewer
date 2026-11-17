@@ -74,7 +74,12 @@ done: greying out metrics a node lacks (every mock node has all four):
     light on dark) decided at its centre.
   The PNG export has neither (colour only).
 - **Timeline** (`timeline.ts`, bottom): the global mean 1950–2100 as a Plot line with a draggable year needle
-  (also a keyboard slider) and ◀ ▶ buttons stepping one year.
+  (also a keyboard slider) and ◀ ▶ buttons stepping one year, over the node's plume (`Series.plume`, faint lines:
+  its ensemble's members for an ensemble or member, the scenario's models' ensemble means for the multi-model mean;
+  read whole per metric from the series store `members.zarr`, `seriesRows()` in `catalog.ts`). The selected member
+  (`shared.selection.member`, also one without maps) is drawn in the accent colour, and the line nearest the pointer
+  (within 6 px at its year) in the text colour, named with its value top right; both are an SVG overlay redrawn on
+  its own (`mark()`), not the chart.
 - **Colormap** picker and **settings gear** (top right; its menu downloads the field as an
   equirectangular PNG, one pixel per cell, `exportPng.ts`, and imports colormaps), **colour bar** (bottom left, a
   canvas drawn from the same lookup table as the globe). The legend panel is draggable anywhere over the globe
