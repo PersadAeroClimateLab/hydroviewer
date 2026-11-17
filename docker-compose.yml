@@ -1,12 +1,13 @@
 services:
-  # Stand-in for the data bucket: serves ./data on http://localhost:9000 with S3-style headers.
+  # Stand-in for the data bucket: serves $DATA_DIR (default ./data) on http://localhost:9000 with S3-style
+  # headers. Switch data with DATA_DIR in .env, then `docker compose up -d data`.
   data:
     image: nginx:1.29-alpine
     ports:
       - "9000:9000"
     volumes:
       - ./tools/bucket:/etc/nginx/conf.d:ro
-      - ./data:/data:ro
+      - ${DATA_DIR:-./data}:/data:ro
 
   # Dev server with hot reload: http://localhost:5173
   web:
@@ -22,8 +23,6 @@ services:
     environment:
       # Set to true on Docker Desktop (Mac/Windows), where bind mounts deliver no file events.
       VITE_USE_POLLING: ${VITE_USE_POLLING:-false}
-      # Set to e.g. http://localhost:8080 to show the trame viewports in cells C and D.
-      VITE_TRAME_URL: ${VITE_TRAME_URL:-}
     volumes:
       - .:/app
 
@@ -46,7 +45,7 @@ services:
       - ./tools/browser/test:/opt/browser/test:ro
       - ./.shots:/out
 
-  # Converts source data into our bucket format, into ./data. Opt-in:
+  # Converts source data into our bucket format, into $DATA_DIR. Opt-in:
   #   docker compose --profile prep run --rm prep CMIP6/CMIP/NOAA-GFDL/GFDL-CM4/historical/r1i1p1f1/Amon/pr/gr1/v20180701
   prep:
     profiles: [prep]
@@ -59,23 +58,13 @@ services:
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     environment: [HTTP_PROXY, HTTPS_PROXY, NO_PROXY]
     volumes:
-      - ./data:/data
+      - ${DATA_DIR:-./data}:/data
 
-  # trame server: VTK scenes rendered in the browser by vtk.js. Opt-in:
-  #   docker compose --profile trame up -d trame     (http://localhost:8080)
-  trame:
-    profiles: [trame]
-    build:
-      context: trame
-      args:
-        HTTP_PROXY: ${HTTP_PROXY:-}
-        HTTPS_PROXY: ${HTTPS_PROXY:-}
-        NO_PROXY: ${NO_PROXY:-}
-    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
-    ports:
-      - "8080:8080"
-    environment:
-      DATA_URL: http://data:9000 # server-side fetches use the service name, so no CORS
+  # Writes the mock dataset (catalog.json and mock/annual.zarr) into $DATA_DIR. Mounts prep/, so edits to
+  # make_mock.py need no rebuild:  docker compose --profile prep run --rm mock
+  mock:
+    extends: prep
+    entrypoint: ["python", "make_mock.py"]
     volumes:
-      - ./trame:/app
-      - ./src/assets:/assets:ro
+      - ./prep:/prep:ro
+

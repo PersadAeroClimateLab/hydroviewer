@@ -1,7 +1,11 @@
 import { mount } from 'svelte';
 import './app.css';
 import App from './App.svelte';
-import { syncHash } from './state/hash.svelte';
+import { loadDataset } from './data/catalog';
+import { dataBase } from './data/config';
 
-syncHash();
-mount(App, { target: document.getElementById('app')! });
+const target = document.getElementById('app')!;
+loadDataset().then(
+  (props) => mount(App, { target, props }),
+  (e) => (target.textContent = `Could not load data from ${dataBase}: ${e instanceof Error ? e.message : e}`),
+);

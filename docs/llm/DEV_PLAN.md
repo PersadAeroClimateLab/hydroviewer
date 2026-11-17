@@ -1,70 +1,59 @@
 # hydroviewer — Development Plan
 
-Status: planning. No application code exists yet. This document records the stack decisions from the
-initial brainstorm, the constraints behind them, and the order in which to de-risk them.
-
-Scope of this plan: **stack, data contract, dev kit, and module boundaries only.** Page layouts and
-user-facing features are intentionally out of scope and will be planned separately.
+This document records the stack decisions, the constraints behind them, the data contract, and the
+order of work. CLAUDE.md summarizes the current state and the commands.
 
 ## 1. Goal
 
 A static web app for 2D and 3D visualization of climate data (CMIP6, MERRA, ERA5, and some
-observational datasets; precipitation is the initial focus). Viewports render visualizations in one
-of two modes:
-
-1. **Bespoke JS rendering** (three.js, Observable Plot) running entirely in the browser.
-2. **trame** (ParaView/VTK-based) for the visualization team, embedded as an optional viewport.
+observational datasets; precipitation is the initial focus), for students and researchers. Everything is
+rendered in the browser with JavaScript: three.js for maps and globes, Observable Plot for charts.
 
 ## 2. Hard constraints
 
 | Constraint | Consequence |
 |---|---|
 | Hosted on GitHub Pages | Static files only. No server-side code, no custom response headers (so no COOP/COEP, no `SharedArrayBuffer`), no SPA fallback routing, ~1 GB site limit. |
-| No compute server | Data is prepared offline and fetched from a bucket. Client-side compute is minimized; heavy lifting is done in prep or on the GPU. |
-| trame must be toggleable | trame is not deeply integrated. The web app must build, run and deploy with it fully absent. |
+| No compute or rendering server | Data is prepared offline and fetched from a bucket. Client-side compute is minimized; heavy lifting is done in prep or on the GPU. |
 | Docker for dev | Reproducible, portable dev server with auto-reload. |
-| Low complexity | Prefer one tool per job. Avoid frameworks, routers and state libraries until they are needed. |
+| Low complexity | One tool per job. Avoid frameworks, routers and state libraries until they are needed. |
 
 ## 3. Stack decisions
 
 | Layer | Choice | Status | Notes |
 |---|---|---|---|
-| Hosting | GitHub Pages via GitHub Actions (`upload-pages-artifact` + `deploy-pages`) | Decided | Vite `base` set to the repo path. No client-side router; view state lives in the URL hash. |
+| Hosting | GitHub Pages via GitHub Actions (`upload-pages-artifact` + `deploy-pages`) | Decided | Vite `base` set to the repo path. No client-side router. |
 | Build / dev server | Vite + TypeScript | Decided | HMR for dev, static `dist/` for Pages. |
 | Dev environment | Docker Compose, `node:22-alpine`, source bind-mounted | Decided | Vite runs with `--host 0.0.0.0`; `server.watch.usePolling` is needed on Docker Desktop (Mac/Windows). Port 5173. |
-| 3D rendering (non-trame) | three.js | Decided | Fields uploaded as textures, colormapped in a fragment shader (GPU, not CPU). A 2D map can reuse the same shader on a plane with an orthographic camera. |
-| 2D plots | Observable Plot + d3 utilities | Decided | Add uPlot only if a specific time-series view proves too slow. |
-| UI layer | Svelte 5 + Vite (plain Svelte, not SvelteKit) | Decided (in use) | Alternative considered: Lit. See section 5. |
-| Data format | Zarr v3, core codecs only (`bytes` + `gzip`) | Decided, verified in spike 1 | zarr-python writes it; v3 consolidated metadata works. |
-| Browser Zarr reader | zarrita.js 0.7.5 | Decided, verified in spike 1 | Reads v2/v3 over HTTP. It bundles WASM codecs (blosc, lz4, zstd) as lazy chunks that our gzip data never loads. |
-| trame integration | Option A: iframe to an external trame server | Decided | See section 7. |
+| Maps and globes | three.js | Decided | Fields uploaded as float textures, colormapped in a fragment shader (GPU, not CPU). |
+| Charts | Observable Plot (+ d3 utilities), lazy-loaded | Decided | Add uPlot only if a specific time-series view proves too slow. |
+| UI layer | Svelte 5 (plain Svelte, not SvelteKit) | Decided | Alternative considered: Lit. See section 5. |
+| Data format | Zarr v3, core codecs only (`bytes` + `gzip`) | Decided, verified | zarr-python writes it; v3 consolidated metadata works. |
+| Browser Zarr reader | zarrita.js 0.7.5 | Decided, verified | Reads v2/v3 over HTTP. Its WASM codecs (blosc, lz4, zstd) are lazy chunks our gzip data never loads. |
+| Bucket | Cloudflare R2, public, CORS | Planned, verified with a temporary bucket | Behaves like the emulator. |
+| trame / ParaView | **Removed** (2026-11-17) | Decided | Previously an optional iframe viewport backed by a Python VTK server, then a dev tool. Dropped to keep one renderer: no mirrored scenes, no server, no Python outside prep. Custom colormaps also need it gone (an iframe only takes initial state through its URL). Last version with it: merge `6506c10`, tag `grid-trame-archive`. |
 
 ## 4. Architecture
 
 ```
-GitHub Pages (static)                       Bucket (public, CORS)
-┌─────────────────────────────┐             ┌────────────────────────┐
-│ Svelte shell                │  zarrita    │ catalog.json           │
-│  ├─ shared state module     │────────────▶│ <dataset>/<var>.zarr   │
-│  ├─ viewport registry       │             │   map layout           │
-│  │    ├─ three.js viewport  │             │   series layout        │
-│  │    ├─ Plot viewport      │             │   aggregates           │
-│  │    └─ trame viewport ····│···┐         └───────────▲────────────┘
-└─────────────────────────────┘   │ iframe              │ xarray/zarr
-                                  ▼ (optional)          │
-                        ┌──────────────────────────┐    │
-                        │ trame server (external)  │────┘
-                        │ Python, own HTTPS origin │
-                        └──────────────────────────┘
+GitHub Pages (static)                    Bucket (R2; nginx emulator in dev)
+┌──────────────────────────────┐         ┌────────────────────────────┐
+│ Svelte shell (App.svelte)    │ zarrita │ catalog.json               │
+│  ├─ shared state module      │────────▶│ <key path>/map.zarr        │
+│  ├─ three.js viewports       │         │            aggregates.zarr │
+│  └─ Plot viewports           │         │ mock/annual.zarr           │
+└──────────────────────────────┘         └─────────────▲──────────────┘
+                                                       │ prep/ (Python, offline)
 ```
 
 ### Viewport module contract
 
-Renderers are plain TypeScript modules with no UI-framework imports. The UI framework only hosts them.
+Renderers are plain TypeScript modules with no UI-framework imports. The UI framework only hosts them
+(`ViewportHost.svelte`).
 
 ```ts
 interface Viewport {
-  mount(el: HTMLElement, ctx: ViewportContext): ViewportHandle;
+  mount(el: HTMLElement, state: SharedState): ViewportHandle;
 }
 interface ViewportHandle {
   update(state: SharedState): void;
@@ -72,49 +61,39 @@ interface ViewportHandle {
 }
 ```
 
-- A registry maps viewport type ids to modules. Adding a viewport type means adding one module and one registry entry.
-- The trame viewport is a module like any other: it mounts an `<iframe>`. It is used only while a trame server answers (URL from the sidebar box, `?trame=` or `VITE_TRAME_URL`). Without one, 3D panels show a "needs a trame server" notice and everything else works.
-- Shared state (selected dataset, variable, time, colormap and range) lives in a small module. Typed arrays must stay out of deep reactive state (use `$state.raw` or keep them outside reactivity).
-- State is mirrored to the URL hash so views are shareable. The trame viewport receives initial state through URL query params only. There is no live two-way sync with the iframe (that would be deep integration).
+- A viewport that changes shared state (e.g. the timeline's needle) takes a callback in its factory.
+- Shared state (now: colormap and year; later: dataset, variable, colour range) lives in a small module.
+  Typed arrays stay out of deep reactive state (`$state.raw` or outside reactivity).
+- Planned: mirror shared state to the URL hash so views are shareable (the removed grid shell did).
 
 ## 5. UI layer: Svelte vs Lit
 
-Svelte 5 is proposed. Reasons Lit was set aside:
-
-- Weaker HMR: `customElements.define` cannot be re-run, so edits often force a full reload, against the "iterative dev with auto-reload" goal.
-- No built-in cross-component state, and shared state is the core of this app.
-- Shadow DOM friction with global CSS, theming and popovers.
-- Thinner control ecosystem; less template type-checking; more boilerplate.
-
-Lit's real advantage (pluggable viewports as custom elements) is achieved instead by the module contract in section 4, which keeps the UI framework swappable. Lit remains the better choice only if viewports must later be embedded in other sites or frameworks.
-
-Svelte caveats: runes have a learning curve, and typed arrays must not go into deep `$state`.
-
-Start with plain CSS and no component library.
+Svelte 5 was chosen. Lit was set aside for weaker HMR (`customElements.define` cannot re-run), no built-in
+shared state, Shadow DOM friction with global CSS and theming, and more boilerplate. Lit's advantage
+(pluggable viewports) is covered by the module contract in section 4. Plain CSS, no component library.
+Svelte caveat: typed arrays must not go into deep `$state`.
 
 ## 6. Data contract
 
-Data is prepared offline (xarray, dask, regridding tools) and written to a public bucket. The web app and trame both read the same Zarr stores. No VTK files are stored; trame converts xarray to VTK/PyVista in Python.
+Data is prepared offline (xarray, dask, regridding tools) and written to a public bucket.
 
 ### Grid
 
 - Regular lat/lon, **1°**, cell-centered: 360 × 180.
 - Longitude **-180..180**, west to east; latitude south to north. Fixed for every dataset; prep wraps and asserts.
 - Regridding happens in prep, never in the client. **Not implemented yet:** the first slice (GFDL-CM4, 180 × 288) keeps its native grid, and the stored lat/lon arrays describe it.
-- Time is stored as integers counted from the first month (`units: "months since 1850-01-01"`), so the client needs no calendar code (the source uses a `noleap` calendar with hours since 1850).
+- Time is stored as integers counted from the first month (`units: "months since 1850-01-01"`), so the client needs no calendar code (the source uses a `noleap` calendar with hours since 1850). Annual stores (the mock) use a `year` coordinate of int32 calendar years instead.
 - Precipitation is stored in mm/day (source: kg m-2 s-1).
 
 ### Source data and key layout
 
 The public `cmip6-pds` bucket is a **source**, not something the app can read directly. Its stores are Zarr v2 with blosc/lz4 and chunks of `(600, nlat, nlon)`: for GFDL-CM4 `pr`, about 102 MB compressed per chunk, so one month would cost a 100 MB download. It also has a `1e20` fill value, a `noleap` calendar and CORS that exposes only `ETag`.
 
-Our bucket mirrors its key path: `CMIP6/<activity>/<institution>/<model>/<experiment>/<member>/<table>/<variable>/<grid>/<version>/`, with our stores inside the version directory (`map.zarr`, later `series.zarr`) and other datasets (ERA5, MERRA, observations) under their own top-level prefix. A root `catalog.json` (not written yet) is how the app discovers stores.
+Our bucket mirrors its key path: `CMIP6/<activity>/<institution>/<model>/<experiment>/<member>/<table>/<variable>/<grid>/<version>/`, with our stores inside the version directory (`map.zarr`, `aggregates.zarr`, later `series.zarr`) and other datasets (ERA5, MERRA, observations) under their own top-level prefix. A root `catalog.json` is how the app discovers stores (written so far only by the mock, see below).
 
 ### Dev bucket emulator
 
-The `data` compose service is nginx serving `./data` with S3-style read behaviour (config in `tools/bucket/default.conf`): `Access-Control-Allow-Origin: *`, preflight, `Range`, ETag, `Content-Range` exposed, no compression, 404 for missing keys. The real bucket's CORS must expose `Content-Range` and `Content-Length` too, which the public bucket does not. A real S3 server was rejected because listing and signed URLs are unused and the common images are not available here.
-
-`prep/` (Python in Docker, opt-in compose profile) writes into `./data`; see CLAUDE.md for commands. The page reaches the emulator at `http://localhost:9000` (override with `?data=` or `VITE_DATA_URL`).
+Each data directory is one bucket root. `$DATA_DIR` (in `.env`, default `./data`) picks the one the emulator serves and prep writes into; data lives outside the repo (decided 2026-11-17: in the sandbox, `/home/oxygen/Downloads/hydroviewer_data/{mock,cmip6}`, because home is snapshotted), and switching is `docker compose up -d data` after changing it. The `data` compose service is nginx serving `$DATA_DIR` with S3-style read behaviour (config in `tools/bucket/default.conf`): `Access-Control-Allow-Origin: *`, preflight, `Range`, ETag, `Content-Range` exposed, no compression, 404 for missing keys. Its access log shows which keys a page reads, i.e. what must be uploaded. Measured 2026-11-16 with the removed grid shell: 19 keys, 3.4 MB of the 352 MB store (all of `aggregates.zarr` plus one `map.zarr` chunk); a time control will need every `map.zarr` chunk.
 
 ### Sizes (float32, 1°)
 
@@ -130,87 +109,93 @@ No multiscale pyramids at 1°. Revisit if 0.25° data (e.g. native ERA5, ~4 MB p
 
 ### Layout per variable
 
-- **Map layout:** chunks `(12, 180, 360)` (one year of months per chunk). Tune after spike 1.
-- **Series layout:** chunks `(all time, ~12, ~12)` (~1.7 MB each), so a point time series costs a few requests instead of thousands.
-- **Aggregates:** precomputed global mean, zonal mean and climatology as small separate arrays, so the client never reduces a large array.
+- **Map layout:** chunks `(12, 180, 360)` (one year of months per chunk).
+- **Series layout:** chunks `(all time, ~12, ~12)` (~1.7 MB each), so a point time series costs a few requests instead of thousands. Not written yet.
+- **Aggregates:** precomputed maps and series (global mean, zonal mean, trend, extremes, contour boxplot) as small separate arrays, so the client never reduces a large array.
 - Duplicating data across layouts is preferred over client-side rechunking.
 
 ### Encoding
 
-- Zarr v3, `bytes` + `gzip` (browsers decode gzip natively; no WASM dependency). No sharding. No zstd/blosc until browser support is confirmed.
+- Zarr v3, `bytes` + `gzip` (browsers decode gzip natively; no WASM dependency). No sharding.
 - float32 on disk. If size becomes a problem, quantize to uint16 with scale/offset before considering other codecs.
-- No NaN in data the shader reads (GPU NaN handling is unreliable). Use an explicit fill value or a separate mask.
+- No NaN in data the shader reads. Use an explicit fill value or a separate mask.
 - CF attributes (`units`, `long_name`) on every array so the UI labels itself.
-- Consolidated metadata, if zarrita supports it for v3 (verify); otherwise keep metadata fetches to a minimum.
-- A static `catalog.json` at the bucket root lists datasets and variables so the app discovers content instead of hard-coding it.
+- v3 consolidated metadata (verified with zarrita).
+- A static `catalog.json` at the bucket root lists datasets and variables so the app discovers content instead of hard-coding it. Format (2026-11-17): `{ datasets: [{ name, detail, store, metrics: [{ id, group, statistics: [ids] }] }] }`, `store` relative to the root; names, units and ranges come from the arrays' CF attributes. The app opens the first dataset.
+
+### Mock dataset
+
+Decided 2026-11-17: the mock is data in the bucket, not formulas in the browser, so the app reads mock and real data through one path and switching data directories switches between them. `prep/make_mock.py` (`docker compose --profile prep run --rm mock`, about 5 s) writes `catalog.json` and `mock/annual.zarr` (216 MB): metrics `pr`, `rx1day`, `cdd`, `tas` as (year, lat, lon) on the 1° grid, 1950–2100, one year per chunk, with `<metric>_agreement`, `<metric>_spread` (step 7 output contract) and `<metric>_global_mean` (year, computed in prep). The formulas are the former `src/data/mock.ts`, ported to numpy; sampled values match it exactly. Real data should be written in the same layout (`src/data/catalog.ts` reads it).
 
 ### Bucket
 
 Public read, CORS allowing the Pages origin with `Range` allowed and `Content-Range`/`Content-Length` exposed, ideally behind a CDN. Do not rely on `Content-Encoding` compression for chunks (it conflicts with range requests); compress in the codec.
 
-## 7. trame integration (Option A)
-
-trame is a Python server and cannot run on GitHub Pages. The web app only knows a URL.
-
-- **Toggle:** with no reachable server (none set in the sidebar box, `?trame=` or `VITE_TRAME_URL`), 3D panels show a notice instead. Public builds can leave `VITE_TRAME_URL` unset.
-- **Local dev:** a `trame` Docker Compose profile starts a Python container. `docker compose --profile trame up` enables it; plain `docker compose up` does not.
-- **HTTPS:** Pages is HTTPS, so a hosted trame server must be HTTPS too. `localhost` is generally treated as secure in Chrome and Firefox; verify Safari.
-- **Framing:** the trame server must allow being framed by the Pages origin (no `X-Frame-Options: DENY`; set `frame-ancestors`).
-- **Initial state:** passed via URL query params only.
-
-### Shared instance with anonymous users
-
-By default one trame server process shares `server.state` across all connected browsers, so a naive shared instance would show every visitor the same scene. For anonymous multi-user use:
-
-- Run a process or container per session using Kitware's trame launcher (verify its current state and docs).
-- Point the iframe at the launcher root, which creates a session and redirects, so the web app stays unaware of sessions.
-- Guardrails: max concurrent sessions, idle timeout, per-session memory limit, rate limiting, and an allowlist of bucket paths the Python app may read.
-- Capacity is concurrent sessions times per-session memory (plan for hundreds of MB; measure). CPU-only server-side rendering may be slow; trame-vtklocal (client-side VTK.wasm) can offload rendering, but note its threaded build needs `SharedArrayBuffer`, and its version compatibility is in flux (VTK 9.4–9.6 vs trame-vtklocal 1.x tied to VTK 10).
-
-This is the only server in the architecture. Everything else remains static.
-
-## 8. Planned repository layout
+## 7. Repository layout
 
 ```
 hydroviewer/
-├── CLAUDE.md
-├── README.md
-├── docs/llm/DEV_PLAN.md
-├── docker-compose.yml          # web, browser (tools profile); trame to be added
+├── CLAUDE.md, README.md, docs/llm/DEV_PLAN.md
+├── docker-compose.yml          # web, data (emulator); profiles: tools (browser), prep
 ├── Dockerfile                  # node:22-alpine dev image
-├── package.json, vite.config.ts, tsconfig.json
+├── package.json, vite.config.ts, tsconfig.json, index.html
 ├── src/
-│   ├── main.ts
+│   ├── App.svelte, main.ts, app.css
 │   ├── state/                  # shared state module
-│   ├── viewports/              # registry + one module per viewport type
-│   ├── data/                   # zarrita access, catalog loading
-│   └── ui/                     # Svelte shell components
-├── tools/browser/              # Playwright + Chromium in Docker, for inspecting the dev page
-├── trame/                      # optional: Python trame app + its Dockerfile
-├── prep/                       # optional: Python data-prep scripts (xarray, regridding)
+│   ├── viewports/              # framework-agnostic renderers (globe, timeline) and helpers
+│   ├── data/                   # bucket access (zarrita: catalog.ts), data model, colormap parsing
+│   ├── ui/                     # Svelte components (viewport host, settings menu)
+│   └── assets/                 # coastlines, colormaps
+├── prep/                       # Python data prep (xarray), own Dockerfile; make_mock.py writes the mock
+├── tools/browser/              # Playwright + Chromium in Docker, for checking the dev page
+├── tools/bucket/               # nginx config of the bucket emulator
 └── .github/workflows/pages.yml
 ```
 
-Directories under `trame/` and `prep/` are created only when first needed. `src/` internals may shift once the first spike lands.
+## 8. Phases
 
-## 9. Phases and spikes
+Done:
 
-Each spike answers a question that could change the plan. Do them in order.
+1. **Data path.** GFDL-CM4 historical `pr` (1850–2014) prepped to Zarr v3 + gzip, served by the emulator, read by zarrita, drawn with three.js; coastlines as a committed asset; R2 verified with a temporary bucket.
+2. **Dev kit.** Docker Compose + Vite + Svelte + TypeScript with HMR; a Pages workflow (written and built locally under `/hydroviewer/`, not yet run on GitHub).
+3. **Viewport contract and shared state.**
+4. **Analyses on a grid shell** (removed 2026-11-17, kept in history at merge `6506c10`, tag `grid-trame-archive`): a sidebar with layouts and analyses (Total Precip., Trend, Extremes, Engines), three.js maps and globes, trame panels, Plot charts, URL-hash sync, and a contour boxplot of the June–August rain band (Whitaker, Mirzargar and Kirby 2013) drawn in shaders. Prep still writes all of their aggregates.
 
-1. **Data path spike (done except the 3D part).** The first slice works end to end with a flat map in place of the sphere: GFDL-CM4 historical `pr`, 1980 months (1850–2014), prepped to Zarr v3 + gzip (351 MB with aggregates), served by the emulator, read by zarrita, drawn in cell A. The flat map and a globe (OrbitControls) now render through three.js with a shared float-texture + shader-colormap layer (bundle ~168 kB gzip). Coastlines (Natural Earth 110m, a committed app asset built by `prep/make_coastlines.py`, ~35 kB gzip lazy chunk) are drawn on both. The globes also have relief: a synthetic uncertainty array (written by prep, read by both engines, displaced radially in a vertex shader / VTK points, headlight-shaded) stands in until a real uncertainty product exists. Still to do: a time control, series layout and aggregates, regridding, `catalog.json`. Original goal: Write one precipitation variable as Zarr v3 (`bytes` + `gzip`, map layout). Serve it from a bucket with CORS. Read it with zarrita and render it as a texture on a three.js sphere with a shader colormap. Confirms: zarrita v3 and gzip support, consolidated metadata, chunk size, fill-value handling.
-2. **Dev kit (done; the Pages workflow `.github/workflows/pages.yml` is written and its build checked locally under `/hydroviewer/`, but it has not run on GitHub yet).** Docker Compose + Vite + Svelte + TypeScript with HMR working in the container; a GitHub Actions workflow deploying to Pages with the correct `base`.
-3. **Viewport contract (done: contract, shared state, URL-hash sync, three.js, Plot and trame viewports; the analysis registry plus `resolve()` in `ViewportGrid.svelte` act as the viewport registry).** Implement the registry, shared state module and URL-hash sync with two trivial viewports (three.js, Plot) to prove the contract.
-4. **trame spike (done for local rendering, single user).** Cells C and D show the flat map and globe built by `trame/` (VTK scenes drawn by vtk.js in the browser) and match A and B visually; the iframe is only present when a trame URL is configured, and the app builds identically without it. Findings: the server needs no GPU/X11 (use `vtkGenericOpenGLRenderWindow`); VTK 9.7's Linux wheel imports without system GL libraries; the browser-side camera ignores parallel projection and the horizontal view angle, so the front end letterboxes the iframe; a `?ui=` layout per view and colormap carries the initial state. The sidebar has a trame URL box (saved in localStorage, reachability-checked) so the static Pages build can use a local server when one is running. Still open: HTTPS and Safari/localhost framing (an https page framing http://localhost, and Chrome's local network access prompt), remote (server-side) rendering and VTK.wasm comparisons, URL-driven state beyond a fixed set of layouts, and the multi-user launcher. Original goal: minimal trame app in the `trame` Compose profile, embedded via iframe from the deployed Pages origin. Confirms HTTPS, framing and Safari/localhost behaviour, and that the app builds identically with the URL unset.
-5. **Shared-instance spike** (only if needed). Launcher, session caps and measured per-session cost.
-6. **Analyses (in progress).** A sidebar *Analysis* switcher (like Layout, in the URL hash as `analysis=`) picks what each cell shows; the registry is `src/state/analyses.ts`, A is always the main panel because layout 1 shows only A, and the layout still decides how many cells are visible. Decisions: **3D panels (globes, relief) are rendered by trame and show a notice when no server is connected; 2D maps use three.js; non-map charts (line charts, heatmaps, histograms) use Observable Plot.** No time control yet. Analyses planned: *Total Precip.* (A flat map of one month, B globe with uncertainty relief; done), *Trend* and *Extremes*, and **an engine comparison, *Engines* (done), kept on purpose** to support the team's conversation about the rendering library: the same views drawn by three.js and by trame side by side (A three.js flat map, B three.js globe, C trame flat map with relief, D trame globe, as before the switcher; C and D show the notice without a server). It is the one exception to the 3D-uses-trame rule, so the three.js globe (`globe.ts`, `relief.ts`, the shader's relief path) stays maintained, and trame must keep serving both flat and globe views. Steps: (1) registry and switcher with Total Precip. and Engines (done; a cell's `engine` overrides the 2D/3D default); (2) prep writes aggregates and viewports take settings (done, with the A maps of Trend and Extremes moved forward from step 5): prep now covers the whole historical run (1850–2014, 1980 months) and writes `aggregates.zarr` next to `map.zarr` with `pr_trend` (linear trend of plain annual means, mm/day per decade) and `pr_wettest_month` (each year's wettest month, averaged), each with a `display_range`; a panel's `data` picks the source (three.js flat maps only so far), `fieldLayer` takes `vmin`, and a range below zero switches to the diverging BrBG palette (not the sidebar colormap). The monthly map still computes its colour max in the client until there is a time control; (3) Observable Plot panels (done: `@observablehq/plot` 0.6.17, lazy-loaded; Trend C is the cos(lat)-weighted global-mean annual series with a least-squares line and 95% band fitted by Plot in the browser, ~165 points; Extremes C is the area histogram of the mean wettest month, precomputed in prep, bars coloured with the map's scale); (4) trame pages per field (done, and option (a) dropped): a single page reading `?analysis=&view=&colormap=` does not work on a plain trame server, because `server.state` is shared by every page (Engines alone opens two trame iframes) and the client only sends its URL parameters through the launcher. Instead the server builds static layouts `?ui=<view>-<data>-<colormap>` (12 scenes, ~2.5 s at startup), which also fills the B globes of Trend and Extremes. Revisit with the launcher (process per session) when a time control arrives; (5) D panels (done): Trend D is the zonal-mean trend by latitude, Extremes D the cos(lat)-weighted global mean of each year's wettest month with a least-squares line; `chart.ts` names a drawing kind per series (`fit`, `profile`, `bars`). (6) Total Precip. C/D, a contour boxplot (done; Whitaker, Mirzargar and Kirby 2013, "Contour Boxplots", IEEE TVCG): each year's June–August mean is one member, its region the cells above 5 mm/day, 30°S–30°N only (decided after a spike: globally the mid-latitude storm tracks sit near 5 mm/day in summer and fill the map with speckled bands; 5-year means were cleaner but no longer single years). Prep's `contour_boxplot()` computes contour band depth with bands of two members and epsilon subsets, area-weighted by cos(lat), with every intersection and union size from weighted dot products of the 0/1 masks (about 0.5 s, not the paper's minutes); epsilon is set so the mean depth is 1/6 as the paper prescribes (its own 1D argument gives 1/3; 1/6 is what yields outliers here). Result for GFDL-CM4: epsilon 0.077 (the paper's ensembles had at most 0.009, so summers differ much more in shape than its members did), median 1955, outliers 1992 and 2009, no drift of depth with the 1850–2014 trend. Written to `aggregates.zarr`: `pr_jja_band` (nested levels, so one array holds both bands), `pr_jja_mean_fraction` (the paper's mean is its 0.5 contour), `pr_jja_median`, `pr_jja_outliers` (over `outlier` years) and the series `pr_jja_depth` (depth per year; not shown since D became the globe). `boxplotMap.ts` (three.js) fills the bands from the level texture (plus the cells every non-outlier summer covers, in light blue: left unfilled as in the paper, they looked the same as the cells no summer covers) and draws each contour in a fragment shader from screen-space derivatives (no contours are traced; outlier dashes are a screen-space checker); its own colours (`BOXPLOT` in `colormaps.ts`), so the sidebar colormap does not apply. C draws it flat, D on a globe with the same shaders (decided: three.js, an exception to the 3D-uses-trame rule like Engines, so the two views match and it works without a server; vtk.js also has no dashed lines). The layers share one geometry and draw in order under a less-or-equal depth test. All analyses now fill their cells; open: real uncertainty, whether the jagged dummy relief should stay on the trend globe. Monthly data rules out daily extremes. The 1850–2014 trend is small (about ±0.03 mm/day per decade at the 98th percentile) and is not tested for significance.
+In progress:
 
-## 10. Open questions
+5. **Front-end overhaul** (branch `frontend-overhaul`). Layouts brainstormed: full-screen map with floating panels, map with axis-sharing charts, metric gallery plus detail, side-by-side compare, guided story, student workbench, timeline-first. Chosen first: **full-screen globe with floating panels**, on mock data so the work goes into the globe (formulas in `src/data/mock.ts` until 2026-11-17, now a store written by `prep/make_mock.py` and read from the bucket).
+   - `stageGlobe.ts`: longitude/latitude per pixel from the sphere position (exact colours on a coarse 96 × 48 mesh, no pole pinching), one field texture refilled in place on a year change, grab-to-rotate (`grab.ts` solves yaw then pitch so the grabbed point stays under the pointer and north stays up; a flick coasts to a stop; OrbitControls only zooms; near the edge `softLimit()` eases the target by its on-screen distance from the centre, exact up to 30% of the radius and levelling off before 60%, so the per-pixel turn falls to about a sixth at the edge and to zero past it, measured in the browser as a smooth fall instead of the previous near-tripling), drawing only while something moves (0 frames when idle), a faint rim halo.
+   - `timeline.ts` (1950–2100): the global mean as a Plot line (redrawn only on resize) with a needle for the shared year, dragged or clicked, a keyboard slider, ◀ ▶ buttons stepping one year.
+   - Metric pane (2026-11-17, `MetricPane.svelte`): left, collapsible; the dataset and its metrics grouped by variable, for the same model/dataset selection. Data model: `Dataset` → `Metric` (field per year, global-mean series, statistics) in `src/data/cmip6.ts`; mock has four metrics (precipitation, wettest day, longest dry spell, temperature) with generic agreement/spread scaled per metric. The globe centres in the area right of the open pane by shifting the projection (`setViewOffset`), eased; on phones the pane overlays the page instead.
+   - Draggable legend (2026-11-17): `draggable` action (`src/ui/draggable.ts`), legend only, free placement clamped to the page, offset in localStorage, reset by double-click or the gear menu. Measured: 0 globe frames while dragging (the move is a CSS `translate`). Reusable for other panels if wanted.
+   - Settings gear (`SettingsMenu.svelte`): downloads the current field as an equirectangular PNG, one pixel per grid cell, coloured with the globe's colormap and range, no coastlines (`exportPng.ts`).
 
-- Bucket provider and CDN, and who owns CORS and access configuration.
-- Where the shared trame instance will be hosted, and whether the public Pages build should expose it at all.
-- Resolved for now: one store per variable per version, at the mirrored CMIP6 key path. Revisit if metadata fetches matter.
-- Resolved for now: ensembles, scenarios and models are separate stores, identified by the key path. Multi-member views would need catalog support.
+6. **Custom colormaps from SciVisColor ColorMoves** (done 2026-11-17). ColorMoves exports `{ colormaps: [{ name, space, points: [{ x, o, r, g, b }], sections, ... }] }` (ParaView's colormap model): points at arbitrary `x` in 0..1, colours 0..1, interpolation space (`"Lab"` in both samples), opacity sometimes a string, hard steps as two points 1e-5 apart (the "Interlinked" sample: a brown ramp with five solid bands), `sections` as editor metadata only. Plan:
+   1. One `Colormap` model (`id`, `name`, `space`, positioned points) and one baked lookup table (`bakeLut`, 1024 entries, Lab or RGB blending) that the globe shader, the colour bar (a canvas, since CSS gradients cannot show Lab blending or hard steps exactly) and the PNG export all sample. Built-in viridis and magma move to the same file format, replacing `src/assets/colormaps.json`.
+   2. A ColorMoves parser (`src/data/colormoves.ts`): all maps in a file, numeric coercion, sort and clamp `x`, at least two points, readable errors; unknown `space` falls back to RGB with a warning. Built-ins are the ColorMoves files in `src/assets/colormaps/` (only viridis and magma: decided 2026-11-17 that custom maps, including the team's two samples, arrive by upload).
+   3. Import from the settings menu (file picker, drag and drop), stored in localStorage, removable; the first imported map is selected and a notice reports names, warnings or the error.
+   Checked (the team's "Divergent 1" and "Interlinked" samples, now in `hydroviewer_data/colormaps/` (`colormap1.json`, `colormap.json`), uploaded through the menu populate the drop-down and draw on the globe): Lab round trips, L*=50 grey = sRGB 119, viridis unchanged from the old evenly spaced RGB blending (within 1/255), the Interlinked step at x = 0.08 within one table entry, Divergent 1's white midpoint, bad files rejected with messages; in the browser, import by menu and drop, persistence over a reload, removal, a bad file, the PNG.
+   Later: export back to ColorMoves JSON, sharing through the URL, reversing, colour-range controls, labelling bands in the legend.
+7. **Uncertainty, spread and agreement** (2026-11-17: elevation and stippling built on mock data; decided that both exist and the user configures which statistic each reads, or off; which statistic comes first and the reference period for "change" are open). Precipitation stays the colour; a second statistic per cell needs its own visual channel. Candidates:
+   - **Elevation (relief)**: built, with a height slider (0–20% of the radius, default 8%; the maximum keeps peaks clear of the closest zoom). Good for a smooth field and for seeing structure while rotating; weak face-on (read mostly from shading and the outline), weak on dark colormap ends, and it displaces the colour surface (grabbing and pointer reading become approximate on high relief). Agreement is shown as height above the sphere: flat = 50% (no consensus), top = 100%.
+   - **Stippling** where a statistic is at or above its threshold: built, the IPCC convention, readable face-on. Fragment shader only: dots fixed to the surface (rows 1–6° apart from a dot-size slider, default 2.5°, radius a fifth of the spacing so the stippled area stays the same; fewer per row toward the poles, so even on the sphere and turning with the globe), each whole (threshold and ink decided at the dot's centre). Not in the PNG export yet. Hatching (lines) is the usual alternative for "low agreement".
+   - **Value-suppressing colour** (desaturate or fade the colour where uncertainty is high): one channel, no geometry; needs a 2D lookup (value x uncertainty) and a legend that explains it.
+   - **Contours of the second field** (e.g. the 66% and 90% agreement lines), as in the removed contour boxplot shaders.
+   - **Toggle or swap**: a picker for what elevation (or the overlay) shows: agreement, inter-model spread (standard deviation), signal-to-noise; off for reading colour exactly.
+   **Output contract** (the simplest input these need; processing of the real high-resolution multi-model ensembles must produce it): per statistic, one float32 grid per time step on the same 1° grid and time axis as the field it accompanies, no NaN, CF `units` and `long_name`, a `display_range` (elevation maps it to flat..highest) and a `stipple_threshold` (cells at or above it are stippled). Stored next to the field, e.g. `pr_agreement` (fraction of models agreeing on the sign of change, 0.5–1), `pr_spread` (inter-model standard deviation of the change), `pr_snr`. In the app this is `Statistic` (`src/data/cmip6.ts`). Mock: `statistics()` in `prep/make_mock.py` (agreement and spread), stored as `<metric>_agreement` and `<metric>_spread`.
 
-## 11. Out of scope for now
+Next:
 
-Page layouts, specific visualizations and features, authentication, a compute backend, multiscale pyramids, live state sync with the trame iframe, and any trame code in the main app bundle.
+8. **Real data** in place of the mock. Done 2026-11-17: the app reads the bucket via zarrita from `catalog.json` (the mock). Left: prep for CMIP6 writing the mock's layout (annual metrics, statistics, global means, `catalog.json`), the series layout, regridding to 1°, and the R2 upload list from the emulator log.
+8b. **Data tree** (draft plan 2026-11-17, `docs/llm/DATA_TREE_PLAN.md`): a top pane showing scenarios, models and ensemble members as a branching diagram (after Lantern's catalogue picker), whose selection picks precomputed member, ensemble and multi-model datasets; multi-model large ensembles (up to ~70 members, ~50 models). Decided: variables stay in the left pane (D7); D1–D6 open.
+9. **Student options** (from the team's notes): colour ranges, line widths, background colour, image and configuration export.
+
+## 9. Open questions
+
+- Bucket provider details and CDN, and who owns CORS and access configuration.
+- Colour range per year (fixed across the timeline, as now) or per field.
+- Resolved for now: one store per variable per version, at the mirrored CMIP6 key path. Ensembles, scenarios and models are separate stores identified by the key path; multi-member views would need catalog support.
+
+## 10. Out of scope for now
+
+Authentication, a compute or rendering backend, multiscale pyramids.

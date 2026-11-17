@@ -16,6 +16,38 @@ export interface Field extends Grid {
   range?: [number, number]; // colour scale from prep; without it the client picks one
 }
 
+// A per-cell statistic of an ensemble (agreement, spread, ...), the output side of the data contract for
+// uncertainty: one float32 grid per time step on the field's grid, CF `units`/`long_name`, a `display_range`
+// (elevation maps it to flat..highest) and a `stipple_threshold` (cells at or above it are stippled).
+export interface Statistic {
+  id: string;
+  name: string;
+  units: string;
+  range: [number, number];
+  threshold: number;
+  load: (year: number) => Field | Promise<Field>;
+}
+
+// One variable or derived metric of a dataset: its field per year (coloured on the globe), its global-mean
+// series (the timeline) and the ensemble statistics that go with it (elevation, stippling).
+export interface Metric {
+  id: string;
+  name: string;
+  group: string; // e.g. "Precipitation", for the list
+  units: string;
+  range: [number, number]; // colour scale
+  load: (year: number) => Field | Promise<Field>;
+  series: () => Series | Promise<Series>;
+  statistics: Statistic[];
+}
+
+// A model/dataset selection and the metrics available for it.
+export interface Dataset {
+  name: string;
+  detail: string; // e.g. experiment and member
+  metrics: Metric[];
+}
+
 // What a panel can show: the first month, or an aggregate written by prep (aggregates.zarr).
 export type Source = 'month' | 'pr_trend' | 'pr_wettest_month';
 
@@ -26,7 +58,10 @@ const openStore = async (name: string) => {
   return zarr.open.v3(store, { kind: 'group' });
 };
 
-const opened = (async () => {
+// Opened on first use, so importing this module fetches nothing.
+let opening: ReturnType<typeof openMap> | undefined;
+const opened = () => (opening ??= openMap());
+const openMap = async () => {
   const root = await openStore('map.zarr');
   const [pr, time] = await Promise.all([
     zarr.open.v3(root.resolve('pr'), { kind: 'array' }),
@@ -34,19 +69,7 @@ const opened = (async () => {
   ]);
   const [year, month] = String(time.attrs.units).match(/since (\d{4})-(\d{2})/)!.slice(1).map(Number);
   return { root, pr, year, month };
-})();
-
-let uncertainty: Promise<Grid> | undefined;
-
-// A synthetic 0..1 uncertainty field (see prep/prep_cmip6.py), used for globe relief.
-export function loadUncertainty(): Promise<Grid> {
-  uncertainty ??= opened.then(async ({ root }) => {
-    const array = await zarr.open.v3(root.resolve('uncertainty'), { kind: 'array' });
-    const grid = await zarr.get(array);
-    return { values: grid.data as Float32Array, height: array.shape[0], width: array.shape[1] };
-  });
-  return uncertainty;
-}
+};
 
 const months = new Map<number, Promise<Field>>();
 
@@ -54,7 +77,7 @@ const months = new Map<number, Promise<Field>>();
 export function loadMonth(index: number): Promise<Field> {
   let field = months.get(index);
   if (!field) {
-    field = opened.then(async ({ pr, year, month }) => {
+    field = opened().then(async ({ pr, year, month }) => {
       const slab = await zarr.get(pr, [index, null, null]);
       const at = year * 12 + (month - 1) + index;
       return {
@@ -98,43 +121,6 @@ export function loadField(source: Source): Promise<Field> {
     fields.set(source, field);
   }
   return field;
-}
-
-// The contour boxplot of the summer rain band (prep's contour_boxplot()): band levels, the fraction field
-// whose 0.5 contour is the mean, and the fields of the median and outlier summers, contoured at `threshold`.
-export interface Boxplot {
-  level: Grid; // 1 or 3: 100% band, 2: 50% band, 4: inside every kept member
-  fraction: Grid;
-  median: Grid;
-  outliers: Grid[];
-  threshold: number;
-  latRange: [number, number]; // analysed latitudes; nothing outside them
-  medianYear: number;
-  outlierYears: number[];
-  label: string;
-}
-
-let boxplot: Promise<Boxplot> | undefined;
-
-export function loadBoxplot(): Promise<Boxplot> {
-  const names = ['pr_jja_band', 'pr_jja_mean_fraction', 'pr_jja_median', 'pr_jja_outliers', 'outlier'];
-  boxplot ??= Promise.all(names.map(readAggregate)).then(([band, fraction, median, outliers, years]) => {
-    const [height, width] = band.array.shape;
-    const grid = (values: Float32Array) => ({ values, height, width });
-    const { attrs } = band;
-    return {
-      level: grid(band.data),
-      fraction: grid(fraction.data),
-      median: grid(median.data),
-      outliers: Array.from(years.data, (_, i) => grid(outliers.data.subarray(i * width * height, (i + 1) * width * height))),
-      threshold: Number(attrs.threshold),
-      latRange: attrs.lat_range,
-      medianYear: Number(attrs.median_year),
-      outlierYears: Array.from(years.data),
-      label: `${attrs.long_name} · ${attrs.period}`,
-    };
-  });
-  return boxplot;
 }
 
 // 1D series from aggregates.zarr, each over its own coordinate (years, latitudes or histogram bin starts).
