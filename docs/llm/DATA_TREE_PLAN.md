@@ -179,9 +179,12 @@ same reductions real prep will do. The analytic statistics go away.
 - Names and member counts: real ones from the index above, hard-coded (names only, like Lantern's
   `catalogue.json`).
 - **D4: size** (decided). `--models` (default 8: the largest ensembles; 50 = all), `--map-members N` (default 3
-  per model and scenario; every member still feeds the statistics and has a series), `--workers` (default 6, about
+  per model and scenario; every member still feeds the statistics and has a series), `--workers` (default 4 since the ETCCDI metrics, about
   2 GB each). Measured with the defaults: 887 member runs (96 with maps), 32 ensemble and 4 multi-model stores,
-  21 GB, 199–210 s on 6 of 24 cores (about 0.85 s per member: formulas 0.5 s, statistics and global means 0.3 s).
+  21 GB, 199–210 s on 6 of 24 cores with four metrics (about 0.85 s per member: formulas 0.5 s, statistics and global
+  means 0.3 s). With eleven (mean precipitation and ten ETCCDI indices, 2026-11-17): 59 GB, about 775 s on 4 workers
+  (float32 accumulators with Welford's running variance: a float32 sum of squares lost 0.2% of the spread; about
+  2.5 GB per worker).
   The tree's scale comes from the catalog and series, which are cheap at any size.
 - Regeneration stays one command (`docker compose --profile prep run --rm mock [--models …]`), into `$DATA_DIR`.
 

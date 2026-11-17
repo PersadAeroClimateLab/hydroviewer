@@ -5,8 +5,10 @@
 
 Models and their members are real names (mock_ensembles.json, largest ensembles first); the values are analytic
 formulas on the target 1° grid (360 x 180, cell-centred, south to north, west to east), annual, 1950-2100. Not real
-data. Each model has its own bias and climate sensitivity, each scenario its own forcing after 2015, and each member
-its own year-to-year variability. Ensemble statistics are computed from the members, as real prep will do.
+data. Metrics: mean precipitation and ETCCDI precipitation indices that are stored at yearly (or monthly)
+frequency: PRCPTOT, SDII, Rx1day, Rx5day, R95p, R99p, R10mm, R20mm, CDD, CWD (annual values here). Each model has
+its own bias and climate sensitivity, each scenario its own forcing after 2015, and each member its own
+year-to-year variability. Ensemble statistics are computed from the members, as real prep will do.
 
 Writes, under the CMIP6 key path:
 - per model and scenario, the first --map-members members: <member>/annual.zarr with each metric (year, lat, lon)
@@ -44,12 +46,21 @@ ENSEMBLES = Path(__file__).with_name("mock_ensembles.json")
 
 # id, label, forcing after 2015 relative to SSP2-4.5
 SCENARIOS = [("ssp126", "SSP1-2.6", 0.45), ("ssp245", "SSP2-4.5", 1.0), ("ssp370", "SSP3-7.0", 1.45), ("ssp585", "SSP5-8.5", 1.9)]
-# id, name, group, units, display range of the field, display range of the spread (its stipple threshold is half)
+# id, name (no commas: the app cuts names at the first one), group, units, display range of the field, display
+# range of the spread (its stipple threshold is half). ETCCDI indices by their short names.
+TOTALS, EXTREMES, DAYS, SPELLS = "Totals and intensity", "Extremes", "Heavy-precipitation days", "Spells"
 METRICS = [
-    ("pr", "Precipitation", "Precipitation", "mm/day", [0, 14], 1.6),
-    ("rx1day", "Wettest day", "Precipitation", "mm/day", [0, 60], 6),
-    ("cdd", "Longest dry spell", "Precipitation", "days", [0, 120], 32),
-    ("tas", "Temperature", "Temperature", "°C", [-30, 35], 1.6),
+    ("pr", "Mean precipitation", TOTALS, "mm/day", [0, 14], 1.6),
+    ("prcptot", "Wet-day total (PRCPTOT)", TOTALS, "mm", [0, 5000], 600),
+    ("sdii", "Wet-day intensity (SDII)", TOTALS, "mm/day", [0, 25], 2.4),
+    ("rx1day", "Wettest day (Rx1day)", EXTREMES, "mm", [0, 70], 8),
+    ("rx5day", "Wettest 5 days (Rx5day)", EXTREMES, "mm", [0, 150], 18),
+    ("r95p", "Very wet days total (R95p)", EXTREMES, "mm", [0, 1800], 240),
+    ("r99p", "Extremely wet days total (R99p)", EXTREMES, "mm", [0, 700], 90),
+    ("r10mm", "Heavy days (R10mm)", DAYS, "days", [0, 140], 20),
+    ("r20mm", "Very heavy days (R20mm)", DAYS, "days", [0, 90], 14),
+    ("cdd", "Longest dry spell (CDD)", SPELLS, "days", [0, 120], 32),
+    ("cwd", "Longest wet spell (CWD)", SPELLS, "days", [0, 12], 1.5),
 ]
 
 # Broadcast as (year, lat, lon).
@@ -74,15 +85,16 @@ def warming(forcing: float, sensitivity: float):
 def fields(model: str, member: str, forcing: float) -> dict[str, np.ndarray]:
     """Every metric of one member run, (year, lat, lon) float32.
 
-    Precipitation (mm/day): a tropical rain band that wobbles from year to year, wetter over the Maritime Continent,
-    Amazon and Congo, mid-latitude storm tracks and some ripples; warming makes the band wetter, the subtropics drier
-    and moves the storm tracks poleward. Wettest day (mm/day) is heavier where it rains more and with warming;
-    longest dry spell (days) is long where it rains little. Temperature (°C): warm tropics, cold poles, warming
-    stronger toward the poles. A model shifts the band, storm tracks, wetness and temperature and scales the warming;
-    a member has its own phases of the year-to-year wobble.
+    Mean precipitation (mm/day): a tropical rain band that wobbles from year to year, wetter over the Maritime
+    Continent, Amazon and Congo, mid-latitude storm tracks and some ripples; warming makes the band wetter, the
+    subtropics drier and moves the storm tracks poleward. The ETCCDI indices follow from it and the warming with
+    plausible shapes, not from daily data: the share of wet days (>= 1 mm) rises with the mean, wet-day amounts are
+    taken as exponential with mean SDII (so R10mm and R20mm are tails of it), extremes intensify with warming faster
+    than the mean, and dry spells are long where it rains little. A model shifts the band and storm tracks, scales
+    the wetness and the warming; a member has its own phases of the year-to-year wobble.
     """
     m, p = rng(model).uniform(size=5), rng(model, member).uniform(0, 2 * np.pi, size=4)
-    sensitivity, band_lat, track_lat, wet, bias = 0.7 + 0.7 * m[0], 4 * m[1] - 2, 6 * m[2] - 3, 0.8 + 0.4 * m[3], 4 * m[4] - 2
+    sensitivity, band_lat, track_lat, wet = 0.7 + 0.7 * m[0], 4 * m[1] - 2, 6 * m[2] - 3, 0.8 + 0.4 * m[3]
     warm = warming(forcing, sensitivity)
 
     itcz = band_lat + 1.5 * np.sin(year * 0.9 + p[0]) + np.sin(year * 0.37 + p[1])
@@ -94,14 +106,30 @@ def fields(model: str, member: str, forcing: float) -> dict[str, np.ndarray]:
     ripple = 0.8 * np.sin(5 * lon * RAD + 3 * lat * RAD) * np.sin(7 * lat * RAD - 2 * lon * RAD + year * 0.5 + p[2])
     pr = np.maximum(0, (0.4 + band + storms + ripple) * dry)
 
-    tas = (
-        -28 + bias + 55 * np.cos(lat * RAD) ** 1.4 + 4 * np.sin(2 * lon * RAD) * np.cos(lat * RAD)
-        + warm * (1 + np.abs(lat) / 60)
-        + 0.4 * np.sin(year * 1.3 + lon * RAD + p[3])
-    )
-    out = {"pr": pr, "rx1day": (4 + 3.5 * pr) * (1 + 0.05 * warm), "cdd": 3 + 110 * np.exp(-pr / 1.2), "tas": tas}
+    wet_days = 0.04 + 0.6 * (1 - np.exp(-pr / 2.5))  # share of days with >= 1 mm
+    prcptot = 365 * 0.95 * pr
+    sdii = np.maximum(1, prcptot / (365 * wet_days))  # a wet day has at least 1 mm
+    rx1day = (4 + 3.5 * pr) * (1 + 0.05 * warm)
+    out = {
+        "pr": pr,
+        "prcptot": prcptot,
+        "sdii": sdii,
+        "rx1day": rx1day,
+        "rx5day": rx1day * (1.6 + 0.6 * (1 - np.exp(-pr / 4))),
+        "r95p": prcptot * (0.18 + 0.1 * (1 - np.exp(-pr / 3))) * (1 + 0.06 * warm),
+        "r99p": prcptot * (0.05 + 0.04 * (1 - np.exp(-pr / 3))) * (1 + 0.1 * warm),
+        "r10mm": 365 * wet_days * np.exp(-10 / sdii),
+        "r20mm": 365 * wet_days * np.exp(-20 / sdii),
+        "cdd": 3 + 110 * np.exp(-pr / 1.2),
+        "cwd": 1 + 18 * wet_days**1.5,
+    }
     shape = (len(YEARS), len(LAT), len(LON))
     return {k: np.broadcast_to(v, shape).astype("float32") for k, v in out.items()}
+
+
+def lower(name: str) -> str:
+    """A name inside a sentence: only its first letter lowered, so "Wettest day (Rx1day)" keeps its index name."""
+    return name[:1].lower() + name[1:]
 
 
 def global_mean(values: np.ndarray) -> np.ndarray:
@@ -118,12 +146,15 @@ class Spread:
     def add(self, values: np.ndarray):
         change = values - values[BASELINE].mean(axis=0)
         if not self.n:  # in place from here on: allocating per run cost a third of the time
-            self.total, self.change, self.square = (np.zeros(values.shape) for _ in range(3))
+            # float32 (11 metrics of float64 sums would need ~3 GB per worker), so the variance is Welford's running
+            # one: a sum of squares minus the squared mean lost 0.2% of the spread to cancellation in float32.
+            self.total, self.mean, self.m2 = (np.zeros(values.shape, "float32") for _ in range(3))
             self.rising = np.zeros(values.shape, "int16")
         self.n += 1
         self.total += values
-        self.change += change
-        self.square += np.square(change, dtype="float64")
+        delta = change - self.mean
+        self.mean += delta / self.n
+        self.m2 += delta * (change - self.mean)
         self.rising += change > 0
 
     def result(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -131,7 +162,7 @@ class Spread:
         (standard deviation of the change)."""
         n = self.n
         agreement = np.maximum(self.rising, n - self.rising) / n
-        spread = np.sqrt(np.maximum(0, self.square / n - (self.change / n) ** 2))
+        spread = np.sqrt(np.maximum(0, self.m2 / n))
         return (self.total / n).astype("float32"), agreement.astype("float32"), spread.astype("float32")
 
 
@@ -175,7 +206,7 @@ def statistics(spreads: dict, by: str) -> dict:
         extent = lambda a: {"actual_range": [float(a.min()), float(a.max())]}  # noqa: E731
         out[f"{metric[0]}_agreement"] = (dims, agreement, attrs(metric, "agreement") | {"long_name": f"Agreement of {by}"} | extent(agreement))
         out[f"{metric[0]}_spread"] = (dims, spread, attrs(metric, "spread") | {"long_name": f"Spread of {by}"} | extent(spread))
-        out[f"{metric[0]}_global_mean"] = (("year",), global_mean(mean), {"units": metric[3], "long_name": f"Global mean {metric[1].lower()}, mean of {by}"})
+        out[f"{metric[0]}_global_mean"] = (("year",), global_mean(mean), {"units": metric[3], "long_name": f"Global mean {lower(metric[1])}, mean of {by}"})
     return out
 
 
@@ -193,7 +224,7 @@ def ensemble(task: tuple) -> dict[str, np.ndarray]:
             spreads[id].add(values[id])
             series[id].append(global_mean(values[id]))
             variables[id] = (("year", "lat", "lon"), values[id], attrs(metric))
-            variables[f"{id}_global_mean"] = (("year",), series[id][-1], {"units": metric[3], "long_name": f"Global mean {metric[1].lower()}"})
+            variables[f"{id}_global_mean"] = (("year",), series[id][-1], {"units": metric[3], "long_name": f"Global mean {lower(metric[1])}"})
         if member in run["maps"]:
             write(out / run["store"].format(member=member), variables, scenario=run["scenario"], model=run["model"], member=member)
     write(out / run["ensemble"], statistics(spreads, f"{len(run['members'])} members"), scenario=run["scenario"], model=run["model"])
@@ -216,7 +247,7 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=Path("/data"))
     parser.add_argument("--models", type=int, default=8, help="how many models, largest ensembles first (50 = all)")
     parser.add_argument("--map-members", type=int, default=3, help="members per model and scenario with map stores")
-    parser.add_argument("--workers", type=int, default=6, help="processes; each needs about 2 GB")
+    parser.add_argument("--workers", type=int, default=4, help="processes; each needs about 2.5 GB")
     args = parser.parse_args()
     out, started = args.out, time.time()
 
@@ -263,7 +294,7 @@ def main() -> None:
         row += len(run["members"])
     plumes = {}
     for metric in METRICS:
-        id, units, name = metric[0], metric[3], metric[1].lower()
+        id, units, name = metric[0], metric[3], lower(metric[1])
         plumes[f"{id}_global_mean"] = (("member_run", "year"), np.concatenate([s[id] for s in series]), {"units": units, "long_name": f"Global mean {name}"})
         plumes[f"{id}_ensemble_global_mean"] = (("run", "year"), np.stack([s[id].mean(axis=0) for s in series]), {"units": units, "long_name": f"Global mean {name}, ensemble mean"})
     ds = xr.Dataset(plumes, coords={"year": ("year", YEARS.astype("int32"), {"long_name": "year"})})
