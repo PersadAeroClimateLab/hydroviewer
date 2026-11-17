@@ -38,9 +38,8 @@ const AMBIENT = 0.5; // share of the colour kept on surfaces facing away from th
 // Light from the upper left of the camera, the usual hillshade direction: slopes read as light and shadow,
 // which a light from the camera itself would show only faintly face-on.
 const LIGHT = new Vector3(-0.45, 0.5, 0.74).normalize();
-// Stipple dots: on rows SPACING degrees apart, with fewer dots per row toward the poles so they stay evenly
-// spaced on the sphere; RADIUS in degrees.
-const STIPPLE = { SPACING: 2.5, RADIUS: 0.5 };
+// A stipple dot's radius as a share of the dot spacing (shared state, degrees): bigger dots, fewer of them.
+const DOT_RADIUS = 0.2;
 
 // Longitude and latitude come from the sphere position (lon 0 at +z, lon 90 at +x, north at +y), so colours
 // are exact at any mesh resolution, with no pinching at the poles. The surface rises radially with a second
@@ -77,6 +76,7 @@ const fragmentShader = /* glsl */ `
   uniform sampler2D stipple;
   uniform float stippleOn;
   uniform float stippleThreshold;
+  uniform float stippleSpacing; // degrees between rows, and between dots along a row (fewer toward the poles)
   varying vec3 vPos;
 
   vec3 colorAt(vec2 uv) {
@@ -88,14 +88,15 @@ const fragmentShader = /* glsl */ `
   // (edges antialiased). Dots are fixed to the surface, so they turn with the globe, and each is whole: the
   // threshold and the ink (dark on light colours, light on dark) are decided at its centre, not per pixel.
   vec4 stippleDot(float lon, float lat) {
-    float sp = ${STIPPLE.SPACING.toFixed(2)};
+    float sp = stippleSpacing;
     float latD = degrees(lat), lonD = degrees(lon);
     float latC = -90.0 + (floor((latD + 90.0) / sp) + 0.5) * sp;
     float width = 360.0 / max(1.0, floor(360.0 / sp * cos(radians(latC)) + 0.5));
     float lonC = -180.0 + (floor((lonD + 180.0) / width) + 0.5) * width;
     float d = length(vec2((lonD - lonC) * cos(lat), latD - latC));
     float aa = fwidth(d);
-    float inside = 1.0 - smoothstep(${STIPPLE.RADIUS.toFixed(2)} - aa, ${STIPPLE.RADIUS.toFixed(2)} + aa, d);
+    float radius = ${DOT_RADIUS.toFixed(2)} * sp;
+    float inside = 1.0 - smoothstep(radius - aa, radius + aa, d);
     vec2 centre = vec2((lonC + 180.0) / 360.0, (latC + 90.0) / 180.0);
     float on = inside * step(stippleThreshold, texture2D(stipple, centre).r);
     vec3 ink = dot(colorAt(centre), vec3(0.299, 0.587, 0.114)) > 0.45 ? vec3(0.08) : vec3(0.95);
@@ -189,6 +190,7 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>, stati
         lift: { value: 0 },
         stipple: { value: null as DataTexture | null },
         stippleOn: { value: 0 },
+        stippleSpacing: { value: initial.stippleSize },
         stippleThreshold: { value: 0 },
       },
       vertexShader,
@@ -399,6 +401,10 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>, stati
       update(state) {
         setColormap(state.colormap);
         setData(state);
+        if (state.stippleSize !== material.uniforms.stippleSpacing.value) {
+          material.uniforms.stippleSpacing.value = state.stippleSize;
+          redraw();
+        }
         if (state.elevationScale !== scale) {
           scale = state.elevationScale;
           setScale();

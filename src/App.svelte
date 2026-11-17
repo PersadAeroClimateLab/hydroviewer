@@ -1,7 +1,7 @@
 <script lang="ts">
   import { MOCK, STATISTICS, YEARS, mockField, mockSeries } from './data/mock';
   import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
-  import { ELEVATION_SCALE, shared } from './state/shared.svelte';
+  import { ELEVATION_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
   import SettingsMenu from './ui/SettingsMenu.svelte';
   import ViewportHost from './ui/ViewportHost.svelte';
   import { download, fieldPng } from './viewports/exportPng';
@@ -110,6 +110,17 @@
             <option value="">Off</option>
             {#each STATISTICS as s (s.id)}<option value={s.id}>{s.name} ≥ {fmt(s.threshold, s.units)}</option>{/each}
           </select>
+        </label>
+        <label class="setting">
+          <span>Dot size <small>one per {shared.stippleSize}°</small></span>
+          <input
+            type="range"
+            min={STIPPLE_SIZE.min}
+            max={STIPPLE_SIZE.max}
+            step="0.5"
+            disabled={!shared.stipple}
+            bind:value={shared.stippleSize}
+          />
         </label>
       </SettingsMenu>
     </section>

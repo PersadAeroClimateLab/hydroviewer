@@ -30,8 +30,10 @@ analytic 360 × 180 annual-mean field for 1950–2100 and its global mean; no bu
     `shared.elevationScale` of the radius: a Height slider in the gear menu, 0–20%, default 8%, disabled with
     elevation off; changing it only sets a uniform), coastlines displaced by the same shader, shading from the relief's slope per pixel, lit from
     the upper left. Grabbing still intersects the unit sphere, so on high relief the grabbed point drifts by up to ~8%.
-  - stippling: in the fragment shader, dots fixed to the surface on rows 2.5° apart (fewer per row toward the
-    poles), each whole: threshold and ink (dark on light colours, light on dark) decided at its centre.
+  - stippling: in the fragment shader, dots fixed to the surface on rows `shared.stippleSize` degrees apart (a Dot
+    size slider in the gear menu, 1–6°, default 2.5°; radius a fifth of the spacing, so bigger dots, fewer of them,
+    same stippled area), fewer per row toward the poles, each whole: threshold and ink (dark on light colours,
+    light on dark) decided at its centre.
   The PNG export has neither (colour only).
 - **Timeline** (`timeline.ts`, bottom): the global mean 1950–2100 as a Plot line with a draggable year needle
   (also a keyboard slider) and ◀ ▶ buttons stepping one year.
