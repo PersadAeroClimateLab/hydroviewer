@@ -187,6 +187,7 @@ In progress:
 Next:
 
 8. **Real data** in place of the mock. Done 2026-11-17: the app reads the bucket via zarrita from `catalog.json` (the mock). Left: prep for CMIP6 writing the mock's layout (annual metrics, statistics, global means, `catalog.json`), the series layout, regridding to 1°, and the R2 upload list from the emulator log.
+8b. **Data tree** (draft plan 2026-11-17, `docs/llm/DATA_TREE_PLAN.md`): a top pane showing scenarios, models and ensemble members as a branching diagram (after Lantern's catalogue picker), whose selection picks precomputed member, ensemble and multi-model datasets; multi-model large ensembles (up to ~70 members, ~50 models). Decided: variables stay in the left pane (D7); D1–D6 open.
 9. **Student options** (from the team's notes): colour ranges, line widths, background colour, image and configuration export.
 
 ## 9. Open questions
