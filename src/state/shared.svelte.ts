@@ -6,8 +6,12 @@ import { colormaps } from './colormaps.svelte';
 // `metric` is the id of the metric on the globe and timeline; `insetLeft` is how many pixels a side pane covers
 // on the left (the globe centres right of it). `elevation` and `stipple` are statistic ids ('' = off); `elevationScale` is the height of the top of the
 // elevation's display range, as a fraction of the globe's radius.
-export const ELEVATION_SCALE = { min: 0, max: 0.2, initial: 0.08 }; // max keeps peaks clear of the closest zoom
-// `stippleSize` is the spacing of stipple dots in degrees; each dot's radius is a fixed share of it.
+export const ELEVATION_SCALE = { min: 0, max: 0.2, initial: 0.08 };
+// `elevationMultiplier` (an integer) multiplies it, so the slider keeps its fine steps at any height; the globe
+// keeps the closest zoom outside the peaks.
+export const ELEVATION_MULTIPLIER = { min: 1, max: 10 };
+// `stippleSize` is the spacing of stipple dots in degrees; each dot's radius is a fixed share of it. `thresholds`
+// holds stipple thresholds moved from their statistic's default, by `<metric>/<statistic>` (units differ per metric).
 export const STIPPLE_SIZE = { min: 1, max: 6, initial: 2.5 };
 export const shared = $state<{
   colormap: Colormap;
@@ -17,7 +21,9 @@ export const shared = $state<{
   elevation: string;
   stipple: string;
   elevationScale: number;
+  elevationMultiplier: number;
   stippleSize: number;
+  thresholds: Record<string, number>;
 }>({
   colormap: colormaps.builtIn[0],
   metric: 'pr',
@@ -26,7 +32,9 @@ export const shared = $state<{
   elevation: 'agreement',
   stipple: 'spread',
   elevationScale: ELEVATION_SCALE.initial,
+  elevationMultiplier: ELEVATION_MULTIPLIER.min,
   stippleSize: STIPPLE_SIZE.initial,
+  thresholds: {},
 });
 
 export type SharedState = typeof shared;

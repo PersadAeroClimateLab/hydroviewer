@@ -31,7 +31,8 @@ export function draggable(node: HTMLElement, options: Options) {
 
   let start: { x: number; y: number; at: Offset; id: number } | undefined;
   const down = (e: PointerEvent) => {
-    if (e.button !== 0) return;
+    // Controls inside keep their clicks (pointer capture would send them to the panel).
+    if (e.button !== 0 || (e.target as Element).closest('button, input, select, a')) return;
     start = { x: e.clientX, y: e.clientY, at, id: e.pointerId };
     node.setPointerCapture(e.pointerId);
     node.style.cursor = 'grabbing';

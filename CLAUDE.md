@@ -10,11 +10,13 @@ change.
 
 ## Project state
 
-Front-end overhaul in progress (branch `frontend-overhaul`, plan section 8). `App.svelte` is a full-screen
-three.js globe (`src/viewports/stageGlobe.ts`) with floating panels, on **mock data read from the bucket** (analytic
-360 × 180 annual means for 1950–2100 written by `prep/make_mock.py`; see Data path). `main.ts` loads the first
-dataset of the bucket's `catalog.json` (`loadDataset()` in `src/data/catalog.ts`) and then mounts `App` with it and
-its years; if that fails the page shows only the error:
+Front-end overhaul merged into `main` (2026-11-17). In progress: the data tree on branch `data-tree`
+(`docs/llm/DATA_TREE_PLAN.md`, plan step 8b). `App.svelte` is a full-screen
+three.js globe (`src/viewports/stageGlobe.ts`) with floating panels, on **mock data read from the bucket** (a
+multi-model, multi-scenario ensemble of analytic 360 × 180 annual fields for 1950–2100 written by `prep/make_mock.py`;
+see Data path). `main.ts` loads the bucket's `catalog.json` (`loadCatalog()`), opens the SSP2-4.5 multi-model mean
+(`openNode()` in `src/data/catalog.ts`) and then mounts `App` with it and its years; if that fails the page shows
+only the error. No UI picks another node yet (data tree phase 2–4):
 
 - **Metric pane** (left, `src/ui/MetricPane.svelte`): app title, dataset (model, experiment, member) and its
   metrics grouped by variable (mock: precipitation, wettest day, longest dry spell, temperature); picking one shows
@@ -31,14 +33,22 @@ its years; if that fails the page shows only the error:
   so the globe turns slower and slower toward the edge and stops past it (the edge is where a pixel covers a
   large angle and dragging got erratic). OrbitControls only zooms. Draws only while something moves.
 - **Elevation and stippling** show per-cell ensemble statistics (`Statistic` in `src/data/cmip6.ts`, the output
-  contract: one grid per time step on the field's grid, `units`, `long_name`, `display_range`, `stipple_threshold`).
-  Mock: `statistics()` in `prep/make_mock.py`, model agreement (fraction of models agreeing on the sign of change since 1970,
-  0.5–1, threshold 0.8) and model spread (standard deviation of that change across models, mm/day, threshold 0.8);
-  both flat or empty before 1970. The gear menu picks which statistic each shows, or off (`shared.elevation`,
-  `shared.stipple`; defaults agreement and spread); the legend explains both. `stageGlobe(load, statistics)`:
+  contract: one grid per time step on the field's grid, `units`, `long_name`, `display_range`, `stipple_threshold`,
+  `actual_range`).
+  Mock: computed from the runs in `prep/make_mock.py` (`Spread`): agreement (fraction of members, or of models for
+  the multi-model mean, on the side of the majority's sign of change from each run's 1961–1990 mean, 0.5–1,
+  threshold 0.8) and spread (standard deviation of that change; display range per metric in `METRICS`, threshold
+  half of it). A member shows its ensemble's statistics. The gear menu picks which statistic each shows, or off (`shared.elevation`,
+  `shared.stipple`; defaults agreement and spread); the legend explains both, and its ⇅ button swaps them (the
+  draggable action ignores pointer-downs on buttons, inputs, selects and links). A Threshold slider in the gear menu
+  moves the stipple threshold between the statistic's `actual_range` (min and max over all years, written by prep,
+  so the browser reads no extra data); moved values live in `shared.thresholds` by `<metric>/<statistic>`, and the
+  globe only sets a uniform. `stageGlobe(load, statistics)`:
   - elevation: a 360 × 180-segment sphere displaced in the vertex shader (the top of the display range rises
-    `shared.elevationScale` of the radius: a Height slider in the gear menu, 0–20%, default 8%, disabled with
-    elevation off; changing it only sets a uniform), coastlines displaced by the same shader, shading from the relief's slope per pixel, lit from
+    `shared.elevationScale` × `shared.elevationMultiplier` of the radius: a Height slider in the gear menu, 0–20%,
+    default 8%, times an integer multiplier from − / + buttons, ×1–×10, so the slider keeps its fine steps at any
+    height; both disabled with elevation off; changing them only sets a uniform, and the closest zoom
+    (`controls.minDistance`) rises to stay 0.05 outside the highest peaks), coastlines displaced by the same shader, shading from the relief's slope per pixel, lit from
     the upper left. Grabbing still intersects the unit sphere, so on high relief the grabbed point drifts by up to ~8%.
   - stippling: in the fragment shader, dots fixed to the surface on rows `shared.stippleSize` degrees apart (a Dot
     size slider in the gear menu, 1–6°, default 2.5°; radius a fifth of the spacing, so bigger dots, fewer of them,
@@ -60,7 +70,7 @@ its years; if that fails the page shows only the error:
   (`src/state/colormaps.svelte.ts`). `bakeLut()` in `src/viewports/colormaps.ts` blends the points in Lab or RGB
   into one 1024-entry table that the globe shader, colour bar and PNG all sample. Opacity is ignored.
 
-Shared state is `{ colormap, metric, insetLeft, year, elevation, stipple, elevationScale, stippleSize }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
+Shared state is `{ colormap, metric, insetLeft, year, elevation, stipple, elevationScale, elevationMultiplier, stippleSize, thresholds }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
 registry). Next: real data in the same layout as the mock (prep for CMIP6 writing `catalog.json` and annual
 metrics). No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).
@@ -97,7 +107,9 @@ docker compose build web                          # after changing package.json 
   `http://web:4173/hydroviewer/` with the browser tool.
 - Dependencies live in the image at `/node_modules` (the repo is bind-mounted at `/app`), so there is
   no `node_modules` on the host and no volume to clear. Rebuild the image after any dependency change.
-- Edits to `src/` hot-reload. Set `VITE_USE_POLLING=true` on Docker Desktop (Mac/Windows).
+- Edits to `src/` hot-reload. Set `VITE_USE_POLLING=true` on Docker Desktop (Mac/Windows). After a git checkout,
+  merge or branch switch, run `docker compose restart web`: Vite can keep a file version from mid-switch (seen
+  2026-11-17: `app.css` without `.panel`, so every panel lost its background).
 - Vite only accepts the `localhost` and `web` hosts (`allowedHosts`); add others in `vite.config.ts`.
 - The sandbox does not publish ports to the host by itself; see the parent CLAUDE.md (`sbx ports`).
   Publish 5173 and 9000 (your browser fetches the data from `http://localhost:9000`).
@@ -112,15 +124,23 @@ docker compose build web                          # after changing package.json 
   `/home/oxygen/Downloads/hydroviewer_data/mock` (the mock, the current `.env`), `.../cmip6` (the GFDL-CM4 slice
   below; no `catalog.json`, so the app cannot open it yet) and `.../colormaps` (ColorMoves test files). To switch,
   edit `.env` (or prefix a command with `DATA_DIR=...`) and run `docker compose up -d data`.
-- **Mock:** `docker compose --profile prep run --rm mock` (`prep/make_mock.py`, a few seconds) writes
-  `catalog.json` and `mock/annual.zarr` (216 MB) into `$DATA_DIR`, replacing both. The `mock` service mounts
-  `prep/`, so edits to the formulas need no image rebuild (only `docker compose --profile prep build mock` once).
-  The store is the layout the app reads: per metric (`pr`, `rx1day`, `cdd`, `tas`) an array (year, lat, lon), one
-  year per chunk, with `display_range`; `<metric>_agreement` and `<metric>_spread` on the same axes with
-  `display_range` and `stipple_threshold`; `<metric>_global_mean` over `year` (cos(lat)-weighted, computed in prep);
-  coordinates `year` (int32 calendar years), `lat`, `lon`. `catalog.json` lists datasets: `name`, `detail`,
-  `store` (relative to the root) and `metrics` (`id`, `group`, statistic ids); names, units and ranges come from
-  the arrays' CF attributes.
+- **Mock:** `docker compose --profile prep run --rm mock [--models 8] [--map-members 3] [--workers 6]`
+  (`prep/make_mock.py`, about 3.5 minutes and 21 GB for the defaults) writes a mock multi-model ensemble into
+  `$DATA_DIR`, replacing a previous mock (it refuses to overwrite a catalog without `"mock": true`). Real model and
+  member names (`prep/mock_ensembles.json`: 50 models, 1288 member runs with monthly pr in historical and an SSP in
+  the cmip6-pds index, largest ensembles first), four SSPs, analytic values: each model its own bias and climate
+  sensitivity, each scenario its forcing after 2015, each member its own year-to-year variability. The `mock`
+  service mounts `prep/`, so edits need no image rebuild (only `docker compose --profile prep build mock` once).
+  Layout (`docs/llm/DATA_TREE_PLAN.md` §7), under the CMIP6 key path: per model and scenario, map stores for the
+  first `--map-members` members (`.../<member>/annual.zarr`: per metric `pr`, `rx1day`, `cdd`, `tas` an array (year,
+  lat, lon), one year per chunk, with `display_range`, and `<metric>_global_mean` over `year`) and an ensemble store
+  (`.../ensemble/annual.zarr`: mean of all members plus `<metric>_agreement` and `<metric>_spread` with
+  `display_range` and `stipple_threshold`); per scenario a multi-model store
+  (`CMIP6/ScenarioMIP/multimodel/<ssp>/annual.zarr`, the same across model means); `members.zarr` with every
+  member's and ensemble mean's global mean (rows in catalog order, for plumes); coordinates `year` (int32 calendar
+  years), `lat`, `lon`. `catalog.json`: `scenarios`, `metrics` (`id`, `group`, statistic ids), `multimodel` per
+  scenario, and `runs` (scenario, model, institution, `members`, `maps`, store paths, first `series` row); names,
+  units and ranges come from the arrays' CF attributes.
 - **Prep** (`prep/`, Python in Docker, opt-in profile) converts a slice into our bucket format under
   the same key path, as `.../<version>/map.zarr` plus `aggregates.zarr` in `$DATA_DIR`:
   `docker compose --profile prep build prep`, then
@@ -137,9 +157,9 @@ docker compose build web                          # after changing package.json 
   keys). Config: `tools/bucket/default.conf`. Use its access log to see which keys a page reads, i.e. what
   must be uploaded to R2.
 - **App side:** `src/data/config.ts` picks the bucket URL (`?data=URL` > `VITE_DATA_URL` >
-  `http://localhost:9000`); `src/data/catalog.ts` reads `catalog.json` and builds the `Dataset` from the store's
-  consolidated metadata (explicit `zarr.open.v3`); a field is one chunk read per year, keeping the latest per
-  array. `src/data/cmip6.ts` holds the data model and the older, unused loaders for the GFDL-CM4 slice:
+  `http://localhost:9000`); `src/data/catalog.ts` reads `catalog.json` and `openNode(catalog, { scenario, model?,
+  member? })` builds a node's `Dataset` from its store's consolidated metadata (explicit `zarr.open.v3`; each store
+  opened once); a field is one chunk read per year, keeping the latest per array. `src/data/cmip6.ts` holds the data model and the older, unused loaders for the GFDL-CM4 slice:
   `loadMonth(i)`, `loadField(source)` (the month or an aggregate map), `loadSeries(source)` (a 1D series with its
   coordinate from `dimension_names`), all memoized.
 - **Coastlines** are a committed app asset, not bucket data. Regenerate `src/assets/coastlines.json`
@@ -204,7 +224,8 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
   and a root `catalog.json`.
 - Bucket needs public read and CORS with `Range`. Do not depend on `Content-Encoding` for chunks.
 - Ensemble statistics (agreement, spread, ...) for elevation and stippling: one float32 grid per time step on the
-  field's grid and time axis, no NaN, `units`, `long_name`, `display_range`, `stipple_threshold` (plan step 7).
+  field's grid and time axis, no NaN, `units`, `long_name`, `display_range`, `stipple_threshold`, `actual_range`
+  (plan step 7).
 
 ## Working agreements
 

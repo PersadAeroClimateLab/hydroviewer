@@ -224,7 +224,8 @@ export const stageGlobe = (metrics: Metric[]): Viewport => ({
     controls.enablePan = false;
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.minDistance = 1.25;
+    const MIN_DISTANCE = 1.25; // raised while the relief is higher (setScale)
+    controls.minDistance = MIN_DISTANCE;
     controls.maxDistance = 10;
 
     // Centre the globe right of a side pane: the projection is shifted (setViewOffset), the camera stays on its
@@ -360,11 +361,21 @@ export const stageGlobe = (metrics: Metric[]): Viewport => ({
       return gridTexture(renderer, f);
     };
     const rangeOf = (f: Field) => f.range ?? [0, Math.max(...f.values)];
-    // Elevation height (shared state, a fraction of the radius) applies only while a statistic is shown;
-    // changing it just sets the uniform.
-    let [scale, elevated] = [initial.elevationScale, false];
+    // Elevation height (shared state: a fraction of the radius times an integer multiplier) applies only while a
+    // statistic is shown; changing it sets the uniform and keeps the closest zoom outside the peaks (the next
+    // frame's controls.update() clamps the camera).
+    let [scale, elevated] = [initial.elevationScale * initial.elevationMultiplier, false];
     const setScale = () => {
       reliefUniforms.reliefScale.value = elevated ? scale : 0;
+      controls.minDistance = Math.max(MIN_DISTANCE, 1.05 + reliefUniforms.reliefScale.value);
+      redraw();
+    };
+    // The stipple threshold: the statistic's default unless moved (shared `thresholds`); only a uniform changes.
+    let [thresholds, stippled] = [initial.thresholds, undefined as { key: string; fallback: number } | undefined];
+    const setThreshold = () => {
+      const t = stippled ? (thresholds[stippled.key] ?? stippled.fallback) : 0;
+      if (t === material.uniforms.stippleThreshold.value) return;
+      material.uniforms.stippleThreshold.value = t;
       redraw();
     };
     let wanted = '';
@@ -390,7 +401,8 @@ export const stageGlobe = (metrics: Metric[]): Viewport => ({
       u.stippleOn.value = st ? 1 : 0;
       if (st) {
         u.stipple.value = fill(u.stipple.value, st);
-        u.stippleThreshold.value = s!.threshold;
+        stippled = { key: `${m.id}/${s!.id}`, fallback: s!.threshold };
+        setThreshold();
       }
       globe.visible = true;
       redraw();
@@ -423,12 +435,14 @@ export const stageGlobe = (metrics: Metric[]): Viewport => ({
           inset = state.insetLeft;
           redraw(); // eases toward it frame by frame
         }
+        thresholds = state.thresholds;
+        setThreshold();
         if (state.stippleSize !== material.uniforms.stippleSpacing.value) {
           material.uniforms.stippleSpacing.value = state.stippleSize;
           redraw();
         }
-        if (state.elevationScale !== scale) {
-          scale = state.elevationScale;
+        if (state.elevationScale * state.elevationMultiplier !== scale) {
+          scale = state.elevationScale * state.elevationMultiplier;
           setScale();
         }
       },

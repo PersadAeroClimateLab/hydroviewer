@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Dataset } from './data/cmip6';
   import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
-  import { ELEVATION_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
+  import { ELEVATION_MULTIPLIER, ELEVATION_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
   import { draggable, type Offset } from './ui/draggable';
   import MetricPane from './ui/MetricPane.svelte';
   import SettingsMenu from './ui/SettingsMenu.svelte';
@@ -21,6 +21,10 @@
   const statistic = (id: string) => metric.statistics.find((s) => s.id === id);
   const elevation = $derived(statistic(shared.elevation));
   const stipple = $derived(statistic(shared.stipple));
+  // The stipple threshold: moved with the slider (per metric and statistic) or the statistic's default.
+  const thresholdKey = $derived(`${metric.id}/${shared.stipple}`);
+  const threshold = $derived(stipple ? (shared.thresholds[thresholdKey] ?? stipple.threshold) : 0);
+  const swap = () => ([shared.elevation, shared.stipple] = [shared.stipple, shared.elevation]);
   const fmt = (v: number, units: string) =>
     units.startsWith('fraction') ? `${Math.round(v * 100)}%` : `${Number(v.toPrecision(3))} ${units}`;
   // svelte-ignore state_referenced_locally
@@ -145,7 +149,7 @@
           </select>
         </label>
         <label class="setting">
-          <span>Height <small>{Math.round(shared.elevationScale * 100)}% of radius</small></span>
+          <span>Height <small>{Math.round(shared.elevationScale * shared.elevationMultiplier * 100)}% of radius</small></span>
           <input
             type="range"
             min={ELEVATION_SCALE.min}
@@ -155,12 +159,40 @@
             bind:value={shared.elevationScale}
           />
         </label>
+        <div class="setting">
+          <span>Height multiplier</span>
+          <span class="stepper">
+            <button
+              aria-label="Lower the height multiplier"
+              disabled={!shared.elevation || shared.elevationMultiplier <= ELEVATION_MULTIPLIER.min}
+              onclick={() => shared.elevationMultiplier--}>−</button
+            >
+            <output>×{shared.elevationMultiplier}</output>
+            <button
+              aria-label="Raise the height multiplier"
+              disabled={!shared.elevation || shared.elevationMultiplier >= ELEVATION_MULTIPLIER.max}
+              onclick={() => shared.elevationMultiplier++}>+</button
+            >
+          </span>
+        </div>
         <label class="setting">
           Stippling
           <select bind:value={shared.stipple}>
             <option value="">Off</option>
-            {#each metric.statistics as s (s.id)}<option value={s.id}>{s.name} ≥ {fmt(s.threshold, s.units)}</option>{/each}
+            {#each metric.statistics as s (s.id)}<option value={s.id}>{s.name}</option>{/each}
           </select>
+        </label>
+        <label class="setting">
+          <span>Threshold <small>{stipple ? `≥ ${fmt(threshold, stipple.units)}` : ''}</small></span>
+          <input
+            type="range"
+            min={stipple?.extent[0] ?? 0}
+            max={stipple?.extent[1] ?? 1}
+            step={stipple ? (stipple.extent[1] - stipple.extent[0]) / 200 : 0.01}
+            disabled={!stipple}
+            value={threshold}
+            oninput={(e) => (shared.thresholds[thresholdKey] = Number(e.currentTarget.value))}
+          />
         </label>
         <label class="setting">
           <span>Dot size <small>one per {shared.stippleSize}°</small></span>
@@ -189,6 +221,9 @@
       <div>{metric.name}, {metric.units}</div>
       <canvas class="bar" width={LUT_SIZE} height="1" bind:this={bar}></canvas>
       <div class="ticks"><span>{metric.range[0]}</span><span>{metric.range[1]}</span></div>
+      {#if elevation || stipple}
+        <button class="swap" aria-label="Swap elevation and stippling" title="Swap elevation and stippling" onclick={swap}>⇅</button>
+      {/if}
       {#if elevation}
         <div class="extra">
           Elevation: {elevation.name.toLowerCase()}
@@ -198,7 +233,7 @@
       {#if stipple}
         <div class="extra">
           <i class="dots" aria-hidden="true"></i>Stippling: {stipple.name.toLowerCase()}
-          <span>dots where ≥ {fmt(stipple.threshold, stipple.units)}</span>
+          <span>dots where ≥ {fmt(threshold, stipple.units)}</span>
         </div>
       {/if}
     </section>
@@ -299,6 +334,34 @@
   .extra {
     margin-top: 6px;
     max-width: 220px;
+  }
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stepper button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .stepper output {
+    min-width: 2.2em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .swap {
+    float: right;
+    margin: 6px 0 0 8px;
+  }
+  .stepper button,
+  .swap {
+    font: inherit;
+    color: var(--fg);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0 6px;
+    cursor: pointer;
   }
   .extra span {
     display: block;
