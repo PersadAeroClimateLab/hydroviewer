@@ -18,13 +18,15 @@ export interface Field extends Grid {
 
 // A per-cell statistic of an ensemble (agreement, spread, ...), the output side of the data contract for
 // uncertainty: one float32 grid per time step on the field's grid, CF `units`/`long_name`, a `display_range`
-// (elevation maps it to flat..highest) and a `stipple_threshold` (cells at or above it are stippled).
+// (elevation maps it to flat..highest), a `stipple_threshold` (cells at or above it are stippled, by default) and an
+// `actual_range` (min and max over all time steps: the limits of the threshold slider).
 export interface Statistic {
   id: string;
   name: string;
   units: string;
   range: [number, number];
   threshold: number;
+  extent: [number, number];
   load: (year: number) => Field | Promise<Field>;
 }
 

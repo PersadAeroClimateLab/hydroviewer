@@ -7,7 +7,7 @@ const MARGIN = { top: 22, right: 22, bottom: 22, left: 36 }; // sides fit the en
 // needle marking the shared year. Drag the needle or click the chart to move it; it is also a keyboard
 // slider (arrows, Page Up/Down, Home/End). Moving the needle only restyles two elements, so it is cheap.
 export const timeline = (
-  load: (metric: string) => Series | Promise<Series>, // the selected metric's series
+  load: (metric: string) => Series | Promise<Series>, // the selected metric's series, of the shown node
   range: [number, number],
   onYear: (year: number) => void,
 ): Viewport => ({
@@ -57,12 +57,12 @@ export const timeline = (
     let draw = () => {};
     const observer = new ResizeObserver(() => draw());
     let alive = true;
-    let metric = initial.metric;
+    let shown = `${initial.node} ${initial.metric}`; // the node and metric drawn (or loading)
     const plot = import('@observablehq/plot');
-    // Loads a metric's series and draws it; a newer pick or unmounting wins over a slow load.
-    const show = async (id: string) => {
+    // Loads a metric's series and draws it; a newer pick (another metric or node) or unmounting wins over a slow load.
+    const show = async (key: string, id: string) => {
       const [Plot, s] = await Promise.all([plot, load(id)]);
-      if (!alive || id !== metric) return;
+      if (!alive || key !== shown) return;
       const rows = s.x.map((x, i) => ({ x, y: s.y[i] }));
       values = new Map(rows.map((r) => [r.x, r.y]));
       const floor = Math.min(...s.y); // the area starts at the lowest value, not 0, so the trend shows
@@ -87,7 +87,7 @@ export const timeline = (
       draw();
       observer.observe(el); // redraws on resize (observing again is a no-op)
     };
-    show(metric);
+    show(shown, initial.metric);
 
     const fromPointer = (e: PointerEvent) => svg && set(svg.scale('x').invert(e.clientX - el.getBoundingClientRect().left));
     let dragging = false;
@@ -115,7 +115,8 @@ export const timeline = (
       update(state) {
         year = state.year;
         place();
-        if (state.metric !== metric) show((metric = state.metric));
+        const key = `${state.node} ${state.metric}`;
+        if (key !== shown) show((shown = key), state.metric);
       },
       destroy() {
         alive = false;

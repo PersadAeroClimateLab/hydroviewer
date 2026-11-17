@@ -1,8 +1,11 @@
 <script lang="ts">
+  import { nodeKey, openNode, type Catalog } from './data/catalog';
   import type { Dataset } from './data/cmip6';
+  import { createTree } from './data/tree';
   import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
-  import { ELEVATION_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
+  import { ELEVATION_MULTIPLIER, ELEVATION_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
   import { draggable, type Offset } from './ui/draggable';
+  import DataTree from './ui/DataTree.svelte';
   import MetricPane from './ui/MetricPane.svelte';
   import SettingsMenu from './ui/SettingsMenu.svelte';
   import ViewportHost from './ui/ViewportHost.svelte';
@@ -11,16 +14,42 @@
   import { stageGlobe } from './viewports/stageGlobe';
   import { timeline } from './viewports/timeline';
 
-  // One full-screen globe with floating panels: a pane of the dataset's metrics on the left, and a timeline of the
-  // selected metric's global mean whose needle sets the year. The dataset comes from the bucket's catalog.json.
-  // Loaded once before mounting (main.ts) and never replaced, so viewports may capture them.
-  const { dataset, years }: { dataset: Dataset; years: [number, number] } = $props();
+  // One full-screen globe with floating panels: a pane of the dataset's metrics on the left, the data tree at the
+  // top, and a timeline of the selected metric's global mean whose needle sets the year. The catalog and the first
+  // node's dataset are loaded before mounting (main.ts); the years are the first node's (every mock node has the
+  // same).
+  const { catalog, dataset: first, years }: { catalog: Catalog; dataset: Dataset; years: [number, number] } = $props();
+
+  // The shown dataset follows the data tree's selection once the node has loaded (shared.node then changes and
+  // the views reload); a newer pick wins over a slow load. Not deep state: it holds loaders and typed arrays.
   // svelte-ignore state_referenced_locally
-  const globe = stageGlobe(dataset.metrics); // colour: the metric; elevation and stippling: its statistics
+  let dataset = $state.raw(first);
+  // svelte-ignore state_referenced_locally
+  const tree = createTree(catalog);
+  let opening = '';
+  $effect(() => {
+    const node = tree.node({ selection: shared.selection, hover: {} });
+    const key = (opening = nodeKey(node));
+    if (key === shared.node) return;
+    openNode(catalog, node).then(
+      (opened) => {
+        if (opening !== key) return;
+        dataset = opened.dataset;
+        shared.node = key;
+      },
+      (e) => say(`Could not open ${key}: ${e instanceof Error ? e.message : e}`, true),
+    );
+  });
+
+  const globe = stageGlobe(() => dataset.metrics); // colour: the metric; elevation and stippling: its statistics
   const metric = $derived(dataset.metrics.find((m) => m.id === shared.metric) ?? dataset.metrics[0]);
   const statistic = (id: string) => metric.statistics.find((s) => s.id === id);
   const elevation = $derived(statistic(shared.elevation));
   const stipple = $derived(statistic(shared.stipple));
+  // The stipple threshold: moved with the slider (per metric and statistic) or the statistic's default.
+  const thresholdKey = $derived(`${metric.id}/${shared.stipple}`);
+  const threshold = $derived(stipple ? (shared.thresholds[thresholdKey] ?? stipple.threshold) : 0);
+  const swap = () => ([shared.elevation, shared.stipple] = [shared.stipple, shared.elevation]);
   const fmt = (v: number, units: string) =>
     units.startsWith('fraction') ? `${Math.round(v * 100)}%` : `${Number(v.toPrecision(3))} ${units}`;
   // svelte-ignore state_referenced_locally
@@ -46,6 +75,14 @@
   const HUD_PADDING = 16;
   $effect(() => {
     shared.insetLeft = paneOpen && wide ? paneWidth + HUD_PADDING : 0;
+  });
+
+  // The data tree: closed, a chip reading out the selection; open, a pane under the top row, and the globe centres
+  // below it (on phones it covers the page instead).
+  let treeOpen = $state(false);
+  let treeBottom = $state(0);
+  $effect(() => {
+    shared.insetTop = treeOpen && wide ? treeBottom : 0;
   });
 
   // A short message over the globe: import results and errors.
@@ -111,7 +148,7 @@
 >
   <div class="stage"><ViewportHost viewport={globe} /></div>
 
-  <div class="hud" class:pane-open={paneOpen && wide}>
+  <div class="hud" class:pane-open={paneOpen && wide} class:tree-open={treeOpen}>
     <MetricPane
       dataset={dataset}
       selected={metric.id}
@@ -123,6 +160,8 @@
         if (!wide) paneOpen = false; // on phones the pane covers the globe
       }}
     />
+
+    <DataTree {catalog} bind:open={treeOpen} bind:bottom={treeBottom} />
 
     <section class="panel tools">
       <label>
@@ -145,7 +184,7 @@
           </select>
         </label>
         <label class="setting">
-          <span>Height <small>{Math.round(shared.elevationScale * 100)}% of radius</small></span>
+          <span>Height <small>{Math.round(shared.elevationScale * shared.elevationMultiplier * 100)}% of radius</small></span>
           <input
             type="range"
             min={ELEVATION_SCALE.min}
@@ -155,12 +194,40 @@
             bind:value={shared.elevationScale}
           />
         </label>
+        <div class="setting">
+          <span>Height multiplier</span>
+          <span class="stepper">
+            <button
+              aria-label="Lower the height multiplier"
+              disabled={!shared.elevation || shared.elevationMultiplier <= ELEVATION_MULTIPLIER.min}
+              onclick={() => shared.elevationMultiplier--}>−</button
+            >
+            <output>×{shared.elevationMultiplier}</output>
+            <button
+              aria-label="Raise the height multiplier"
+              disabled={!shared.elevation || shared.elevationMultiplier >= ELEVATION_MULTIPLIER.max}
+              onclick={() => shared.elevationMultiplier++}>+</button
+            >
+          </span>
+        </div>
         <label class="setting">
           Stippling
           <select bind:value={shared.stipple}>
             <option value="">Off</option>
-            {#each metric.statistics as s (s.id)}<option value={s.id}>{s.name} ≥ {fmt(s.threshold, s.units)}</option>{/each}
+            {#each metric.statistics as s (s.id)}<option value={s.id}>{s.name}</option>{/each}
           </select>
+        </label>
+        <label class="setting">
+          <span>Threshold <small>{stipple ? `≥ ${fmt(threshold, stipple.units)}` : ''}</small></span>
+          <input
+            type="range"
+            min={stipple?.extent[0] ?? 0}
+            max={stipple?.extent[1] ?? 1}
+            step={stipple ? (stipple.extent[1] - stipple.extent[0]) / 200 : 0.01}
+            disabled={!stipple}
+            value={threshold}
+            oninput={(e) => (shared.thresholds[thresholdKey] = Number(e.currentTarget.value))}
+          />
         </label>
         <label class="setting">
           <span>Dot size <small>one per {shared.stippleSize}°</small></span>
@@ -189,6 +256,9 @@
       <div>{metric.name}, {metric.units}</div>
       <canvas class="bar" width={LUT_SIZE} height="1" bind:this={bar}></canvas>
       <div class="ticks"><span>{metric.range[0]}</span><span>{metric.range[1]}</span></div>
+      {#if elevation || stipple}
+        <button class="swap" aria-label="Swap elevation and stippling" title="Swap elevation and stippling" onclick={swap}>⇅</button>
+      {/if}
       {#if elevation}
         <div class="extra">
           Elevation: {elevation.name.toLowerCase()}
@@ -198,7 +268,7 @@
       {#if stipple}
         <div class="extra">
           <i class="dots" aria-hidden="true"></i>Stippling: {stipple.name.toLowerCase()}
-          <span>dots where ≥ {fmt(stipple.threshold, stipple.units)}</span>
+          <span>dots where ≥ {fmt(threshold, stipple.units)}</span>
         </div>
       {/if}
     </section>
@@ -238,16 +308,33 @@
     /* The pane's column is as wide as the closed chip or the open pane; with the pane open, the panels below
        sit right of it (the globe is centred there too). */
     grid-template:
-      'pane notice tools' auto
-      '. . .' 1fr
+      'pane chip tools' auto
+      '. notice .' 1fr
       'legend legend .' auto
       'time time time' auto / auto 1fr auto;
     pointer-events: none;
   }
   .hud.pane-open {
     grid-template:
-      'pane notice tools' auto
-      'pane . .' 1fr
+      'pane chip tools' auto
+      'pane notice .' 1fr
+      'pane legend .' auto
+      'pane time time' auto / auto 1fr auto;
+  }
+  /* The open data tree takes a row under the top one, right of the metric pane. */
+  .hud.tree-open {
+    grid-template:
+      'pane chip tools' auto
+      'tree tree tree' auto
+      '. notice .' 1fr
+      'legend legend .' auto
+      'time time time' auto / auto 1fr auto;
+  }
+  .hud.pane-open.tree-open {
+    grid-template:
+      'pane chip tools' auto
+      'pane tree tree' auto
+      'pane notice .' 1fr
       'pane legend .' auto
       'pane time time' auto / auto 1fr auto;
   }
@@ -299,6 +386,34 @@
   .extra {
     margin-top: 6px;
     max-width: 220px;
+  }
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stepper button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .stepper output {
+    min-width: 2.2em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .swap {
+    float: right;
+    margin: 6px 0 0 8px;
+  }
+  .stepper button,
+  .swap {
+    font: inherit;
+    color: var(--fg);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0 6px;
+    cursor: pointer;
   }
   .extra span {
     display: block;
@@ -372,8 +487,16 @@
   }
 
   @media (max-width: 720px) {
-    .hud {
+    /* Phones: the data tree's chip gets its own row; the open tree and metric pane cover the page instead. */
+    .hud,
+    .hud.tree-open {
       padding: 12px;
+      grid-template:
+        'pane tools' auto
+        'chip chip' auto
+        'notice notice' 1fr
+        'legend .' auto
+        'time time' auto / 1fr auto;
     }
     .track {
       height: 88px;
