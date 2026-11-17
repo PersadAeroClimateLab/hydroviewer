@@ -206,7 +206,14 @@ same reductions real prep will do. The analytic statistics go away.
    catalog substituted in the browser; nothing draws while idle.
    Browser checks: screenshots at 1280 × 800 and phone width, 0 globe frames while idle, a drag-free pick flow
    with a Playwright script.
-4. **Switching data:** the globe and timeline take a new dataset; the metric pane greys out missing metrics.
+4. **Switching data** (built 2026-11-17): the globe and timeline take a new dataset; the metric pane greys out missing metrics.
+   As built: `App` opens the selection's node and, once loaded, swaps its dataset and sets `shared.node` (the node's
+   key); the globe (`stageGlobe(() => metrics)`) and timeline reload on it, so no view sees a half-loaded node and a
+   newer pick wins. Statistic and threshold choices carry over (same ids). Checked in the browser: metric pane,
+   legend, timeline and globe follow each kind of node, a member without maps shows its ensemble, a fast run of
+   picks ends on the last, and the emulator log shows each node reads only its own store (a member's statistics
+   from its ensemble's). Deferred until real data needs it: greying out metrics a node lacks, and a year range per
+   node (the timeline keeps the first node's).
 5. **Plume on the timeline:** the node's members (or models) as faint lines and the aggregate in bold, hover to
    identify (a Plot layer; drawing only).
 6. **Docs:** CLAUDE.md, DEV_PLAN (data contract: catalog, node stores, series store).

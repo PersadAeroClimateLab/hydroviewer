@@ -1,7 +1,7 @@
 import { mount } from 'svelte';
 import './app.css';
 import App from './App.svelte';
-import { loadCatalog, openNode } from './data/catalog';
+import { loadCatalog, nodeKey, openNode } from './data/catalog';
 import { dataBase } from './data/config';
 import { createTree } from './data/tree';
 import { shared } from './state/shared.svelte';
@@ -13,6 +13,7 @@ loadCatalog()
     const tree = createTree(catalog);
     const start = tree.initial();
     shared.selection = start.selection;
+    shared.node = nodeKey(tree.node(start));
     return { catalog, ...(await openNode(catalog, tree.node(start))) };
   })
   .then(

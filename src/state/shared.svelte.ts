@@ -6,7 +6,8 @@ import { colormaps } from './colormaps.svelte';
 // The colormap itself (not its id) is shared, so viewports need no registry.
 // `metric` is the id of the metric on the globe and timeline; `insetLeft` is how many pixels a side pane covers
 // on the left (the globe centres right of it) and `insetTop` how many the open data tree covers at the top.
-// `selection` is the data tree's pick (scenario, model, member; set from the catalog before the app mounts). `elevation` and `stipple` are statistic ids ('' = off); `elevationScale` is the height of the top of the
+// `selection` is the data tree's pick (scenario, model, member; set from the catalog before the app mounts) and
+// `node` the key of the node whose dataset the views show (set once it has loaded, so views reload then). `elevation` and `stipple` are statistic ids ('' = off); `elevationScale` is the height of the top of the
 // elevation's display range, as a fraction of the globe's radius.
 export const ELEVATION_SCALE = { min: 0, max: 0.2, initial: 0.08 };
 // `elevationMultiplier` (an integer) multiplies it, so the slider keeps its fine steps at any height; the globe
@@ -21,6 +22,7 @@ export const shared = $state<{
   insetLeft: number;
   insetTop: number;
   selection: Selection;
+  node: string;
   year: number;
   elevation: string;
   stipple: string;
@@ -34,6 +36,7 @@ export const shared = $state<{
   insetLeft: 0,
   insetTop: 0,
   selection: { scenario: '' },
+  node: '',
   year: 2025,
   elevation: 'agreement',
   stipple: 'spread',

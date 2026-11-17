@@ -166,9 +166,10 @@ const toXyz = (lon: number, lat: number, r: number): [number, number, number] =>
 // in the shared state. It centres in the area right of `insetLeft` (a side pane) and below `insetTop` (the data
 // tree), easing when they change.
 // Drag to rotate (the point grabbed stays under the pointer, a flick coasts to a stop), scroll or pinch to zoom.
-// The metrics' loaders give the fields for a year (memoized by the caller). Draws only while
+// `metrics()` gives the shown node's metrics, whose loaders give the fields for a year (memoized by the caller);
+// they are read again when `node` in the shared state changes. Draws only while
 // something changes: a frame per input event, and frames while a flick or a zoom damps out.
-export const stageGlobe = (metrics: Metric[]): Viewport => ({
+export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
   mount(el, initial) {
     const renderer = new WebGLRenderer({ alpha: true, antialias: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -381,12 +382,13 @@ export const stageGlobe = (metrics: Metric[]): Viewport => ({
       redraw();
     };
     let wanted = '';
-    const setData = async (state: { metric: string; year: number; elevation: string; stipple: string }) => {
-      const { metric, year, elevation, stipple } = state;
-      const key = `${metric} ${year} ${elevation} ${stipple}`;
+    const setData = async (state: { node: string; metric: string; year: number; elevation: string; stipple: string }) => {
+      const { node, metric, year, elevation, stipple } = state;
+      const key = `${node} ${metric} ${year} ${elevation} ${stipple}`;
       if (key === wanted) return;
       wanted = key;
-      const m = metrics.find((x) => x.id === metric) ?? metrics[0];
+      const shown = metrics();
+      const m = shown.find((x) => x.id === metric) ?? shown[0];
       const [e, s] = [elevation, stipple].map((id) => m.statistics.find((st) => st.id === id));
       const [f, r, st] = await Promise.all([m.load(year), e?.load(year), s?.load(year)]);
       if (key !== wanted || !alive) return; // a newer request won

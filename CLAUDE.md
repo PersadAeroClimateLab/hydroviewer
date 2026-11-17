@@ -16,8 +16,11 @@ three.js globe (`src/viewports/stageGlobe.ts`) with floating panels, on **mock d
 multi-model, multi-scenario ensemble of analytic 360 × 180 annual fields for 1950–2100 written by `prep/make_mock.py`;
 see Data path). `main.ts` loads the bucket's `catalog.json` (`loadCatalog()`), opens the SSP2-4.5 multi-model mean
 (`openNode()` in `src/data/catalog.ts`) and then mounts `App` with it and its years; if that fails the page shows
-only the error. The data tree pane picks a node (`shared.selection`), but the globe, legend, timeline and metric
-pane do not follow it yet (data tree phase 4):
+only the error. The data tree pane picks a node (`shared.selection`); `App` opens it (`openNode`, each store opened
+once) and, once loaded, swaps its `dataset` (`$state.raw`) and sets `shared.node` (the node's key, `nodeKey()`), on
+which the globe and timeline reload (they read the metrics through a getter); a newer pick wins over a slow load,
+and a failure shows a notice. The timeline's year range is the first node's (every mock node has the same). Not
+done: greying out metrics a node lacks (every mock node has all four):
 
 - **Data tree** (top, `src/ui/DataTree.svelte`; rules in `src/data/tree.ts`, tested in `tests/tree.test.ts`): closed,
   a chip at the top centre reads out the selection ("SSP2-4.5 › CanESM5 › Ensemble (50)") and toggles the pane;
@@ -83,7 +86,7 @@ pane do not follow it yet (data tree phase 4):
   (`src/state/colormaps.svelte.ts`). `bakeLut()` in `src/viewports/colormaps.ts` blends the points in Lab or RGB
   into one 1024-entry table that the globe shader, colour bar and PNG all sample. Opacity is ignored.
 
-Shared state is `{ colormap, metric, insetLeft, insetTop, selection, year, elevation, stipple, elevationScale, elevationMultiplier, stippleSize, thresholds }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
+Shared state is `{ colormap, metric, insetLeft, insetTop, selection, node, year, elevation, stipple, elevationScale, elevationMultiplier, stippleSize, thresholds }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
 registry). Next: real data in the same layout as the mock (prep for CMIP6 writing `catalog.json` and annual
 metrics). No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).

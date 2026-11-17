@@ -32,6 +32,9 @@ export interface Node {
   member?: string;
 }
 
+// A node as a string, e.g. "ssp245/CanESM5/r1i1p1f1", to tell which node the views show.
+export const nodeKey = ({ scenario, model, member }: Node) => [scenario, model, member].filter(Boolean).join('/');
+
 type Attrs = { units: string; long_name: string; display_range: [number, number]; stipple_threshold: number; actual_range?: [number, number] };
 
 export async function loadCatalog(): Promise<Catalog> {

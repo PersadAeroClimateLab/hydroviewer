@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { Catalog } from './data/catalog';
+  import { nodeKey, openNode, type Catalog } from './data/catalog';
   import type { Dataset } from './data/cmip6';
+  import { createTree } from './data/tree';
   import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
   import { ELEVATION_MULTIPLIER, ELEVATION_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
   import { draggable, type Offset } from './ui/draggable';
@@ -13,12 +14,34 @@
   import { stageGlobe } from './viewports/stageGlobe';
   import { timeline } from './viewports/timeline';
 
-  // One full-screen globe with floating panels: a pane of the dataset's metrics on the left, and a timeline of the
-  // selected metric's global mean whose needle sets the year. The dataset comes from the bucket's catalog.json.
-  // Loaded once before mounting (main.ts) and never replaced, so viewports may capture them.
-  const { catalog, dataset, years }: { catalog: Catalog; dataset: Dataset; years: [number, number] } = $props();
+  // One full-screen globe with floating panels: a pane of the dataset's metrics on the left, the data tree at the
+  // top, and a timeline of the selected metric's global mean whose needle sets the year. The catalog and the first
+  // node's dataset are loaded before mounting (main.ts); the years are the first node's (every mock node has the
+  // same).
+  const { catalog, dataset: first, years }: { catalog: Catalog; dataset: Dataset; years: [number, number] } = $props();
+
+  // The shown dataset follows the data tree's selection once the node has loaded (shared.node then changes and
+  // the views reload); a newer pick wins over a slow load. Not deep state: it holds loaders and typed arrays.
   // svelte-ignore state_referenced_locally
-  const globe = stageGlobe(dataset.metrics); // colour: the metric; elevation and stippling: its statistics
+  let dataset = $state.raw(first);
+  // svelte-ignore state_referenced_locally
+  const tree = createTree(catalog);
+  let opening = '';
+  $effect(() => {
+    const node = tree.node({ selection: shared.selection, hover: {} });
+    const key = (opening = nodeKey(node));
+    if (key === shared.node) return;
+    openNode(catalog, node).then(
+      (opened) => {
+        if (opening !== key) return;
+        dataset = opened.dataset;
+        shared.node = key;
+      },
+      (e) => say(`Could not open ${key}: ${e instanceof Error ? e.message : e}`, true),
+    );
+  });
+
+  const globe = stageGlobe(() => dataset.metrics); // colour: the metric; elevation and stippling: its statistics
   const metric = $derived(dataset.metrics.find((m) => m.id === shared.metric) ?? dataset.metrics[0]);
   const statistic = (id: string) => metric.statistics.find((s) => s.id === id);
   const elevation = $derived(statistic(shared.elevation));
