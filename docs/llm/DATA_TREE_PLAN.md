@@ -198,7 +198,12 @@ same reductions real prep will do. The analytic statistics go away.
    scenario keeps the model and member where it has them; a member without maps can be picked (`node()` is then
    its ensemble, `path()` says "no maps"); links are at most one per level plus the selection's model link during a
    preview, with a `weight` (runs it stands for) for bundles.
-3. **Top pane:** `DataTree.svelte`, closed chip and open pane, `insetTop`, tools placement, phones, keyboard.
+3. **Top pane** (built 2026-11-17): `DataTree.svelte`, closed chip and open pane, `insetTop`, tools placement, phones, keyboard.
+   As built: the chip sits in the top row between the metric pane and the tools (which stay put); the open pane is
+   a new grid row under it, right of the metric pane. Models flow into sub-columns of 9–14 rows and scroll sideways
+   when the members need the room. Links that would cross other models' names run along the band above the first
+   row. Checked at 1280 × 800, 1920 × 1080, 390 × 844 and in dark mode, with the 8-model mock and with a 45-model
+   catalog substituted in the browser; nothing draws while idle.
    Browser checks: screenshots at 1280 × 800 and phone width, 0 globe frames while idle, a drag-free pick flow
    with a Playwright script.
 4. **Switching data:** the globe and timeline take a new dataset; the metric pane greys out missing metrics.

@@ -16,8 +16,20 @@ three.js globe (`src/viewports/stageGlobe.ts`) with floating panels, on **mock d
 multi-model, multi-scenario ensemble of analytic 360 × 180 annual fields for 1950–2100 written by `prep/make_mock.py`;
 see Data path). `main.ts` loads the bucket's `catalog.json` (`loadCatalog()`), opens the SSP2-4.5 multi-model mean
 (`openNode()` in `src/data/catalog.ts`) and then mounts `App` with it and its years; if that fails the page shows
-only the error. No UI picks another node yet: the tree's rules exist (`src/data/tree.ts`, tested), the pane and
-switching are data tree phases 3–4:
+only the error. The data tree pane picks a node (`shared.selection`), but the globe, legend, timeline and metric
+pane do not follow it yet (data tree phase 4):
+
+- **Data tree** (top, `src/ui/DataTree.svelte`; rules in `src/data/tree.ts`, tested in `tests/tree.test.ts`): closed,
+  a chip at the top centre reads out the selection ("SSP2-4.5 › CanESM5 › Ensemble (50)") and toggles the pane;
+  open, the pane takes a row under the top row (right of the metric pane) and the globe centres below it
+  (`shared.insetTop` from the pane's lower edge, eased with `insetLeft` in `setViewOffset`). Columns: scenarios
+  (with model counts), models (sorted by ensemble size, "All models" first; sub-columns of 9 to 14 rows, scrolling
+  sideways when there is no room, the picked one scrolled into view), members (an "Ensemble mean" button and a grid
+  of 14 px cells: solid with maps, hollow without, blue when picked, the id in the heading on hover). Links are
+  SVG curves measured from the items' boxes after each change, thicker for bundles; one that would cross other
+  models' names runs along the band above the first row instead. Arrow keys move within a column, Escape closes.
+  Phones: the chip gets its own row and the open pane covers the page, columns stacked, no links. Checked with 8
+  and (catalog swapped in the browser) 45 models per scenario.
 
 - **Metric pane** (left, `src/ui/MetricPane.svelte`): app title, dataset (model, experiment, member) and its
   metrics grouped by variable (mock: precipitation, wettest day, longest dry spell, temperature); picking one shows
@@ -71,7 +83,7 @@ switching are data tree phases 3–4:
   (`src/state/colormaps.svelte.ts`). `bakeLut()` in `src/viewports/colormaps.ts` blends the points in Lab or RGB
   into one 1024-entry table that the globe shader, colour bar and PNG all sample. Opacity is ignored.
 
-Shared state is `{ colormap, metric, insetLeft, year, elevation, stipple, elevationScale, elevationMultiplier, stippleSize, thresholds }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
+Shared state is `{ colormap, metric, insetLeft, insetTop, selection, year, elevation, stipple, elevationScale, elevationMultiplier, stippleSize, thresholds }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
 registry). Next: real data in the same layout as the mock (prep for CMIP6 writing `catalog.json` and annual
 metrics). No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).

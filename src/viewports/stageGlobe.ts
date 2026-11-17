@@ -163,7 +163,8 @@ const toXyz = (lon: number, lat: number, r: number): [number, number, number] =>
 
 // The main globe of the full-screen layout: the selected metric's field on a sphere with coastlines; the surface
 // can rise with one of its statistics (elevation) and be stippled where another passes its threshold, as picked
-// in the shared state. It centres in the area right of `insetLeft` (a side pane), easing when that changes.
+// in the shared state. It centres in the area right of `insetLeft` (a side pane) and below `insetTop` (the data
+// tree), easing when they change.
 // Drag to rotate (the point grabbed stays under the pointer, a flick coasts to a stop), scroll or pinch to zoom.
 // The metrics' loaders give the fields for a year (memoized by the caller). Draws only while
 // something changes: a frame per input event, and frames while a flick or a zoom damps out.
@@ -228,15 +229,16 @@ export const stageGlobe = (metrics: Metric[]): Viewport => ({
     controls.minDistance = MIN_DISTANCE;
     controls.maxDistance = 10;
 
-    // Centre the globe right of a side pane: the projection is shifted (setViewOffset), the camera stays on its
-    // axis, so grabbing and picking are unchanged. The globe is fitted to the area that remains.
+    // Centre the globe right of a side pane and below a top pane: the projection is shifted (setViewOffset), the
+    // camera stays on its axis, so grabbing and picking are unchanged. The globe is fitted to the area that remains.
     let [width, height] = [1, 1];
-    let [inset, shown] = [initial.insetLeft, initial.insetLeft]; // target and current, in px
+    let inset = [initial.insetLeft, initial.insetTop]; // target, in px
+    let shown = [...inset]; // current, eased toward the target
     const frameView = () => {
-      const usable = Math.max(width - shown, width * 0.4);
+      const fit = Math.min(1, Math.max(width - shown[0], width * 0.4) / height, Math.max(height - shown[1], height * 0.4) / height);
       camera.aspect = width / height;
-      camera.fov = MathUtils.radToDeg(2 * Math.atan(Math.tan(MathUtils.degToRad(FOV / 2)) / Math.min(1, usable / height)));
-      camera.setViewOffset(width, height, -shown / 2, 0, width, height);
+      camera.fov = MathUtils.radToDeg(2 * Math.atan(Math.tan(MathUtils.degToRad(FOV / 2)) / fit));
+      camera.setViewOffset(width, height, -shown[0] / 2, -shown[1] / 2, width, height);
       camera.updateProjectionMatrix();
     };
 
@@ -254,8 +256,8 @@ export const stageGlobe = (metrics: Metric[]): Viewport => ({
         spin = spin.map((v) => (Math.abs(v * decay) < 1e-6 ? 0 : v * decay));
         redraw();
       }
-      if (shown !== inset) {
-        shown = Math.abs(inset - shown) < 0.5 ? inset : shown + (inset - shown) * 0.25;
+      if (shown[0] !== inset[0] || shown[1] !== inset[1]) {
+        shown = shown.map((s, i) => (Math.abs(inset[i] - s) < 0.5 ? inset[i] : s + (inset[i] - s) * 0.25));
         frameView();
         redraw();
       }
@@ -431,8 +433,8 @@ export const stageGlobe = (metrics: Metric[]): Viewport => ({
       update(state) {
         setColormap(state.colormap);
         setData(state);
-        if (state.insetLeft !== inset) {
-          inset = state.insetLeft;
+        if (state.insetLeft !== inset[0] || state.insetTop !== inset[1]) {
+          inset = [state.insetLeft, state.insetTop];
           redraw(); // eases toward it frame by frame
         }
         thresholds = state.thresholds;
