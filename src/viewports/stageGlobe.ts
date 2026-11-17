@@ -2,23 +2,31 @@ import {
   AdditiveBlending,
   BackSide,
   DataTexture,
+  FloatType,
   LinearFilter,
   LinearSRGBColorSpace,
   MathUtils,
+  Group,
+  NearestFilter,
   Mesh,
   PerspectiveCamera,
+  Ray,
+  RedFormat,
+  RepeatWrapping,
   RGBAFormat,
   Scene,
   ShaderMaterial,
   SphereGeometry,
   UnsignedByteType,
+  Vector2,
+  Vector3,
   WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Field } from '../data/cmip6';
 import { colorAt, type Palette } from './colormaps';
 import { createCoastlines, disposeCoastlines } from './coastlines';
-import { gridTexture } from './fieldLayer';
+import { solveGrab } from './grab';
 import type { Viewport } from './types';
 
 const LUT_SIZE = 256;
@@ -62,17 +70,26 @@ const haloShader = /* glsl */ `
   }
 `;
 
+// A grid as a float texture, filtered linearly where the GPU allows it.
+function gridTexture(renderer: WebGLRenderer, f: Field): DataTexture {
+  const texture = new DataTexture(f.values, f.width, f.height, RedFormat, FloatType);
+  texture.minFilter = texture.magFilter = renderer.extensions.has('OES_texture_float_linear') ? LinearFilter : NearestFilter;
+  texture.wrapS = RepeatWrapping; // longitude is periodic, so filter across the antimeridian
+  texture.needsUpdate = true;
+  return texture;
+}
+
+// Lon 0 at +z, lon 90 at +x, north at +y: the same frame as the fragment shader's atan(p.x, p.z).
 const toXyz = (lon: number, lat: number, r: number): [number, number, number] => {
   const [l, p] = [MathUtils.degToRad(lon), MathUtils.degToRad(lat)];
   return [r * Math.cos(p) * Math.sin(l), r * Math.sin(p), r * Math.cos(p) * Math.cos(l)];
 };
 
 // The main globe of the full-screen layout: a field on a sphere with coastlines, drag to rotate,
-// scroll to zoom. `load` gives the field for the shared state (memoized by the caller). Draws only
-// while something changes: a frame per input event, and frames while the rotation damps out.
-export const stageGlobe = (load: (month: number) => Field | Promise<Field>): Viewport => ({
-  name: 'Globe',
-  engine: 'three.js',
+// scroll or pinch to zoom. The point grabbed stays under the pointer, and a flick coasts to a stop.
+// `load` gives the field for the shared state (memoized by the caller). Draws only while something
+// changes: a frame per input event, and frames while a flick or a zoom damps out.
+export const stageGlobe = (load: (year: number) => Field | Promise<Field>): Viewport => ({
   mount(el, initial) {
     const renderer = new WebGLRenderer({ alpha: true, antialias: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -99,11 +116,18 @@ export const stageGlobe = (load: (month: number) => Field | Promise<Field>): Vie
       blending: AdditiveBlending,
       depthWrite: false,
     });
-    const scene = new Scene().add(new Mesh(haloGeometry, haloMaterial), globe);
+    // The camera stays on +z; the globe and its coastlines turn (see solveGrab).
+    const earth = new Group().add(globe);
+    const scene = new Scene().add(new Mesh(haloGeometry, haloMaterial), earth);
+    let [yaw, pitch] = [MathUtils.degToRad(-START.lon), MathUtils.degToRad(START.lat)];
+    const turn = () => earth.rotation.set(pitch, yaw, 0, 'XYZ'); // Rx(pitch) * Ry(yaw)
+    turn();
 
     const camera = new PerspectiveCamera(FOV, 1, 0.05, 50);
-    camera.position.set(...toXyz(START.lon, START.lat, 1 / Math.sin(MathUtils.degToRad(FOV / 2)) / FILL));
+    camera.position.set(0, 0, 1 / Math.sin(MathUtils.degToRad(FOV / 2)) / FILL);
+    // OrbitControls only zooms (wheel, pinch), so the camera stays on its axis.
     const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableRotate = false;
     controls.enablePan = false;
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
@@ -111,15 +135,81 @@ export const stageGlobe = (load: (month: number) => Field | Promise<Field>): Vie
     controls.maxDistance = 10;
 
     let frame = 0;
-    const draw = () => {
+    let last = 0; // time of the previous frame, for the flick
+    let spin = [0, 0]; // yaw and pitch per millisecond after a flick
+    const draw = (now: number) => {
       frame = 0;
-      // Slower rotation close up, so a drag moves the surface about as far as the pointer.
-      controls.rotateSpeed = 0.15 + 0.3 * (camera.position.length() - 1);
-      controls.update(); // fires 'change' (and so another frame) while damping
+      controls.update(); // fires 'change' (and so another frame) while the zoom damps
+      if (!grab && (spin[0] || spin[1])) {
+        const dt = Math.min(now - last, 50);
+        [yaw, pitch] = [yaw + spin[0] * dt, MathUtils.clamp(pitch + spin[1] * dt, -Math.PI / 2, Math.PI / 2)];
+        turn();
+        const decay = Math.exp(-dt / 250);
+        spin = spin.map((v) => (Math.abs(v * decay) < 1e-6 ? 0 : v * decay));
+        redraw();
+      }
+      last = now;
       renderer.render(scene, camera);
     };
     const redraw = () => (frame ||= requestAnimationFrame(draw));
     controls.addEventListener('change', redraw);
+
+    // Where the pointer's ray meets the unit sphere, in view space; off the globe, the nearest point of
+    // its outline, so a drag past the edge keeps turning instead of stopping.
+    const canvas = renderer.domElement;
+    const ray = new Ray();
+    const pointerOnSphere = (e: PointerEvent) => {
+      const r = canvas.getBoundingClientRect();
+      const ndc = new Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      camera.updateMatrixWorld();
+      ray.origin.copy(camera.position);
+      ray.direction.set(ndc.x, ndc.y, 0.5).unproject(camera).sub(camera.position).normalize();
+      const along = -ray.origin.dot(ray.direction); // to the point of the ray nearest the centre
+      const near = ray.at(along, new Vector3());
+      const hit = near.lengthSq() <= 1;
+      return { hit, point: hit ? ray.at(along - Math.sqrt(1 - near.lengthSq()), near) : near.normalize() };
+    };
+
+    let grab: { lon: number; lat: number; id: number; t: number } | undefined;
+    const pointers = new Set<number>();
+    const onDown = (e: PointerEvent) => {
+      pointers.add(e.pointerId);
+      if (pointers.size > 1 || e.button !== 0) return void (grab = undefined); // pinch: zoom only
+      const { hit, point } = pointerOnSphere(e);
+      if (!hit) return;
+      const local = point.applyQuaternion(earth.quaternion.clone().invert());
+      grab = { lon: Math.atan2(local.x, local.z), lat: Math.asin(MathUtils.clamp(local.y, -1, 1)), id: e.pointerId, t: e.timeStamp };
+      spin = [0, 0];
+      canvas.setPointerCapture(e.pointerId);
+      canvas.style.cursor = 'grabbing';
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!grab || e.pointerId !== grab.id) {
+        if (!grab) canvas.style.cursor = pointerOnSphere(e).hit ? 'grab' : '';
+        return;
+      }
+      const [y, p] = solveGrab(grab.lon, grab.lat, pointerOnSphere(e).point, yaw);
+      const dt = Math.max(e.timeStamp - grab.t, 1);
+      spin = [(y - yaw) / dt, (p - pitch) / dt];
+      [yaw, pitch, grab.t] = [y, p, e.timeStamp];
+      turn();
+      redraw();
+    };
+    const onUp = (e: PointerEvent) => {
+      pointers.delete(e.pointerId);
+      if (!grab || e.pointerId !== grab.id) return;
+      if (e.timeStamp - grab.t > 80) spin = [0, 0]; // held still before letting go: no flick
+      grab = undefined;
+      canvas.style.cursor = 'grab';
+      last = performance.now();
+      redraw();
+    };
+    const listening = new AbortController();
+    const { signal } = listening;
+    canvas.addEventListener('pointerdown', onDown, { signal });
+    canvas.addEventListener('pointermove', onMove, { signal });
+    canvas.addEventListener('pointerup', onUp, { signal });
+    canvas.addEventListener('pointercancel', onUp, { signal });
 
     const observer = new ResizeObserver(() => {
       const [w, h] = [el.clientWidth, el.clientHeight];
@@ -142,15 +232,15 @@ export const stageGlobe = (load: (month: number) => Field | Promise<Field>): Vie
       redraw();
     };
 
-    // One field texture, refilled in place when only the values change (e.g. a new month), so
+    // One field texture, refilled in place when only the values change (e.g. a new year), so
     // stepping through time re-uploads data without allocating.
     let texture: DataTexture | undefined;
     let wanted = -1;
-    const setMonth = async (month: number) => {
-      if (month === wanted) return;
-      wanted = month;
-      const f = await load(month);
-      if (month !== wanted || !alive) return; // a newer request won
+    const setYear = async (year: number) => {
+      if (year === wanted) return;
+      wanted = year;
+      const f = await load(year);
+      if (year !== wanted || !alive) return; // a newer request won
       if (texture && texture.image.width === f.width && texture.image.height === f.height) {
         texture.image.data = f.values;
         texture.needsUpdate = true;
@@ -168,23 +258,24 @@ export const stageGlobe = (load: (month: number) => Field | Promise<Field>): Vie
     createCoastlines((lon, lat) => toXyz(lon, lat, 1.002)).then((lines) => {
       if (!alive) return disposeCoastlines(lines);
       lines.material.opacity = 0.6;
-      scene.add((coast = lines));
+      earth.add((coast = lines));
       redraw();
     });
 
     setColormap(initial.colormap);
-    setMonth(initial.month);
+    setYear(initial.year);
 
     return {
       update(state) {
         setColormap(state.colormap);
-        setMonth(state.month);
+        setYear(state.year);
       },
       destroy() {
         alive = false;
         cancelAnimationFrame(frame);
         observer.disconnect();
         controls.dispose();
+        listening.abort();
         if (coast) disposeCoastlines(coast);
         [texture, lut, material, geometry, haloMaterial, haloGeometry].forEach((r) => r?.dispose());
         renderer.dispose();

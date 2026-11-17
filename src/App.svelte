@@ -1,16 +1,20 @@
 <script lang="ts">
-  import { MOCK, MONTHS, mockField, mockSeries } from './data/mock';
+  import { MOCK, YEARS, mockField, mockSeries } from './data/mock';
   import { colormaps, shared } from './state/shared.svelte';
+  import SettingsMenu from './ui/SettingsMenu.svelte';
   import ViewportHost from './ui/ViewportHost.svelte';
-  import { seriesChart } from './viewports/chart';
-  import { gradient } from './viewports/overlay';
+  import { download, fieldPng } from './viewports/exportPng';
+  import { gradient } from './viewports/colormaps';
   import { stageGlobe } from './viewports/stageGlobe';
+  import { timeline } from './viewports/timeline';
 
-  // Layout mockup: one full-screen globe with floating panels. Data is mock (src/data/mock.ts) and the
-  // chart is not linked to the globe yet.
+  // Layout mockup: one full-screen globe with floating panels, and a timeline of the global mean whose
+  // needle sets the year. Data is mock (src/data/mock.ts).
   const globe = stageGlobe(mockField);
-  const chart = seriesChart('Global mean', 'fit', async () => mockSeries());
-  let chartOpen = $state(!matchMedia('(max-width: 720px)').matches);
+  const time = timeline(mockSeries, YEARS, (year) => (shared.year = year));
+  const downloadPng = async () =>
+    download(await fieldPng(await mockField(shared.year), shared.colormap), `hydroviewer-pr-${shared.year}-${shared.colormap}.png`);
+  const step = (by: number) => (shared.year = Math.min(YEARS[1], Math.max(YEARS[0], shared.year + by)));
 </script>
 
 <main>
@@ -19,7 +23,7 @@
   <div class="hud">
     <section class="panel title">
       <h1>Hydroviewer</h1>
-      <p>Precipitation · {MONTHS[shared.month]} <span class="tag">mock data</span></p>
+      <p>Precipitation · {shared.year} <span class="tag">mock data</span></p>
     </section>
 
     <section class="panel tools">
@@ -29,6 +33,7 @@
           {#each colormaps as c (c)}<option value={c}>{c}</option>{/each}
         </select>
       </label>
+      <SettingsMenu onDownloadPng={downloadPng} />
     </section>
 
     <section class="panel legend" aria-label="Colour scale">
@@ -38,19 +43,9 @@
     </section>
 
     <section class="panel time">
-      <label>
-        <span>{MONTHS[shared.month]}</span>
-        <input type="range" min="0" max="11" step="1" bind:value={shared.month} aria-label="Month" />
-      </label>
-    </section>
-
-    <section class="panel chart" class:open={chartOpen}>
-      <button class="head" aria-expanded={chartOpen} onclick={() => (chartOpen = !chartOpen)}>
-        Global mean <span aria-hidden="true">{chartOpen ? '▾' : '▸'}</span>
-      </button>
-      {#if chartOpen}
-        <div class="plot"><ViewportHost viewport={chart} /></div>
-      {/if}
+      <button aria-label="Previous year" disabled={shared.year <= YEARS[0]} onclick={() => step(-1)}>◀</button>
+      <div class="track"><ViewportHost viewport={time} /></div>
+      <button aria-label="Next year" disabled={shared.year >= YEARS[1]} onclick={() => step(1)}>▶</button>
     </section>
   </div>
 </main>
@@ -75,7 +70,7 @@
     padding: 16px;
     display: grid;
     gap: 12px;
-    grid-template: 'title . tools' auto '. . .' 1fr 'legend time chart' auto / 1fr auto 1fr;
+    grid-template: 'title tools' auto '. .' 1fr 'legend .' auto 'time time' auto / 1fr auto;
     pointer-events: none;
   }
   .panel {
@@ -110,6 +105,10 @@
     grid-area: tools;
     justify-self: end;
     align-self: start;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 4px 4px 12px;
   }
   select {
     font: inherit;
@@ -132,58 +131,47 @@
   }
   .time {
     grid-area: time;
-    align-self: end;
-  }
-  .time label {
+    justify-self: center;
+    width: min(960px, 100%);
+    box-sizing: border-box;
     display: flex;
-    align-items: center;
-    gap: 10px;
+    align-items: stretch;
+    gap: 4px;
+    padding: 8px 4px;
   }
-  .time span {
-    width: 2.5em;
+  .track {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    height: 104px;
   }
-  .time input {
-    width: min(360px, 60vw);
+  .track :global([role='slider']:focus-visible) {
+    outline: 2px solid var(--accent);
+    border-radius: 6px;
   }
-  .chart {
-    grid-area: chart;
-    justify-self: end;
-    align-self: end;
-    padding: 0;
-  }
-  .head {
+  .time button {
     font: inherit;
     color: inherit;
     background: none;
     border: 0;
-    padding: 8px 12px;
+    border-radius: 6px;
+    padding: 0 8px;
     cursor: pointer;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
   }
-  .plot {
-    position: relative;
-    width: 340px;
-    height: 200px;
+  .time button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--fg) 10%, transparent);
+  }
+  .time button:disabled {
+    opacity: 0.35;
+    cursor: default;
   }
 
   @media (max-width: 720px) {
     .hud {
       padding: 12px;
-      grid-template: 'title tools' auto '. .' 1fr 'legend legend' auto 'chart chart' auto 'time time' auto / 1fr auto;
     }
-    .time input {
-      flex: 1;
-      width: auto;
-    }
-    .plot {
-      width: calc(100vw - 24px);
-      height: 180px;
-    }
-    .chart.open {
-      justify-self: stretch;
+    .track {
+      height: 88px;
     }
   }
 </style>

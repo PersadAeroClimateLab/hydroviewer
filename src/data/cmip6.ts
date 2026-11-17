@@ -39,18 +39,6 @@ const openMap = async () => {
   return { root, pr, year, month };
 };
 
-let uncertainty: Promise<Grid> | undefined;
-
-// A synthetic 0..1 uncertainty field (see prep/prep_cmip6.py), used for globe relief.
-export function loadUncertainty(): Promise<Grid> {
-  uncertainty ??= opened().then(async ({ root }) => {
-    const array = await zarr.open.v3(root.resolve('uncertainty'), { kind: 'array' });
-    const grid = await zarr.get(array);
-    return { values: grid.data as Float32Array, height: array.shape[0], width: array.shape[1] };
-  });
-  return uncertainty;
-}
-
 const months = new Map<number, Promise<Field>>();
 
 // Memoized per month so several viewports share one fetch.
@@ -101,43 +89,6 @@ export function loadField(source: Source): Promise<Field> {
     fields.set(source, field);
   }
   return field;
-}
-
-// The contour boxplot of the summer rain band (prep's contour_boxplot()): band levels, the fraction field
-// whose 0.5 contour is the mean, and the fields of the median and outlier summers, contoured at `threshold`.
-export interface Boxplot {
-  level: Grid; // 1 or 3: 100% band, 2: 50% band, 4: inside every kept member
-  fraction: Grid;
-  median: Grid;
-  outliers: Grid[];
-  threshold: number;
-  latRange: [number, number]; // analysed latitudes; nothing outside them
-  medianYear: number;
-  outlierYears: number[];
-  label: string;
-}
-
-let boxplot: Promise<Boxplot> | undefined;
-
-export function loadBoxplot(): Promise<Boxplot> {
-  const names = ['pr_jja_band', 'pr_jja_mean_fraction', 'pr_jja_median', 'pr_jja_outliers', 'outlier'];
-  boxplot ??= Promise.all(names.map(readAggregate)).then(([band, fraction, median, outliers, years]) => {
-    const [height, width] = band.array.shape;
-    const grid = (values: Float32Array) => ({ values, height, width });
-    const { attrs } = band;
-    return {
-      level: grid(band.data),
-      fraction: grid(fraction.data),
-      median: grid(median.data),
-      outliers: Array.from(years.data, (_, i) => grid(outliers.data.subarray(i * width * height, (i + 1) * width * height))),
-      threshold: Number(attrs.threshold),
-      latRange: attrs.lat_range,
-      medianYear: Number(attrs.median_year),
-      outlierYears: Array.from(years.data),
-      label: `${attrs.long_name} · ${attrs.period}`,
-    };
-  });
-  return boxplot;
 }
 
 // 1D series from aggregates.zarr, each over its own coordinate (years, latitudes or histogram bin starts).

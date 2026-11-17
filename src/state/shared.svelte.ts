@@ -3,6 +3,6 @@
 export const colormaps = ['viridis', 'magma'] as const;
 export type Colormap = (typeof colormaps)[number];
 
-export const shared = $state<{ colormap: Colormap; month: number }>({ colormap: 'viridis', month: 0 });
+export const shared = $state<{ colormap: Colormap; year: number }>({ colormap: 'viridis', year: 2025 });
 
 export type SharedState = typeof shared;
