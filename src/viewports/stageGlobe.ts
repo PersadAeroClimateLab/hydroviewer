@@ -7,6 +7,7 @@ import {
   LinearSRGBColorSpace,
   MathUtils,
   Group,
+  LineSegments,
   NearestFilter,
   Mesh,
   PerspectiveCamera,
@@ -23,7 +24,7 @@ import {
   WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { Field } from '../data/cmip6';
+import type { Field, Statistic } from '../data/cmip6';
 import { bakeLut, LUT_SIZE, type Colormap } from './colormaps';
 import { createCoastlines, disposeCoastlines } from './coastlines';
 import { softLimit, solveGrab } from './grab';
@@ -33,29 +34,106 @@ const FOV = 30;
 const FILL = 0.78; // share of the shorter side the globe spans at the start
 const START = { lon: 15, lat: 12 }; // what faces the camera first
 
-// Longitude and latitude are computed per pixel from the sphere position, so the colours are exact
-// at any mesh resolution (no pinching at the poles) and the mesh can stay coarse. Lon 0 faces +z.
-const vertexShader = /* glsl */ `
-  varying vec3 vPos;
-  varying vec3 vNormal;
-  void main() {
-    vPos = position;
-    vNormal = normalize(normalMatrix * normal);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+// How far the top of the relief (the relief field at the top of its range) rises above the unit sphere.
+const RELIEF_SCALE = 0.08;
+const AMBIENT = 0.5; // share of the colour kept on surfaces facing away from the light
+// Light from the upper left of the camera, the usual hillshade direction: slopes read as light and shadow,
+// which a light from the camera itself would show only faintly face-on.
+const LIGHT = new Vector3(-0.45, 0.5, 0.74).normalize();
+// Stipple dots: on rows SPACING degrees apart, with fewer dots per row toward the poles so they stay evenly
+// spaced on the sphere; RADIUS in degrees.
+const STIPPLE = { SPACING: 2.5, RADIUS: 0.5 };
+
+// Longitude and latitude come from the sphere position (lon 0 at +z, lon 90 at +x, north at +y), so colours
+// are exact at any mesh resolution, with no pinching at the poles. The surface rises radially with a second
+// field, the relief (0 when there is none), sampled the same way in the vertex shader.
+const lonLat = /* glsl */ `
+  uniform sampler2D relief;
+  uniform vec2 reliefRange;
+  uniform float reliefScale;
+  vec2 lonLatUv(vec3 p) {
+    return vec2(atan(p.x, p.z) / 6.2831853 + 0.5, asin(clamp(p.y, -1.0, 1.0)) / 3.1415927 + 0.5);
+  }
+  float height(vec2 uv) {
+    return reliefScale * clamp((texture2D(relief, uv).r - reliefRange.x) / (reliefRange.y - reliefRange.x), 0.0, 1.0);
   }
 `;
+const vertexShader = /* glsl */ `
+  ${lonLat}
+  uniform float lift; // coastlines sit just above the surface
+  varying vec3 vPos;
+  void main() {
+    vPos = normalize(position);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(vPos * (1.0 + lift + height(lonLatUv(vPos))), 1.0);
+  }
+`;
+// Shading: the relief's normal from its slope (central differences one grid cell apart), lit from a fixed direction
+// (`light`, in globe coordinates). With no relief it is plain shading of a sphere.
 const fragmentShader = /* glsl */ `
+  ${lonLat}
   uniform sampler2D field;
   uniform sampler2D lut;
   uniform vec2 range;
+  uniform vec2 texel; // one relief grid cell in uv
+  uniform vec3 light;
+  uniform sampler2D stipple;
+  uniform float stippleOn;
+  uniform float stippleThreshold;
   varying vec3 vPos;
-  varying vec3 vNormal;
+
+  vec3 colorAt(vec2 uv) {
+    float t = clamp((texture2D(field, uv).r - range.x) / (range.y - range.x), 0.0, 1.0);
+    return texture2D(lut, vec2((0.5 + t * ${(LUT_SIZE - 1).toFixed(1)}) / ${LUT_SIZE.toFixed(1)}, 0.5)).rgb;
+  }
+
+  // A stipple dot: rgba with alpha 1 inside a dot whose centre cell is at or above the threshold, 0 elsewhere
+  // (edges antialiased). Dots are fixed to the surface, so they turn with the globe, and each is whole: the
+  // threshold and the ink (dark on light colours, light on dark) are decided at its centre, not per pixel.
+  vec4 stippleDot(float lon, float lat) {
+    float sp = ${STIPPLE.SPACING.toFixed(2)};
+    float latD = degrees(lat), lonD = degrees(lon);
+    float latC = -90.0 + (floor((latD + 90.0) / sp) + 0.5) * sp;
+    float width = 360.0 / max(1.0, floor(360.0 / sp * cos(radians(latC)) + 0.5));
+    float lonC = -180.0 + (floor((lonD + 180.0) / width) + 0.5) * width;
+    float d = length(vec2((lonD - lonC) * cos(lat), latD - latC));
+    float aa = fwidth(d);
+    float inside = 1.0 - smoothstep(${STIPPLE.RADIUS.toFixed(2)} - aa, ${STIPPLE.RADIUS.toFixed(2)} + aa, d);
+    vec2 centre = vec2((lonC + 180.0) / 360.0, (latC + 90.0) / 180.0);
+    float on = inside * step(stippleThreshold, texture2D(stipple, centre).r);
+    vec3 ink = dot(colorAt(centre), vec3(0.299, 0.587, 0.114)) > 0.45 ? vec3(0.08) : vec3(0.95);
+    return vec4(ink, on);
+  }
+
   void main() {
     vec3 p = normalize(vPos);
-    vec2 uv = vec2(atan(p.x, p.z) / 6.2831853 + 0.5, asin(clamp(p.y, -1.0, 1.0)) / 3.1415927 + 0.5);
-    float t = clamp((texture2D(field, uv).r - range.x) / (range.y - range.x), 0.0, 1.0);
-    vec3 rgb = texture2D(lut, vec2((0.5 + t * ${(LUT_SIZE - 1).toFixed(1)}) / ${LUT_SIZE.toFixed(1)}, 0.5)).rgb;
-    gl_FragColor = vec4(rgb * (0.78 + 0.22 * vNormal.z), 1.0); // soft limb darkening for depth
+    vec2 uv = lonLatUv(p);
+    vec3 rgb = colorAt(uv);
+
+    float lon = (uv.x - 0.5) * 6.2831853, lat = (uv.y - 0.5) * 3.1415927;
+    float r = 1.0 + height(uv);
+    float dLon = (height(uv + vec2(texel.x, 0.0)) - height(uv - vec2(texel.x, 0.0))) / (2.0 * texel.x * 6.2831853);
+    float dLat = (height(uv + vec2(0.0, texel.y)) - height(uv - vec2(0.0, texel.y))) / (2.0 * texel.y * 3.1415927);
+    vec3 east = vec3(cos(lon), 0.0, -sin(lon));
+    vec3 north = vec3(-sin(lat) * sin(lon), cos(lat), -sin(lat) * cos(lon));
+    vec3 n = normalize(p - (dLon / max(cos(lat), 0.05) * east + dLat * north) / r);
+    if (stippleOn > 0.5) {
+      vec4 stippled = stippleDot(lon, lat);
+      rgb = mix(rgb, stippled.rgb, 0.9 * stippled.a);
+    }
+    float lit = ${AMBIENT.toFixed(2)} + ${(1 - AMBIENT).toFixed(2)} * max(dot(n, light), 0.0);
+    gl_FragColor = vec4(rgb * lit, 1.0);
+  }
+`;
+const coastShader = /* glsl */ `
+  void main() {
+    gl_FragColor = vec4(1.0, 1.0, 1.0, 0.6);
+  }
+`;
+const haloVertex = /* glsl */ `
+  varying vec3 vNormal;
+  void main() {
+    vNormal = normalize(normalMatrix * normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
 // A faint glow just outside the rim, so the silhouette reads on any background. Seen from inside, the
@@ -84,11 +162,12 @@ const toXyz = (lon: number, lat: number, r: number): [number, number, number] =>
   return [r * Math.cos(p) * Math.sin(l), r * Math.sin(p), r * Math.cos(p) * Math.cos(l)];
 };
 
-// The main globe of the full-screen layout: a field on a sphere with coastlines, drag to rotate,
-// scroll or pinch to zoom. The point grabbed stays under the pointer, and a flick coasts to a stop.
-// `load` gives the field for the shared state (memoized by the caller). Draws only while something
-// changes: a frame per input event, and frames while a flick or a zoom damps out.
-export const stageGlobe = (load: (year: number) => Field | Promise<Field>): Viewport => ({
+// The main globe of the full-screen layout: a field on a sphere with coastlines; the surface can rise with one
+// statistic (elevation) and be stippled where another passes its threshold, as picked in the shared state.
+// Drag to rotate (the point grabbed stays under the pointer, a flick coasts to a stop), scroll or pinch to zoom.
+// `load` and the statistics' loaders give the fields for a year (memoized by the caller). Draws only while
+// something changes: a frame per input event, and frames while a flick or a zoom damps out.
+export const stageGlobe = (load: (year: number) => Field | Promise<Field>, statistics: Statistic[]): Viewport => ({
   mount(el, initial) {
     const renderer = new WebGLRenderer({ alpha: true, antialias: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -98,17 +177,31 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>): View
     const lutData = new Uint8Array(LUT_SIZE * 4);
     const lut = new DataTexture(lutData, LUT_SIZE, 1, RGBAFormat, UnsignedByteType);
     lut.minFilter = lut.magFilter = LinearFilter;
+    // Shared by the surface and the coastlines, so both rise together.
+    const reliefUniforms = { relief: { value: null as DataTexture | null }, reliefRange: { value: [0, 1] }, reliefScale: { value: 0 } };
+    const light = new Vector3();
     const material = new ShaderMaterial({
-      uniforms: { field: { value: null }, lut: { value: lut }, range: { value: [0, 1] } },
+      uniforms: {
+        ...reliefUniforms,
+        field: { value: null },
+        lut: { value: lut },
+        range: { value: [0, 1] },
+        texel: { value: [1, 1] },
+        light: { value: light },
+        lift: { value: 0 },
+        stipple: { value: null as DataTexture | null },
+        stippleOn: { value: 0 },
+        stippleThreshold: { value: 0 },
+      },
       vertexShader,
       fragmentShader,
     });
-    const geometry = new SphereGeometry(1, 96, 48);
+    const geometry = new SphereGeometry(1, 360, 180); // a vertex per grid cell, so the relief is followed
     const globe = new Mesh(geometry, material);
     globe.visible = false; // until the first field arrives
     const haloGeometry = new SphereGeometry(HALO, 64, 32);
     const haloMaterial = new ShaderMaterial({
-      vertexShader,
+      vertexShader: haloVertex,
       fragmentShader: haloShader,
       side: BackSide,
       transparent: true,
@@ -148,6 +241,7 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>): View
         redraw();
       }
       last = now;
+      light.copy(LIGHT).applyQuaternion(earth.quaternion.clone().invert()); // fixed to the view, not the globe
       renderer.render(scene, camera);
     };
     const redraw = () => (frame ||= requestAnimationFrame(draw));
@@ -238,43 +332,67 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>): View
       redraw();
     };
 
-    // One field texture, refilled in place when only the values change (e.g. a new year), so
+    // One texture per field, refilled in place when only the values change (e.g. a new year), so
     // stepping through time re-uploads data without allocating.
-    let texture: DataTexture | undefined;
-    let wanted = -1;
-    const setYear = async (year: number) => {
-      if (year === wanted) return;
-      wanted = year;
-      const f = await load(year);
-      if (year !== wanted || !alive) return; // a newer request won
+    const fill = (texture: DataTexture | null, f: Field): DataTexture => {
       if (texture && texture.image.width === f.width && texture.image.height === f.height) {
         texture.image.data = f.values;
         texture.needsUpdate = true;
-      } else {
-        texture?.dispose();
-        texture = material.uniforms.field.value = gridTexture(renderer, f);
+        return texture;
       }
-      material.uniforms.range.value = f.range ?? [0, Math.max(...f.values)];
+      texture?.dispose();
+      return gridTexture(renderer, f);
+    };
+    const rangeOf = (f: Field) => f.range ?? [0, Math.max(...f.values)];
+    let wanted = '';
+    const setData = async ({ year, elevation, stipple }: { year: number; elevation: string; stipple: string }) => {
+      const key = `${year} ${elevation} ${stipple}`;
+      if (key === wanted) return;
+      wanted = key;
+      const [e, s] = [elevation, stipple].map((id) => statistics.find((st) => st.id === id));
+      const [f, r, st] = await Promise.all([load(year), e?.load(year), s?.load(year)]);
+      if (key !== wanted || !alive) return; // a newer request won
+      const u = material.uniforms;
+      u.field.value = fill(u.field.value, f);
+      u.range.value = rangeOf(f);
+      reliefUniforms.reliefScale.value = r ? RELIEF_SCALE : 0;
+      if (r) {
+        reliefUniforms.relief.value = fill(reliefUniforms.relief.value, r);
+        reliefUniforms.reliefRange.value = e!.range;
+        u.texel.value = [1 / r.width, 1 / r.height];
+      }
+      u.stippleOn.value = st ? 1 : 0;
+      if (st) {
+        u.stipple.value = fill(u.stipple.value, st);
+        u.stippleThreshold.value = s!.threshold;
+      }
       globe.visible = true;
       redraw();
     };
 
     let alive = true;
-    let coast: Awaited<ReturnType<typeof createCoastlines>> | undefined;
-    createCoastlines((lon, lat) => toXyz(lon, lat, 1.002)).then((lines) => {
+    let coast: LineSegments | undefined;
+    // Coastlines rise with the relief in the same vertex shader, a little above the surface.
+    const coastMaterial = new ShaderMaterial({
+      uniforms: { ...reliefUniforms, lift: { value: 0.003 } },
+      vertexShader,
+      fragmentShader: coastShader,
+      transparent: true,
+    });
+    createCoastlines((lon, lat) => toXyz(lon, lat, 1)).then((lines) => {
       if (!alive) return disposeCoastlines(lines);
-      lines.material.opacity = 0.6;
-      earth.add((coast = lines));
+      lines.material.dispose();
+      earth.add((coast = new LineSegments(lines.geometry, coastMaterial)));
       redraw();
     });
 
     setColormap(initial.colormap);
-    setYear(initial.year);
+    setData(initial);
 
     return {
       update(state) {
         setColormap(state.colormap);
-        setYear(state.year);
+        setData(state);
       },
       destroy() {
         alive = false;
@@ -282,8 +400,9 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>): View
         observer.disconnect();
         controls.dispose();
         listening.abort();
-        if (coast) disposeCoastlines(coast);
-        [texture, lut, material, geometry, haloMaterial, haloGeometry].forEach((r) => r?.dispose());
+        coast?.geometry.dispose();
+        const u = material.uniforms;
+        [u.field.value, u.stipple.value, reliefUniforms.relief.value, lut, material, coastMaterial, geometry, haloMaterial, haloGeometry].forEach((r) => r?.dispose());
         renderer.dispose();
         renderer.forceContextLoss();
         renderer.domElement.remove();

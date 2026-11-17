@@ -1,11 +1,15 @@
 <script lang="ts">
   // Gear button with a drop-down of actions. Closes on choosing, Escape or a click elsewhere.
+  import type { Snippet } from 'svelte';
+
   let {
+    children,
     onDownloadPng,
     onImport,
     imported,
     onRemove,
   }: {
+    children?: Snippet; // extra settings shown at the top of the menu
     onDownloadPng: () => void;
     onImport: (file: File) => void;
     imported: { id: string; name: string }[];
@@ -37,6 +41,7 @@
   </button>
   {#if open}
     <div class="menu" role="menu">
+      {#if children}<div class="settings-group">{@render children()}</div>{/if}
       <button role="menuitem" onclick={() => choose(onDownloadPng)}>
         Download PNG
         <small>Unfolded globe, equirectangular, one pixel per grid cell</small>
@@ -96,7 +101,7 @@
     position: absolute;
     top: calc(100% + 10px);
     right: -8px;
-    width: 260px;
+    width: 280px;
     padding: 4px;
     background: color-mix(in srgb, var(--bg) 92%, transparent);
     backdrop-filter: blur(8px);
@@ -119,6 +124,11 @@
     display: block;
     color: var(--muted);
     font-size: 12px;
+  }
+  .settings-group {
+    padding: 4px 8px 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
   }
   .group {
     border-top: 1px solid var(--border);

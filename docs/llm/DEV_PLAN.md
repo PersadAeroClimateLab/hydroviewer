@@ -169,10 +169,18 @@ In progress:
    3. Import from the settings menu (file picker, drag and drop), stored in localStorage, removable; the first imported map is selected and a notice reports names, warnings or the error.
    Checked (the team's "Divergent 1" and "Interlinked" samples, `data/colormap1.json` and `data/colormap.json`, uploaded through the menu populate the drop-down and draw on the globe): Lab round trips, L*=50 grey = sRGB 119, viridis unchanged from the old evenly spaced RGB blending (within 1/255), the Interlinked step at x = 0.08 within one table entry, Divergent 1's white midpoint, bad files rejected with messages; in the browser, import by menu and drop, persistence over a reload, removal, a bad file, the PNG.
    Later: export back to ColorMoves JSON, sharing through the URL, reversing, colour-range controls, labelling bands in the legend.
+7. **Uncertainty, spread and agreement** (2026-11-17: elevation and stippling built on mock data; decided that both exist and the user configures which statistic each reads, or off; which statistic comes first and the reference period for "change" are open). Precipitation stays the colour; a second statistic per cell needs its own visual channel. Candidates:
+   - **Elevation (relief)**: built. Good for a smooth field and for seeing structure while rotating; weak face-on (read mostly from shading and the outline), weak on dark colormap ends, and it displaces the colour surface (grabbing and pointer reading become approximate on high relief). Agreement is shown as height above the sphere: flat = 50% (no consensus), top = 100%.
+   - **Stippling** where a statistic is at or above its threshold: built, the IPCC convention, readable face-on. Fragment shader only: dots fixed to the surface (rows 2.5° apart, fewer per row toward the poles, so even on the sphere and turning with the globe), each whole (threshold and ink decided at the dot's centre). Not in the PNG export yet. Hatching (lines) is the usual alternative for "low agreement".
+   - **Value-suppressing colour** (desaturate or fade the colour where uncertainty is high): one channel, no geometry; needs a 2D lookup (value x uncertainty) and a legend that explains it.
+   - **Contours of the second field** (e.g. the 66% and 90% agreement lines), as in the removed contour boxplot shaders.
+   - **Toggle or swap**: a picker for what elevation (or the overlay) shows: agreement, inter-model spread (standard deviation), signal-to-noise; off for reading colour exactly.
+   **Output contract** (the simplest input these need; processing of the real high-resolution multi-model ensembles must produce it): per statistic, one float32 grid per time step on the same 1° grid and time axis as the field it accompanies, no NaN, CF `units` and `long_name`, a `display_range` (elevation maps it to flat..highest) and a `stipple_threshold` (cells at or above it are stippled). Stored next to the field, e.g. `pr_agreement` (fraction of models agreeing on the sign of change, 0.5–1), `pr_spread` (inter-model standard deviation of the change), `pr_snr`. In the app this is `Statistic` (`src/data/cmip6.ts`). Mock: `STATISTICS` in `src/data/mock.ts` (agreement and spread).
+
 Next:
 
-7. **Real data** in place of the mock: the bucket via zarrita, `catalog.json`, the series layout, regridding to 1° in prep, and the R2 upload list from the emulator log.
-8. **Student options** (from the team's notes): colour ranges, line widths, background colour, image and configuration export.
+8. **Real data** in place of the mock: the bucket via zarrita, `catalog.json`, the series layout, regridding to 1° in prep, and the R2 upload list from the emulator log.
+9. **Student options** (from the team's notes): colour ranges, line widths, background colour, image and configuration export.
 
 ## 9. Open questions
 

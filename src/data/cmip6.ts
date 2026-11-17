@@ -16,6 +16,18 @@ export interface Field extends Grid {
   range?: [number, number]; // colour scale from prep; without it the client picks one
 }
 
+// A per-cell statistic of an ensemble (agreement, spread, ...), the output side of the data contract for
+// uncertainty: one float32 grid per time step on the field's grid, CF `units`/`long_name`, a `display_range`
+// (elevation maps it to flat..highest) and a `stipple_threshold` (cells at or above it are stippled).
+export interface Statistic {
+  id: string;
+  name: string;
+  units: string;
+  range: [number, number];
+  threshold: number;
+  load: (year: number) => Field | Promise<Field>;
+}
+
 // What a panel can show: the first month, or an aggregate written by prep (aggregates.zarr).
 export type Source = 'month' | 'pr_trend' | 'pr_wettest_month';
 

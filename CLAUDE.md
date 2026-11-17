@@ -20,6 +20,18 @@ analytic 360 × 180 annual-mean field for 1950–2100 and its global mean; no bu
   stays up, a flick coasts to a stop) within 30% of the globe's on-screen radius; beyond that `softLimit()` eases it
   so the globe turns slower and slower toward the edge and stops past it (the edge is where a pixel covers a
   large angle and dragging got erratic). OrbitControls only zooms. Draws only while something moves.
+- **Elevation and stippling** show per-cell ensemble statistics (`Statistic` in `src/data/cmip6.ts`, the output
+  contract: one grid per time step on the field's grid, `units`, `long_name`, `display_range`, `stipple_threshold`).
+  Mock: `STATISTICS` in `mock.ts`, model agreement (fraction of models agreeing on the sign of change since 1970,
+  0.5–1, threshold 0.8) and model spread (standard deviation of that change across models, mm/day, threshold 0.8);
+  both flat or empty before 1970. The gear menu picks which statistic each shows, or off (`shared.elevation`,
+  `shared.stipple`; defaults agreement and spread); the legend explains both. `stageGlobe(load, statistics)`:
+  - elevation: a 360 × 180-segment sphere displaced in the vertex shader (`RELIEF_SCALE` 0.08 at the top of the
+    display range), coastlines displaced by the same shader, shading from the relief's slope per pixel, lit from
+    the upper left. Grabbing still intersects the unit sphere, so on high relief the grabbed point drifts by up to ~8%.
+  - stippling: in the fragment shader, dots fixed to the surface on rows 2.5° apart (fewer per row toward the
+    poles), each whole: threshold and ink (dark on light colours, light on dark) decided at its centre.
+  The PNG export has neither (colour only).
 - **Timeline** (`timeline.ts`, bottom): the global mean 1950–2100 as a Plot line with a draggable year needle
   (also a keyboard slider) and ◀ ▶ buttons stepping one year.
 - **Title** (top left), **colormap** picker and **settings gear** (top right; its menu downloads the field as an
@@ -158,6 +170,8 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
 - float32, no NaN in data read by shaders (use a fill value or mask), CF attributes on all arrays,
   and a root `catalog.json`.
 - Bucket needs public read and CORS with `Range`. Do not depend on `Content-Encoding` for chunks.
+- Ensemble statistics (agreement, spread, ...) for elevation and stippling: one float32 grid per time step on the
+  field's grid and time axis, no NaN, `units`, `long_name`, `display_range`, `stipple_threshold` (plan step 7).
 
 ## Working agreements
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MOCK, YEARS, mockField, mockSeries } from './data/mock';
+  import { MOCK, STATISTICS, YEARS, mockField, mockSeries } from './data/mock';
   import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
   import { shared } from './state/shared.svelte';
   import SettingsMenu from './ui/SettingsMenu.svelte';
@@ -11,7 +11,11 @@
 
   // Layout mockup: one full-screen globe with floating panels, and a timeline of the global mean whose
   // needle sets the year. Data is mock (src/data/mock.ts).
-  const globe = stageGlobe(mockField);
+  const globe = stageGlobe(mockField, STATISTICS); // colour: precipitation; elevation and stippling: statistics
+  const statistic = (id: string) => STATISTICS.find((s) => s.id === id);
+  const elevation = $derived(statistic(shared.elevation));
+  const stipple = $derived(statistic(shared.stipple));
+  const fmt = (v: number, units: string) => (units.startsWith('fraction') ? `${Math.round(v * 100)}%` : `${v} ${units}`);
   const time = timeline(mockSeries, YEARS, (year) => (shared.year = year));
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const downloadPng = async () =>
@@ -81,13 +85,40 @@
           {/if}
         </select>
       </label>
-      <SettingsMenu onDownloadPng={downloadPng} onImport={importFile} imported={colormaps.imported} onRemove={remove} />
+      <SettingsMenu onDownloadPng={downloadPng} onImport={importFile} imported={colormaps.imported} onRemove={remove}>
+        <label class="setting">
+          Elevation
+          <select bind:value={shared.elevation}>
+            <option value="">Off</option>
+            {#each STATISTICS as s (s.id)}<option value={s.id}>{s.name}</option>{/each}
+          </select>
+        </label>
+        <label class="setting">
+          Stippling
+          <select bind:value={shared.stipple}>
+            <option value="">Off</option>
+            {#each STATISTICS as s (s.id)}<option value={s.id}>{s.name} ≥ {fmt(s.threshold, s.units)}</option>{/each}
+          </select>
+        </label>
+      </SettingsMenu>
     </section>
 
     <section class="panel legend" aria-label="Colour scale">
       <div>{MOCK.units}</div>
       <canvas class="bar" width={LUT_SIZE} height="1" bind:this={bar}></canvas>
       <div class="ticks"><span>{MOCK.range[0]}</span><span>{MOCK.range[1]}</span></div>
+      {#if elevation}
+        <div class="extra">
+          Elevation: {elevation.name.toLowerCase()}
+          <span>flat = {fmt(elevation.range[0], elevation.units)}, highest = {fmt(elevation.range[1], elevation.units)}</span>
+        </div>
+      {/if}
+      {#if stipple}
+        <div class="extra">
+          <i class="dots" aria-hidden="true"></i>Stippling: {stipple.name.toLowerCase()}
+          <span>dots where ≥ {fmt(stipple.threshold, stipple.units)}</span>
+        </div>
+      {/if}
     </section>
 
     {#if notice}
@@ -191,6 +222,33 @@
   .ticks {
     display: flex;
     justify-content: space-between;
+    width: 160px;
+  }
+  .extra {
+    margin-top: 6px;
+    max-width: 220px;
+  }
+  .extra span {
+    display: block;
+    color: var(--muted);
+  }
+  .dots {
+    display: inline-block;
+    width: 14px;
+    height: 10px;
+    margin-right: 6px;
+    vertical-align: -1px;
+    background: radial-gradient(circle, var(--fg) 1.6px, transparent 2px) 0 0 / 7px 5px;
+  }
+  .setting select {
+    max-width: 150px;
+  }
+  .setting {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
   }
   .time {
     grid-area: time;

@@ -1,4 +1,4 @@
-import type { Field, Series } from './cmip6';
+import type { Field, Series, Statistic } from './cmip6';
 
 // Stand-in data for the layout mockup: annual-mean precipitation from an analytic formula on the target
 // 1° grid (360 x 180, cell-centred, south to north, west to east), 1950-2100, so the globe and timeline
@@ -12,16 +12,18 @@ const rad = Math.PI / 180;
 
 // A tropical rain band that wobbles from year to year, wetter over the Maritime Continent, Amazon and
 // Congo, mid-latitude storm tracks and some ripples. Warming (from about 1970) makes the band wetter,
-// the subtropics drier and moves the storm tracks poleward.
-function value(lon: number, lat: number, year: number): number {
-  const warm = 3 * Math.max(0, (year - 1970) / 130) ** 1.6;
-  const itcz = 2 + 1.5 * Math.sin(year * 0.9) + Math.sin(year * 0.37);
+// the subtropics drier and moves the storm tracks poleward. Without `wobble`, only the forced change (no
+// year-to-year wobble of the band or ripples), as an ensemble mean would show it.
+const warming = (year: number) => 3 * Math.max(0, (year - 1970) / 130) ** 1.6;
+function value(lon: number, lat: number, year: number, wobble = true): number {
+  const warm = warming(year);
+  const itcz = wobble ? 2 + 1.5 * Math.sin(year * 0.9) + Math.sin(year * 0.37) : 2;
   const land = Math.exp(-(((lon - 120) / 35) ** 2)) + 0.7 * Math.exp(-(((lon + 60) / 20) ** 2)) + 0.6 * Math.exp(-(((lon - 20) / 15) ** 2));
   const band = (6 + 6 * land) * (1 + 0.07 * warm) * Math.exp(-(((lat - itcz) / 8) ** 2));
   const dry = 1 - 0.06 * warm * Math.exp(-(((Math.abs(lat) - 25) / 8) ** 2));
   const track = 45 + 1.5 * warm;
   const storms = 4 * (1 + 0.04 * warm) * Math.exp(-(((Math.abs(lat) - track) / 10) ** 2)) * (0.7 + 0.3 * Math.cos(2 * lon * rad + 3 * lat * rad));
-  const ripple = 0.8 * Math.sin(5 * lon * rad + 3 * lat * rad) * Math.sin(7 * lat * rad - 2 * lon * rad + year * 0.5);
+  const ripple = 0.8 * Math.sin(5 * lon * rad + 3 * lat * rad) * Math.sin(7 * lat * rad - 2 * lon * rad + (wobble ? year * 0.5 : 0));
   return Math.max(0, (0.4 + band + storms + ripple) * dry);
 }
 
@@ -35,6 +37,40 @@ export function mockField(year: number): Field {
   }
   return (last = { values, width: W, height: H, units: MOCK.units, label: `Precipitation · ${year}`, range: MOCK.range });
 }
+
+// Spread between models of the change since 1970 (standard deviation, mm/day): internal variability plus model
+// differences that grow with warming, larger in some regions than others.
+const spreadAt = (lon: number, lat: number, year: number) =>
+  0.5 * (1 + 0.5 * Math.sin(3 * lon * rad) * Math.cos(4 * lat * rad)) * (1 + warming(year) / 6);
+
+// Agreement: the fraction of models agreeing on the sign of that change (0.5 = a coin flip, 1 = all), IPCC
+// style. High where the forced change is large against the spread (wetter rain band, drier subtropics, poleward
+// storm tracks), low where wetting meets drying; 0.5 everywhere before the warming starts.
+const agreementAt = (lon: number, lat: number, year: number) =>
+  0.5 + 0.5 * Math.tanh(Math.abs(value(lon, lat, year, false) - value(lon, lat, 1970, false)) / (1.6 * spreadAt(lon, lat, year)));
+
+// A statistic as a field, keeping only the latest year per statistic.
+const latest = new Map<string, Field>();
+const statistic = (s: Omit<Statistic, 'load'>, at: (lon: number, lat: number, year: number) => number): Statistic => ({
+  ...s,
+  load(year) {
+    const label = `${s.name} · ${year}`;
+    const kept = latest.get(s.id);
+    if (kept?.label === label) return kept;
+    const values = new Float32Array(W * H);
+    for (let j = 0; j < H; j++) {
+      for (let i = 0; i < W; i++) values[j * W + i] = at(-180 + i + 0.5, -90 + j + 0.5, year);
+    }
+    const field = { values, width: W, height: H, units: s.units, label, range: s.range };
+    latest.set(s.id, field);
+    return field;
+  },
+});
+
+export const STATISTICS: Statistic[] = [
+  statistic({ id: 'agreement', name: 'Model agreement', units: 'fraction of models', range: [0.5, 1], threshold: 0.8 }, agreementAt),
+  statistic({ id: 'spread', name: 'Model spread', units: 'mm/day', range: [0, 1.5], threshold: 0.8 }, spreadAt),
+];
 
 // Area-weighted global mean of the same formula per year, sampled every 3° (about 20 ms for all years).
 export function mockSeries(): Series {
