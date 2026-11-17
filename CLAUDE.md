@@ -39,7 +39,10 @@ analytic 360 × 180 annual-mean field for 1950–2100 and its global mean; no bu
   (also a keyboard slider) and ◀ ▶ buttons stepping one year.
 - **Title** (top left), **colormap** picker and **settings gear** (top right; its menu downloads the field as an
   equirectangular PNG, one pixel per cell, `exportPng.ts`, and imports colormaps), **colour bar** (bottom left, a
-  canvas drawn from the same lookup table as the globe).
+  canvas drawn from the same lookup table as the globe). The legend panel is draggable anywhere over the globe
+  (`src/ui/draggable.ts`, a Svelte action: pointer or arrow keys, kept inside the page, re-clamped on resize; moves
+  by `translate` only, so the globe does not redraw); its offset is kept in localStorage and reset by double-click
+  or the gear menu.
 - **Colormaps** are SciVisColor ColorMoves JSON exports (`{ colormaps: [{ name, space, points: [{ x, o, r, g, b }] }] }`),
   parsed by `src/data/colormoves.ts`. Built-ins are the files in `src/assets/colormaps/` (id = file name; only
   viridis and magma, by decision: custom maps arrive by upload). A new export dropped there would ship as built-in. Users

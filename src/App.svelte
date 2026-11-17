@@ -2,6 +2,7 @@
   import { MOCK, STATISTICS, YEARS, mockField, mockSeries } from './data/mock';
   import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
   import { ELEVATION_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
+  import { draggable, type Offset } from './ui/draggable';
   import SettingsMenu from './ui/SettingsMenu.svelte';
   import ViewportHost from './ui/ViewportHost.svelte';
   import { download, fieldPng } from './viewports/exportPng';
@@ -47,6 +48,26 @@
     removeColormap(id);
     if (shared.colormap.id === id) shared.colormap = colormaps.builtIn[0];
   };
+
+  // The legend can be dragged anywhere over the globe; where it was left is kept in this browser.
+  const LEGEND_KEY = 'hydroviewer.legend';
+  let legendAt = $state<Offset>(
+    (() => {
+      try {
+        return JSON.parse(localStorage.getItem(LEGEND_KEY) ?? '') as Offset;
+      } catch {
+        return { x: 0, y: 0 };
+      }
+    })(),
+  );
+  $effect(() => {
+    try {
+      localStorage.setItem(LEGEND_KEY, JSON.stringify(legendAt));
+    } catch {
+      // Storage unavailable: the position lasts for this visit.
+    }
+  });
+  const resetLegend = () => (legendAt = { x: 0, y: 0 });
 
   let bar: HTMLCanvasElement;
   $effect(() => {
@@ -122,10 +143,19 @@
             bind:value={shared.stippleSize}
           />
         </label>
+        <button class="reset" onclick={resetLegend}>Reset legend position</button>
       </SettingsMenu>
     </section>
 
-    <section class="panel legend" aria-label="Colour scale">
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex: focusable so arrow keys can move it -->
+    <section
+      class="panel legend"
+      aria-label="Legend (drag or use arrow keys to move, double-click to reset)"
+      tabindex="0"
+      style:translate="{legendAt.x}px {legendAt.y}px"
+      use:draggable={{ at: legendAt, move: (at) => (legendAt = at) }}
+      ondblclick={resetLegend}
+    >
       <div>{MOCK.units}</div>
       <canvas class="bar" width={LUT_SIZE} height="1" bind:this={bar}></canvas>
       <div class="ticks"><span>{MOCK.range[0]}</span><span>{MOCK.range[1]}</span></div>
@@ -231,6 +261,11 @@
   }
   .legend {
     grid-area: legend;
+    position: relative;
+    z-index: 1; /* above the other panels when dragged over them */
+    cursor: grab;
+    user-select: none;
+    touch-action: none; /* a touch drag moves the legend, not the page */
     justify-self: start;
     align-self: end;
     font-size: 12px;
@@ -268,6 +303,14 @@
   }
   .setting small {
     color: var(--muted);
+  }
+  .reset {
+    font: inherit;
+    color: var(--accent);
+    background: none;
+    border: 0;
+    padding: 4px 0 0;
+    cursor: pointer;
   }
   .setting {
     display: flex;
