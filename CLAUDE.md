@@ -16,7 +16,8 @@ three.js globe (`src/viewports/stageGlobe.ts`) with floating panels, on **mock d
 multi-model, multi-scenario ensemble of analytic 360 × 180 annual fields for 1950–2100 written by `prep/make_mock.py`;
 see Data path). `main.ts` loads the bucket's `catalog.json` (`loadCatalog()`), opens the SSP2-4.5 multi-model mean
 (`openNode()` in `src/data/catalog.ts`) and then mounts `App` with it and its years; if that fails the page shows
-only the error. No UI picks another node yet (data tree phase 2–4):
+only the error. No UI picks another node yet: the tree's rules exist (`src/data/tree.ts`, tested), the pane and
+switching are data tree phases 3–4:
 
 - **Metric pane** (left, `src/ui/MetricPane.svelte`): app title, dataset (model, experiment, member) and its
   metrics grouped by variable (mock: precipitation, wettest day, longest dry spell, temperature); picking one shows
@@ -93,6 +94,7 @@ panels, URL-hash sync). The last version with all of it is merge `6506c10` on `m
 docker compose up -d web data                     # dev server (HMR) on :5173 and bucket emulator on :9000
 docker compose logs -f web
 docker compose run --rm --no-deps web npm run check   # svelte-check (type check)
+docker compose run --rm --no-deps web npm test        # tests/*.test.ts (node --test; the data tree's rules)
 docker compose run --rm --no-deps web npm run build   # production build into dist/
 docker compose build web                          # after changing package.json or the Dockerfile
 ```
@@ -238,7 +240,8 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
    without modifying the test.
 4. **Keep testing narrow.** Don't run the full test suite unless the change warrants it. Keep tests
    deliberate, and document in a short comment what it means if a given test fails; this also checks
-   that the test itself is well written.
+   that the test itself is well written. Kept tests live in `tests/` (Node's runner, no test dependency,
+   outside the type check); check each new one by breaking the code on purpose once.
 
 ## Conventions
 

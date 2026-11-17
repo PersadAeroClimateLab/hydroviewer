@@ -119,8 +119,8 @@ open (wide screen, metric pane open on the left; about 220–260 px tall, scroll
 
 | piece | where | notes |
 |---|---|---|
-| tree rules | `src/data/tree.ts` | Pure TypeScript, no DOM (Lantern's split): `items(column)`, `links()`, `selection()`, hover/pick actions, given the catalog. Facet order is data. |
-| tree rules tests | `src/data/tree.test.ts`, `node --test` in the `web` container | **D6:** keep in the repo (logic with many cases, as Lantern found), or throwaway as so far. No new dependency either way. |
+| tree rules | `src/data/tree.ts` | Built (phase 2). Pure functions of a `TreeState` (`{ selection, hover }`), no DOM: `initial`, `items(state, column)`, `links`, `path` (the closed pane's readout), `node` (what to open), `hover`, `leave`, `pick`. The column order is fixed (D2), not data. |
+| tree rules tests | `tests/tree.test.ts`, `npm test` (`node --test`, Node's type stripping) in the `web` container | Built (phase 2), 12 tests, each confirmed by breaking `tree.ts` once (D6). Outside `src/`, because the type check has no Node types and adding `@types/node` was not worth a dependency. |
 | top pane | `src/ui/DataTree.svelte` | Buttons and lists in Svelte (accessible, keyboard); the links in an SVG overlay drawn from item rects after layout, as in Lantern. It is UI, not a renderer, so rule 3 (viewports must not import Svelte) is untouched. No d3 (not a dependency here; plain SVG paths). |
 | catalog | `src/data/catalog.ts` | Parse the tree (§7); `openNode(path)` → `Dataset`, memoized per node. |
 | shared state | `src/state/shared.svelte.ts` | `selection: { scenario, model, member }` (`'*'` = ensemble or all models), `insetTop`. |
@@ -191,8 +191,13 @@ same reductions real prep will do. The analytic statistics go away.
    and the series store; `catalog.ts` reads the tree and opens nodes. The app keeps working with a default
    selection. Check: values of computed statistics against a direct numpy reduction (throwaway); the emulator log
    for which keys a selection reads.
-2. **Tree rules:** `tree.ts`, tests for hover, pick, release, ragged availability, counts, links and member cells
-   without maps.
+2. **Tree rules** (built 2026-11-17): `tree.ts`, tests for hover, pick, release, ragged availability, counts, links
+   and member cells without maps. Rules as built: the selection is always a node (multi-model mean, ensemble or
+   member); hover previews (scenario → its models, model → its members); a click picks and fixes the hovered
+   parents; a click on the picked model or member goes up one level, a scenario cannot be released; another
+   scenario keeps the model and member where it has them; a member without maps can be picked (`node()` is then
+   its ensemble, `path()` says "no maps"); links are at most one per level plus the selection's model link during a
+   preview, with a `weight` (runs it stands for) for bundles.
 3. **Top pane:** `DataTree.svelte`, closed chip and open pane, `insetTop`, tools placement, phones, keyboard.
    Browser checks: screenshots at 1280 × 800 and phone width, 0 globe frames while idle, a drag-free pick flow
    with a Playwright script.
