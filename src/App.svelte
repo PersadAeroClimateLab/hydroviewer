@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { MOCK, STATISTICS, YEARS, mockField, mockSeries } from './data/mock';
+  import { DATASET, YEARS } from './data/mock';
   import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
   import { ELEVATION_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
   import { draggable, type Offset } from './ui/draggable';
+  import MetricPane from './ui/MetricPane.svelte';
   import SettingsMenu from './ui/SettingsMenu.svelte';
   import ViewportHost from './ui/ViewportHost.svelte';
   import { download, fieldPng } from './viewports/exportPng';
@@ -10,20 +11,38 @@
   import { stageGlobe } from './viewports/stageGlobe';
   import { timeline } from './viewports/timeline';
 
-  // Layout mockup: one full-screen globe with floating panels, and a timeline of the global mean whose
-  // needle sets the year. Data is mock (src/data/mock.ts).
-  const globe = stageGlobe(mockField, STATISTICS); // colour: precipitation; elevation and stippling: statistics
-  const statistic = (id: string) => STATISTICS.find((s) => s.id === id);
+  // Layout mockup: one full-screen globe with floating panels: a pane of the dataset's metrics on the left, and a
+  // timeline of the selected metric's global mean whose needle sets the year. Data is mock (src/data/mock.ts).
+  const globe = stageGlobe(DATASET.metrics); // colour: the metric; elevation and stippling: its statistics
+  const metric = $derived(DATASET.metrics.find((m) => m.id === shared.metric) ?? DATASET.metrics[0]);
+  const statistic = (id: string) => metric.statistics.find((s) => s.id === id);
   const elevation = $derived(statistic(shared.elevation));
   const stipple = $derived(statistic(shared.stipple));
-  const fmt = (v: number, units: string) => (units.startsWith('fraction') ? `${Math.round(v * 100)}%` : `${v} ${units}`);
-  const time = timeline(mockSeries, YEARS, (year) => (shared.year = year));
+  const fmt = (v: number, units: string) =>
+    units.startsWith('fraction') ? `${Math.round(v * 100)}%` : `${Number(v.toPrecision(3))} ${units}`;
+  const time = timeline(
+    (id) => (DATASET.metrics.find((m) => m.id === id) ?? DATASET.metrics[0]).series(),
+    YEARS,
+    (year) => (shared.year = year),
+  );
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const downloadPng = async () =>
     download(
-      await fieldPng(await mockField(shared.year), shared.colormap),
-      `hydroviewer-pr-${shared.year}-${slug(shared.colormap.name)}.png`,
+      await fieldPng(await metric.load(shared.year), shared.colormap),
+      `hydroviewer-${metric.id}-${shared.year}-${slug(shared.colormap.name)}.png`,
     );
+
+  // The metric pane: open on wide screens, where the globe centres right of it; on phones it starts closed and
+  // covers the page when opened, so it takes no room from the globe.
+  const narrow = matchMedia('(max-width: 720px)');
+  let wide = $state(!narrow.matches);
+  narrow.addEventListener('change', () => (wide = !narrow.matches));
+  let paneOpen = $state(!narrow.matches);
+  let paneWidth = $state(0);
+  const HUD_PADDING = 16;
+  $effect(() => {
+    shared.insetLeft = paneOpen && wide ? paneWidth + HUD_PADDING : 0;
+  });
 
   // A short message over the globe: import results and errors.
   let notice = $state<{ text: string; error?: boolean }>();
@@ -88,11 +107,18 @@
 >
   <div class="stage"><ViewportHost viewport={globe} /></div>
 
-  <div class="hud">
-    <section class="panel title">
-      <h1>Hydroviewer</h1>
-      <p>Precipitation · {shared.year} <span class="tag">mock data</span></p>
-    </section>
+  <div class="hud" class:pane-open={paneOpen && wide}>
+    <MetricPane
+      dataset={DATASET}
+      selected={metric.id}
+      year={shared.year}
+      bind:open={paneOpen}
+      bind:width={paneWidth}
+      onSelect={(id) => {
+        shared.metric = id;
+        if (!wide) paneOpen = false; // on phones the pane covers the globe
+      }}
+    />
 
     <section class="panel tools">
       <label>
@@ -111,7 +137,7 @@
           Elevation
           <select bind:value={shared.elevation}>
             <option value="">Off</option>
-            {#each STATISTICS as s (s.id)}<option value={s.id}>{s.name}</option>{/each}
+            {#each metric.statistics as s (s.id)}<option value={s.id}>{s.name}</option>{/each}
           </select>
         </label>
         <label class="setting">
@@ -129,7 +155,7 @@
           Stippling
           <select bind:value={shared.stipple}>
             <option value="">Off</option>
-            {#each STATISTICS as s (s.id)}<option value={s.id}>{s.name} ≥ {fmt(s.threshold, s.units)}</option>{/each}
+            {#each metric.statistics as s (s.id)}<option value={s.id}>{s.name} ≥ {fmt(s.threshold, s.units)}</option>{/each}
           </select>
         </label>
         <label class="setting">
@@ -156,9 +182,9 @@
       use:draggable={{ at: legendAt, move: (at) => (legendAt = at) }}
       ondblclick={resetLegend}
     >
-      <div>{MOCK.units}</div>
+      <div>{metric.name}, {metric.units}</div>
       <canvas class="bar" width={LUT_SIZE} height="1" bind:this={bar}></canvas>
-      <div class="ticks"><span>{MOCK.range[0]}</span><span>{MOCK.range[1]}</span></div>
+      <div class="ticks"><span>{metric.range[0]}</span><span>{metric.range[1]}</span></div>
       {#if elevation}
         <div class="extra">
           Elevation: {elevation.name.toLowerCase()}
@@ -205,36 +231,21 @@
     padding: 16px;
     display: grid;
     gap: 12px;
-    grid-template: 'title tools' auto 'notice notice' 1fr 'legend .' auto 'time time' auto / 1fr auto;
+    /* The pane's column is as wide as the closed chip or the open pane; with the pane open, the panels below
+       sit right of it (the globe is centred there too). */
+    grid-template:
+      'pane notice tools' auto
+      '. . .' 1fr
+      'legend legend .' auto
+      'time time time' auto / auto 1fr auto;
     pointer-events: none;
   }
-  .panel {
-    pointer-events: auto;
-    background: color-mix(in srgb, var(--bg) 80%, transparent);
-    backdrop-filter: blur(8px);
-    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-    border-radius: 10px;
-    padding: 8px 12px;
-    font-size: 14px;
-  }
-  .title {
-    grid-area: title;
-    justify-self: start;
-  }
-  h1 {
-    margin: 0;
-    font-size: 1.125rem;
-  }
-  .title p {
-    margin: 0;
-    color: var(--muted);
-  }
-  .tag {
-    white-space: nowrap;
-    font-size: 11px;
-    padding: 1px 6px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
+  .hud.pane-open {
+    grid-template:
+      'pane notice tools' auto
+      'pane . .' 1fr
+      'pane legend .' auto
+      'pane time time' auto / auto 1fr auto;
   }
   .tools {
     grid-area: tools;

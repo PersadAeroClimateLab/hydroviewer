@@ -11,8 +11,16 @@ change.
 ## Project state
 
 Front-end overhaul in progress (branch `frontend-overhaul`, plan section 8). `App.svelte` is a full-screen
-three.js globe (`src/viewports/stageGlobe.ts`) with floating panels, on **mock data** (`src/data/mock.ts`: an
-analytic 360 × 180 annual-mean field for 1950–2100 and its global mean; no bucket needed):
+three.js globe (`src/viewports/stageGlobe.ts`) with floating panels, on **mock data** (`src/data/mock.ts`: `DATASET`,
+analytic 360 × 180 annual means for 1950–2100; no bucket needed):
+
+- **Metric pane** (left, `src/ui/MetricPane.svelte`): app title, dataset (model, experiment, member) and its
+  metrics grouped by variable (mock: precipitation, wettest day, longest dry spell, temperature); picking one shows
+  it on the globe, legend and timeline (`shared.metric`). Collapses to a title chip («, ☰). Open on wide screens,
+  where the globe centres in the area right of it (`shared.insetLeft`; `setViewOffset` shifts the projection, the
+  camera stays on its axis, eased); on phones it starts closed, covers the page when open and closes on a pick.
+  Data model in `src/data/cmip6.ts`: a `Dataset` has `Metric`s, each with its field per year, global-mean series
+  and `Statistic`s (same ids across metrics, so elevation/stippling picks survive a metric change).
 
 - **Globe:** longitude/latitude per pixel from the sphere position (coarse mesh, no pole pinching), one float
   texture refilled in place when the year changes, colormap lookup in the fragment shader, Natural Earth
@@ -37,7 +45,7 @@ analytic 360 × 180 annual-mean field for 1950–2100 and its global mean; no bu
   The PNG export has neither (colour only).
 - **Timeline** (`timeline.ts`, bottom): the global mean 1950–2100 as a Plot line with a draggable year needle
   (also a keyboard slider) and ◀ ▶ buttons stepping one year.
-- **Title** (top left), **colormap** picker and **settings gear** (top right; its menu downloads the field as an
+- **Colormap** picker and **settings gear** (top right; its menu downloads the field as an
   equirectangular PNG, one pixel per cell, `exportPng.ts`, and imports colormaps), **colour bar** (bottom left, a
   canvas drawn from the same lookup table as the globe). The legend panel is draggable anywhere over the globe
   (`src/ui/draggable.ts`, a Svelte action: pointer or arrow keys, kept inside the page, re-clamped on resize; moves
@@ -50,7 +58,7 @@ analytic 360 × 180 annual-mean field for 1950–2100 and its global mean; no bu
   (`src/state/colormaps.svelte.ts`). `bakeLut()` in `src/viewports/colormaps.ts` blends the points in Lab or RGB
   into one 1024-entry table that the globe shader, colour bar and PNG all sample. Opacity is ignored.
 
-Shared state is `{ colormap, year }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
+Shared state is `{ colormap, metric, insetLeft, year, elevation, stipple, elevationScale, stippleSize }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
 registry). Next: real data from the bucket instead of the mock. No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).
 

@@ -28,6 +28,26 @@ export interface Statistic {
   load: (year: number) => Field | Promise<Field>;
 }
 
+// One variable or derived metric of a dataset: its field per year (coloured on the globe), its global-mean
+// series (the timeline) and the ensemble statistics that go with it (elevation, stippling).
+export interface Metric {
+  id: string;
+  name: string;
+  group: string; // e.g. "Precipitation", for the list
+  units: string;
+  range: [number, number]; // colour scale
+  load: (year: number) => Field | Promise<Field>;
+  series: () => Series | Promise<Series>;
+  statistics: Statistic[];
+}
+
+// A model/dataset selection and the metrics available for it.
+export interface Dataset {
+  name: string;
+  detail: string; // e.g. experiment and member
+  metrics: Metric[];
+}
+
 // What a panel can show: the first month, or an aggregate written by prep (aggregates.zarr).
 export type Source = 'month' | 'pr_trend' | 'pr_wettest_month';
 

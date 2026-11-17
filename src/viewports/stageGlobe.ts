@@ -24,7 +24,7 @@ import {
   WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { Field, Statistic } from '../data/cmip6';
+import type { Field, Metric } from '../data/cmip6';
 import { bakeLut, LUT_SIZE, type Colormap } from './colormaps';
 import { createCoastlines, disposeCoastlines } from './coastlines';
 import { softLimit, solveGrab } from './grab';
@@ -161,12 +161,13 @@ const toXyz = (lon: number, lat: number, r: number): [number, number, number] =>
   return [r * Math.cos(p) * Math.sin(l), r * Math.sin(p), r * Math.cos(p) * Math.cos(l)];
 };
 
-// The main globe of the full-screen layout: a field on a sphere with coastlines; the surface can rise with one
-// statistic (elevation) and be stippled where another passes its threshold, as picked in the shared state.
+// The main globe of the full-screen layout: the selected metric's field on a sphere with coastlines; the surface
+// can rise with one of its statistics (elevation) and be stippled where another passes its threshold, as picked
+// in the shared state. It centres in the area right of `insetLeft` (a side pane), easing when that changes.
 // Drag to rotate (the point grabbed stays under the pointer, a flick coasts to a stop), scroll or pinch to zoom.
-// `load` and the statistics' loaders give the fields for a year (memoized by the caller). Draws only while
+// The metrics' loaders give the fields for a year (memoized by the caller). Draws only while
 // something changes: a frame per input event, and frames while a flick or a zoom damps out.
-export const stageGlobe = (load: (year: number) => Field | Promise<Field>, statistics: Statistic[]): Viewport => ({
+export const stageGlobe = (metrics: Metric[]): Viewport => ({
   mount(el, initial) {
     const renderer = new WebGLRenderer({ alpha: true, antialias: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -226,6 +227,18 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>, stati
     controls.minDistance = 1.25;
     controls.maxDistance = 10;
 
+    // Centre the globe right of a side pane: the projection is shifted (setViewOffset), the camera stays on its
+    // axis, so grabbing and picking are unchanged. The globe is fitted to the area that remains.
+    let [width, height] = [1, 1];
+    let [inset, shown] = [initial.insetLeft, initial.insetLeft]; // target and current, in px
+    const frameView = () => {
+      const usable = Math.max(width - shown, width * 0.4);
+      camera.aspect = width / height;
+      camera.fov = MathUtils.radToDeg(2 * Math.atan(Math.tan(MathUtils.degToRad(FOV / 2)) / Math.min(1, usable / height)));
+      camera.setViewOffset(width, height, -shown / 2, 0, width, height);
+      camera.updateProjectionMatrix();
+    };
+
     let frame = 0;
     let last = 0; // time of the previous frame, for the flick
     let spin = [0, 0]; // yaw and pitch per millisecond after a flick
@@ -238,6 +251,11 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>, stati
         turn();
         const decay = Math.exp(-dt / 250);
         spin = spin.map((v) => (Math.abs(v * decay) < 1e-6 ? 0 : v * decay));
+        redraw();
+      }
+      if (shown !== inset) {
+        shown = Math.abs(inset - shown) < 0.5 ? inset : shown + (inset - shown) * 0.25;
+        frameView();
         redraw();
       }
       last = now;
@@ -314,10 +332,8 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>, stati
       const [w, h] = [el.clientWidth, el.clientHeight];
       if (!w || !h) return;
       renderer.setSize(w, h, false); // the canvas is sized by CSS
-      camera.aspect = w / h;
-      // Keep the globe fitted to the shorter side in portrait too.
-      camera.fov = MathUtils.radToDeg(2 * Math.atan(Math.tan(MathUtils.degToRad(FOV / 2)) / Math.min(1, w / h)));
-      camera.updateProjectionMatrix();
+      [width, height] = [w, h];
+      frameView(); // fitted to the shorter side of the usable area, in portrait too
       redraw();
     });
     observer.observe(el);
@@ -352,12 +368,14 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>, stati
       redraw();
     };
     let wanted = '';
-    const setData = async ({ year, elevation, stipple }: { year: number; elevation: string; stipple: string }) => {
-      const key = `${year} ${elevation} ${stipple}`;
+    const setData = async (state: { metric: string; year: number; elevation: string; stipple: string }) => {
+      const { metric, year, elevation, stipple } = state;
+      const key = `${metric} ${year} ${elevation} ${stipple}`;
       if (key === wanted) return;
       wanted = key;
-      const [e, s] = [elevation, stipple].map((id) => statistics.find((st) => st.id === id));
-      const [f, r, st] = await Promise.all([load(year), e?.load(year), s?.load(year)]);
+      const m = metrics.find((x) => x.id === metric) ?? metrics[0];
+      const [e, s] = [elevation, stipple].map((id) => m.statistics.find((st) => st.id === id));
+      const [f, r, st] = await Promise.all([m.load(year), e?.load(year), s?.load(year)]);
       if (key !== wanted || !alive) return; // a newer request won
       const u = material.uniforms;
       u.field.value = fill(u.field.value, f);
@@ -401,6 +419,10 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>, stati
       update(state) {
         setColormap(state.colormap);
         setData(state);
+        if (state.insetLeft !== inset) {
+          inset = state.insetLeft;
+          redraw(); // eases toward it frame by frame
+        }
         if (state.stippleSize !== material.uniforms.stippleSpacing.value) {
           material.uniforms.stippleSpacing.value = state.stippleSize;
           redraw();

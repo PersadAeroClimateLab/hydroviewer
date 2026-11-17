@@ -42,3 +42,14 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/* A floating panel over the globe (App.svelte and the components it places). */
+.panel {
+  pointer-events: auto;
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
