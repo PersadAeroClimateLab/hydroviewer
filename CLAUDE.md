@@ -26,8 +26,9 @@ analytic 360 × 180 annual-mean field for 1950–2100 and its global mean; no bu
   0.5–1, threshold 0.8) and model spread (standard deviation of that change across models, mm/day, threshold 0.8);
   both flat or empty before 1970. The gear menu picks which statistic each shows, or off (`shared.elevation`,
   `shared.stipple`; defaults agreement and spread); the legend explains both. `stageGlobe(load, statistics)`:
-  - elevation: a 360 × 180-segment sphere displaced in the vertex shader (`RELIEF_SCALE` 0.08 at the top of the
-    display range), coastlines displaced by the same shader, shading from the relief's slope per pixel, lit from
+  - elevation: a 360 × 180-segment sphere displaced in the vertex shader (the top of the display range rises
+    `shared.elevationScale` of the radius: a Height slider in the gear menu, 0–20%, default 8%, disabled with
+    elevation off; changing it only sets a uniform), coastlines displaced by the same shader, shading from the relief's slope per pixel, lit from
     the upper left. Grabbing still intersects the unit sphere, so on high relief the grabbed point drifts by up to ~8%.
   - stippling: in the fragment shader, dots fixed to the surface on rows 2.5° apart (fewer per row toward the
     poles), each whole: threshold and ink (dark on light colours, light on dark) decided at its centre.

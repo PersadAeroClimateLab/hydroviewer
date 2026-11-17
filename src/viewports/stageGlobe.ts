@@ -34,8 +34,6 @@ const FOV = 30;
 const FILL = 0.78; // share of the shorter side the globe spans at the start
 const START = { lon: 15, lat: 12 }; // what faces the camera first
 
-// How far the top of the relief (the relief field at the top of its range) rises above the unit sphere.
-const RELIEF_SCALE = 0.08;
 const AMBIENT = 0.5; // share of the colour kept on surfaces facing away from the light
 // Light from the upper left of the camera, the usual hillshade direction: slopes read as light and shadow,
 // which a light from the camera itself would show only faintly face-on.
@@ -344,6 +342,13 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>, stati
       return gridTexture(renderer, f);
     };
     const rangeOf = (f: Field) => f.range ?? [0, Math.max(...f.values)];
+    // Elevation height (shared state, a fraction of the radius) applies only while a statistic is shown;
+    // changing it just sets the uniform.
+    let [scale, elevated] = [initial.elevationScale, false];
+    const setScale = () => {
+      reliefUniforms.reliefScale.value = elevated ? scale : 0;
+      redraw();
+    };
     let wanted = '';
     const setData = async ({ year, elevation, stipple }: { year: number; elevation: string; stipple: string }) => {
       const key = `${year} ${elevation} ${stipple}`;
@@ -355,7 +360,8 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>, stati
       const u = material.uniforms;
       u.field.value = fill(u.field.value, f);
       u.range.value = rangeOf(f);
-      reliefUniforms.reliefScale.value = r ? RELIEF_SCALE : 0;
+      elevated = Boolean(r);
+      setScale();
       if (r) {
         reliefUniforms.relief.value = fill(reliefUniforms.relief.value, r);
         reliefUniforms.reliefRange.value = e!.range;
@@ -393,6 +399,10 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>, stati
       update(state) {
         setColormap(state.colormap);
         setData(state);
+        if (state.elevationScale !== scale) {
+          scale = state.elevationScale;
+          setScale();
+        }
       },
       destroy() {
         alive = false;

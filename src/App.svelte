@@ -1,7 +1,7 @@
 <script lang="ts">
   import { MOCK, STATISTICS, YEARS, mockField, mockSeries } from './data/mock';
   import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
-  import { shared } from './state/shared.svelte';
+  import { ELEVATION_SCALE, shared } from './state/shared.svelte';
   import SettingsMenu from './ui/SettingsMenu.svelte';
   import ViewportHost from './ui/ViewportHost.svelte';
   import { download, fieldPng } from './viewports/exportPng';
@@ -92,6 +92,17 @@
             <option value="">Off</option>
             {#each STATISTICS as s (s.id)}<option value={s.id}>{s.name}</option>{/each}
           </select>
+        </label>
+        <label class="setting">
+          <span>Height <small>{Math.round(shared.elevationScale * 100)}% of radius</small></span>
+          <input
+            type="range"
+            min={ELEVATION_SCALE.min}
+            max={ELEVATION_SCALE.max}
+            step="0.01"
+            disabled={!shared.elevation}
+            bind:value={shared.elevationScale}
+          />
         </label>
         <label class="setting">
           Stippling
@@ -240,8 +251,12 @@
     vertical-align: -1px;
     background: radial-gradient(circle, var(--fg) 1.6px, transparent 2px) 0 0 / 7px 5px;
   }
-  .setting select {
+  .setting select,
+  .setting input {
     max-width: 150px;
+  }
+  .setting small {
+    color: var(--muted);
   }
   .setting {
     display: flex;
