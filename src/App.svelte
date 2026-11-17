@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DATASET, YEARS } from './data/mock';
+  import type { Dataset } from './data/cmip6';
   import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
   import { ELEVATION_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
   import { draggable, type Offset } from './ui/draggable';
@@ -11,18 +11,22 @@
   import { stageGlobe } from './viewports/stageGlobe';
   import { timeline } from './viewports/timeline';
 
-  // Layout mockup: one full-screen globe with floating panels: a pane of the dataset's metrics on the left, and a
-  // timeline of the selected metric's global mean whose needle sets the year. Data is mock (src/data/mock.ts).
-  const globe = stageGlobe(DATASET.metrics); // colour: the metric; elevation and stippling: its statistics
-  const metric = $derived(DATASET.metrics.find((m) => m.id === shared.metric) ?? DATASET.metrics[0]);
+  // One full-screen globe with floating panels: a pane of the dataset's metrics on the left, and a timeline of the
+  // selected metric's global mean whose needle sets the year. The dataset comes from the bucket's catalog.json.
+  // Loaded once before mounting (main.ts) and never replaced, so viewports may capture them.
+  const { dataset, years }: { dataset: Dataset; years: [number, number] } = $props();
+  // svelte-ignore state_referenced_locally
+  const globe = stageGlobe(dataset.metrics); // colour: the metric; elevation and stippling: its statistics
+  const metric = $derived(dataset.metrics.find((m) => m.id === shared.metric) ?? dataset.metrics[0]);
   const statistic = (id: string) => metric.statistics.find((s) => s.id === id);
   const elevation = $derived(statistic(shared.elevation));
   const stipple = $derived(statistic(shared.stipple));
   const fmt = (v: number, units: string) =>
     units.startsWith('fraction') ? `${Math.round(v * 100)}%` : `${Number(v.toPrecision(3))} ${units}`;
+  // svelte-ignore state_referenced_locally
   const time = timeline(
-    (id) => (DATASET.metrics.find((m) => m.id === id) ?? DATASET.metrics[0]).series(),
-    YEARS,
+    (id) => (dataset.metrics.find((m) => m.id === id) ?? dataset.metrics[0]).series(),
+    years,
     (year) => (shared.year = year),
   );
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -93,7 +97,7 @@
     const lut = bakeLut(shared.colormap);
     bar.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(lut), LUT_SIZE, 1), 0, 0);
   });
-  const step = (by: number) => (shared.year = Math.min(YEARS[1], Math.max(YEARS[0], shared.year + by)));
+  const step = (by: number) => (shared.year = Math.min(years[1], Math.max(years[0], shared.year + by)));
 </script>
 
 <main
@@ -109,7 +113,7 @@
 
   <div class="hud" class:pane-open={paneOpen && wide}>
     <MetricPane
-      dataset={DATASET}
+      dataset={dataset}
       selected={metric.id}
       year={shared.year}
       bind:open={paneOpen}
@@ -204,9 +208,9 @@
     {/if}
 
     <section class="panel time">
-      <button aria-label="Previous year" disabled={shared.year <= YEARS[0]} onclick={() => step(-1)}>◀</button>
+      <button aria-label="Previous year" disabled={shared.year <= years[0]} onclick={() => step(-1)}>◀</button>
       <div class="track"><ViewportHost viewport={time} /></div>
-      <button aria-label="Next year" disabled={shared.year >= YEARS[1]} onclick={() => step(1)}>▶</button>
+      <button aria-label="Next year" disabled={shared.year >= years[1]} onclick={() => step(1)}>▶</button>
     </section>
   </div>
 </main>

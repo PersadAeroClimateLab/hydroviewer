@@ -11,8 +11,10 @@ change.
 ## Project state
 
 Front-end overhaul in progress (branch `frontend-overhaul`, plan section 8). `App.svelte` is a full-screen
-three.js globe (`src/viewports/stageGlobe.ts`) with floating panels, on **mock data** (`src/data/mock.ts`: `DATASET`,
-analytic 360 × 180 annual means for 1950–2100; no bucket needed):
+three.js globe (`src/viewports/stageGlobe.ts`) with floating panels, on **mock data read from the bucket** (analytic
+360 × 180 annual means for 1950–2100 written by `prep/make_mock.py`; see Data path). `main.ts` loads the first
+dataset of the bucket's `catalog.json` (`loadDataset()` in `src/data/catalog.ts`) and then mounts `App` with it and
+its years; if that fails the page shows only the error:
 
 - **Metric pane** (left, `src/ui/MetricPane.svelte`): app title, dataset (model, experiment, member) and its
   metrics grouped by variable (mock: precipitation, wettest day, longest dry spell, temperature); picking one shows
@@ -30,7 +32,7 @@ analytic 360 × 180 annual means for 1950–2100; no bucket needed):
   large angle and dragging got erratic). OrbitControls only zooms. Draws only while something moves.
 - **Elevation and stippling** show per-cell ensemble statistics (`Statistic` in `src/data/cmip6.ts`, the output
   contract: one grid per time step on the field's grid, `units`, `long_name`, `display_range`, `stipple_threshold`).
-  Mock: `STATISTICS` in `mock.ts`, model agreement (fraction of models agreeing on the sign of change since 1970,
+  Mock: `statistics()` in `prep/make_mock.py`, model agreement (fraction of models agreeing on the sign of change since 1970,
   0.5–1, threshold 0.8) and model spread (standard deviation of that change across models, mm/day, threshold 0.8);
   both flat or empty before 1970. The gear menu picks which statistic each shows, or off (`shared.elevation`,
   `shared.stipple`; defaults agreement and spread); the legend explains both. `stageGlobe(load, statistics)`:
@@ -59,7 +61,8 @@ analytic 360 × 180 annual means for 1950–2100; no bucket needed):
   into one 1024-entry table that the globe shader, colour bar and PNG all sample. Opacity is ignored.
 
 Shared state is `{ colormap, metric, insetLeft, year, elevation, stipple, elevationScale, stippleSize }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
-registry). Next: real data from the bucket instead of the mock. No URL-hash state yet.
+registry). Next: real data in the same layout as the mock (prep for CMIP6 writing `catalog.json` and annual
+metrics). No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).
 
 **Removed (2026-11-17):** the trame/ParaView server and its iframe viewport, and the earlier analysis/layout grid
@@ -87,7 +90,8 @@ docker compose build web                          # after changing package.json 
 - **Deploy:** `.github/workflows/pages.yml` runs on every push to main: `npm ci`, `npm run check`, then
   `npm run build -- --base=/<repo>/`, published with `upload-pages-artifact`/`deploy-pages`. Repo setting once:
   Settings > Pages > Source: GitHub Actions. Repository variable `DATA_URL` becomes `VITE_DATA_URL`; unset, the
-  page reads `http://localhost:9000` (`?data=` still overrides). To check a Pages-like build locally:
+  page reads `http://localhost:9000` (`?data=` still overrides). The page needs a bucket with `catalog.json`
+  (upload the mock for now). To check a Pages-like build locally:
   `docker compose exec web sh -c 'npm run build -- --base=/hydroviewer/'`, then
   `docker compose exec -d web vite preview --host --port 4173 --base /hydroviewer/` and open
   `http://web:4173/hydroviewer/` with the browser tool.
@@ -96,15 +100,29 @@ docker compose build web                          # after changing package.json 
 - Edits to `src/` hot-reload. Set `VITE_USE_POLLING=true` on Docker Desktop (Mac/Windows).
 - Vite only accepts the `localhost` and `web` hosts (`allowedHosts`); add others in `vite.config.ts`.
 - The sandbox does not publish ports to the host by itself; see the parent CLAUDE.md (`sbx ports`).
-  Publish 5173 (and 9000 once the page reads the bucket: your browser fetches data from `http://localhost:9000`).
+  Publish 5173 and 9000 (your browser fetches the data from `http://localhost:9000`).
 
 ## Data path
 
 - **Source:** the public `cmip6-pds` S3 bucket (Zarr v2, blosc, chunks of ~100 MB). It is only a
   source: the app cannot use it directly. Keys are
   `CMIP6/<activity>/<institution>/<model>/<experiment>/<member>/<table>/<variable>/<grid>/<version>/`.
+- **Data directory:** the emulator serves, and prep writes into, `$DATA_DIR` (set in `.env`, gitignored; default
+  `./data`). Each data directory is one bucket root. Here they live outside the repo, because home is snapshotted:
+  `/home/oxygen/Downloads/hydroviewer_data/mock` (the mock, the current `.env`), `.../cmip6` (the GFDL-CM4 slice
+  below; no `catalog.json`, so the app cannot open it yet) and `.../colormaps` (ColorMoves test files). To switch,
+  edit `.env` (or prefix a command with `DATA_DIR=...`) and run `docker compose up -d data`.
+- **Mock:** `docker compose --profile prep run --rm mock` (`prep/make_mock.py`, a few seconds) writes
+  `catalog.json` and `mock/annual.zarr` (216 MB) into `$DATA_DIR`, replacing both. The `mock` service mounts
+  `prep/`, so edits to the formulas need no image rebuild (only `docker compose --profile prep build mock` once).
+  The store is the layout the app reads: per metric (`pr`, `rx1day`, `cdd`, `tas`) an array (year, lat, lon), one
+  year per chunk, with `display_range`; `<metric>_agreement` and `<metric>_spread` on the same axes with
+  `display_range` and `stipple_threshold`; `<metric>_global_mean` over `year` (cos(lat)-weighted, computed in prep);
+  coordinates `year` (int32 calendar years), `lat`, `lon`. `catalog.json` lists datasets: `name`, `detail`,
+  `store` (relative to the root) and `metrics` (`id`, `group`, statistic ids); names, units and ranges come from
+  the arrays' CF attributes.
 - **Prep** (`prep/`, Python in Docker, opt-in profile) converts a slice into our bucket format under
-  the same key path, as `.../<version>/map.zarr` plus `aggregates.zarr` in `./data` (gitignored):
+  the same key path, as `.../<version>/map.zarr` plus `aggregates.zarr` in `$DATA_DIR`:
   `docker compose --profile prep build prep`, then
   `docker compose --profile prep run --rm prep CMIP6/CMIP/NOAA-GFDL/GFDL-CM4/historical/r1i1p1f1/Amon/pr/gr1/v20180701 --months 1980`
   (the whole 1850–2014 historical run; about 25 s, 351 MB output). Rebuild the prep image after editing
@@ -113,15 +131,17 @@ docker compose build web                          # after changing package.json 
   and `pr_wettest_month_global` over `year` (cos(lat)-weighted), `pr_trend_zonal` over `lat`,
   `pr_wettest_month_hist` over `bin`; and a contour boxplot of the June–August rain band (`contour_boxplot()`,
   `pr_jja_*`). `map.zarr` also holds `uncertainty`, synthetic noise from `dummy_uncertainty()` that only the removed
-  relief globe used. Nothing in the current app reads the bucket.
-- **Bucket emulator:** the `data` service is nginx serving `./data` with S3-style headers (any-origin
+  relief globe used. Nothing in the current app reads these stores.
+- **Bucket emulator:** the `data` service is nginx serving `$DATA_DIR` with S3-style headers (any-origin
   CORS incl. preflight, byte ranges, ETag, `Content-Range` exposed, no compression, 404 for missing
   keys). Config: `tools/bucket/default.conf`. Use its access log to see which keys a page reads, i.e. what
   must be uploaded to R2.
 - **App side:** `src/data/config.ts` picks the bucket URL (`?data=URL` > `VITE_DATA_URL` >
-  `http://localhost:9000`); `src/data/cmip6.ts` opens stores with zarrita on first use (explicit `zarr.open.v3`,
-  v3 consolidated metadata): `loadMonth(i)`, `loadField(source)` (the month or an aggregate map),
-  `loadSeries(source)` (a 1D series with its coordinate from `dimension_names`), all memoized.
+  `http://localhost:9000`); `src/data/catalog.ts` reads `catalog.json` and builds the `Dataset` from the store's
+  consolidated metadata (explicit `zarr.open.v3`); a field is one chunk read per year, keeping the latest per
+  array. `src/data/cmip6.ts` holds the data model and the older, unused loaders for the GFDL-CM4 slice:
+  `loadMonth(i)`, `loadField(source)` (the month or an aggregate map), `loadSeries(source)` (a 1D series with its
+  coordinate from `dimension_names`), all memoized.
 - **Coastlines** are a committed app asset, not bucket data. Regenerate `src/assets/coastlines.json`
   (Natural Earth 110m, pinned to tag v5.1.2, densified to 1° steps) with
   `docker compose --profile prep run --rm --entrypoint python -v "$PWD/src/assets:/assets" prep make_coastlines.py /assets/coastlines.json`.
@@ -162,8 +182,7 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
    headers (so no `SharedArrayBuffer`/COOP/COEP), no client-side router or SPA fallback, no large
    data files in the repo. Vite `base` must match the Pages path (the workflow passes `--base=/<repo>/`).
 2. **Minimize client compute.** Do reductions, regridding, aggregation and rechunking in data prep,
-   not in the browser. Do colormapping and similar per-pixel work in shaders. (The mock data is the
-   exception, until real data replaces it.)
+   not in the browser. Do colormapping and similar per-pixel work in shaders.
 3. **Renderers are framework-agnostic.** Viewports are plain TypeScript modules implementing
    `mount(el, state)` → `{ update(state), destroy() }` (`src/viewports/types.ts`). They must not import
    Svelte; `ViewportHost.svelte` hosts them.
@@ -213,6 +232,9 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
 - The parent `/home/oxygen/Documents/CLAUDE.md` describes the sandbox (persistent env file, network
   firewall, git auth, port publishing). It applies here. In particular, dev servers must bind to
   `0.0.0.0` and be published with `sbx ports` to be reachable from the host.
+- Data goes in `/home/oxygen/Downloads/hydroviewer_data/` (read-write, outside the snapshotted home), never in
+  the repo. `/home/oxygen/Documents/Lantern/` (read-only) is an earlier ensemble viewer with visualizations to
+  bring over (catalogue picker, plume, uncertainty fractions).
 - Use `bash -l -c "..."` if a tool is not found on PATH.
 - **Docker's disk is small (about 9.8 GB).** The Playwright image alone is 3.6 GB and build cache piles up.
   If a build fails with "no space left on device", run `docker builder prune -af` (safe, only slows the

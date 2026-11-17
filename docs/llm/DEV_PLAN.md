@@ -38,11 +38,12 @@ rendered in the browser with JavaScript: three.js for maps and globes, Observabl
 ```
 GitHub Pages (static)                    Bucket (R2; nginx emulator in dev)
 ┌──────────────────────────────┐         ┌────────────────────────────┐
-│ Svelte shell (App.svelte)    │ zarrita │ catalog.json (planned)     │
+│ Svelte shell (App.svelte)    │ zarrita │ catalog.json               │
 │  ├─ shared state module      │────────▶│ <key path>/map.zarr        │
 │  ├─ three.js viewports       │         │            aggregates.zarr │
-│  └─ Plot viewports           │         └─────────────▲──────────────┘
-└──────────────────────────────┘                       │ prep/ (Python, offline)
+│  └─ Plot viewports           │         │ mock/annual.zarr           │
+└──────────────────────────────┘         └─────────────▲──────────────┘
+                                                       │ prep/ (Python, offline)
 ```
 
 ### Viewport module contract
@@ -81,18 +82,18 @@ Data is prepared offline (xarray, dask, regridding tools) and written to a publi
 - Regular lat/lon, **1°**, cell-centered: 360 × 180.
 - Longitude **-180..180**, west to east; latitude south to north. Fixed for every dataset; prep wraps and asserts.
 - Regridding happens in prep, never in the client. **Not implemented yet:** the first slice (GFDL-CM4, 180 × 288) keeps its native grid, and the stored lat/lon arrays describe it.
-- Time is stored as integers counted from the first month (`units: "months since 1850-01-01"`), so the client needs no calendar code (the source uses a `noleap` calendar with hours since 1850).
+- Time is stored as integers counted from the first month (`units: "months since 1850-01-01"`), so the client needs no calendar code (the source uses a `noleap` calendar with hours since 1850). Annual stores (the mock) use a `year` coordinate of int32 calendar years instead.
 - Precipitation is stored in mm/day (source: kg m-2 s-1).
 
 ### Source data and key layout
 
 The public `cmip6-pds` bucket is a **source**, not something the app can read directly. Its stores are Zarr v2 with blosc/lz4 and chunks of `(600, nlat, nlon)`: for GFDL-CM4 `pr`, about 102 MB compressed per chunk, so one month would cost a 100 MB download. It also has a `1e20` fill value, a `noleap` calendar and CORS that exposes only `ETag`.
 
-Our bucket mirrors its key path: `CMIP6/<activity>/<institution>/<model>/<experiment>/<member>/<table>/<variable>/<grid>/<version>/`, with our stores inside the version directory (`map.zarr`, `aggregates.zarr`, later `series.zarr`) and other datasets (ERA5, MERRA, observations) under their own top-level prefix. A root `catalog.json` (not written yet) is how the app discovers stores.
+Our bucket mirrors its key path: `CMIP6/<activity>/<institution>/<model>/<experiment>/<member>/<table>/<variable>/<grid>/<version>/`, with our stores inside the version directory (`map.zarr`, `aggregates.zarr`, later `series.zarr`) and other datasets (ERA5, MERRA, observations) under their own top-level prefix. A root `catalog.json` is how the app discovers stores (written so far only by the mock, see below).
 
 ### Dev bucket emulator
 
-The `data` compose service is nginx serving `./data` with S3-style read behaviour (config in `tools/bucket/default.conf`): `Access-Control-Allow-Origin: *`, preflight, `Range`, ETag, `Content-Range` exposed, no compression, 404 for missing keys. Its access log shows which keys a page reads, i.e. what must be uploaded. Measured 2026-11-16 with the removed grid shell: 19 keys, 3.4 MB of the 352 MB store (all of `aggregates.zarr` plus one `map.zarr` chunk); a time control will need every `map.zarr` chunk.
+Each data directory is one bucket root. `$DATA_DIR` (in `.env`, default `./data`) picks the one the emulator serves and prep writes into; data lives outside the repo (decided 2026-11-17: in the sandbox, `/home/oxygen/Downloads/hydroviewer_data/{mock,cmip6}`, because home is snapshotted), and switching is `docker compose up -d data` after changing it. The `data` compose service is nginx serving `$DATA_DIR` with S3-style read behaviour (config in `tools/bucket/default.conf`): `Access-Control-Allow-Origin: *`, preflight, `Range`, ETag, `Content-Range` exposed, no compression, 404 for missing keys. Its access log shows which keys a page reads, i.e. what must be uploaded. Measured 2026-11-16 with the removed grid shell: 19 keys, 3.4 MB of the 352 MB store (all of `aggregates.zarr` plus one `map.zarr` chunk); a time control will need every `map.zarr` chunk.
 
 ### Sizes (float32, 1°)
 
@@ -120,7 +121,11 @@ No multiscale pyramids at 1°. Revisit if 0.25° data (e.g. native ERA5, ~4 MB p
 - No NaN in data the shader reads. Use an explicit fill value or a separate mask.
 - CF attributes (`units`, `long_name`) on every array so the UI labels itself.
 - v3 consolidated metadata (verified with zarrita).
-- A static `catalog.json` at the bucket root lists datasets and variables so the app discovers content instead of hard-coding it.
+- A static `catalog.json` at the bucket root lists datasets and variables so the app discovers content instead of hard-coding it. Format (2026-11-17): `{ datasets: [{ name, detail, store, metrics: [{ id, group, statistics: [ids] }] }] }`, `store` relative to the root; names, units and ranges come from the arrays' CF attributes. The app opens the first dataset.
+
+### Mock dataset
+
+Decided 2026-11-17: the mock is data in the bucket, not formulas in the browser, so the app reads mock and real data through one path and switching data directories switches between them. `prep/make_mock.py` (`docker compose --profile prep run --rm mock`, about 5 s) writes `catalog.json` and `mock/annual.zarr` (216 MB): metrics `pr`, `rx1day`, `cdd`, `tas` as (year, lat, lon) on the 1° grid, 1950–2100, one year per chunk, with `<metric>_agreement`, `<metric>_spread` (step 7 output contract) and `<metric>_global_mean` (year, computed in prep). The formulas are the former `src/data/mock.ts`, ported to numpy; sampled values match it exactly. Real data should be written in the same layout (`src/data/catalog.ts` reads it).
 
 ### Bucket
 
@@ -138,10 +143,10 @@ hydroviewer/
 │   ├── App.svelte, main.ts, app.css
 │   ├── state/                  # shared state module
 │   ├── viewports/              # framework-agnostic renderers (globe, timeline) and helpers
-│   ├── data/                   # bucket access (zarrita), mock data, coastlines
+│   ├── data/                   # bucket access (zarrita: catalog.ts), data model, colormap parsing
 │   ├── ui/                     # Svelte components (viewport host, settings menu)
 │   └── assets/                 # coastlines, colormaps
-├── prep/                       # Python data prep (xarray), own Dockerfile
+├── prep/                       # Python data prep (xarray), own Dockerfile; make_mock.py writes the mock
 ├── tools/browser/              # Playwright + Chromium in Docker, for checking the dev page
 ├── tools/bucket/               # nginx config of the bucket emulator
 └── .github/workflows/pages.yml
@@ -158,7 +163,7 @@ Done:
 
 In progress:
 
-5. **Front-end overhaul** (branch `frontend-overhaul`). Layouts brainstormed: full-screen map with floating panels, map with axis-sharing charts, metric gallery plus detail, side-by-side compare, guided story, student workbench, timeline-first. Chosen first: **full-screen globe with floating panels**, on mock data (`src/data/mock.ts`) so the work goes into the globe.
+5. **Front-end overhaul** (branch `frontend-overhaul`). Layouts brainstormed: full-screen map with floating panels, map with axis-sharing charts, metric gallery plus detail, side-by-side compare, guided story, student workbench, timeline-first. Chosen first: **full-screen globe with floating panels**, on mock data so the work goes into the globe (formulas in `src/data/mock.ts` until 2026-11-17, now a store written by `prep/make_mock.py` and read from the bucket).
    - `stageGlobe.ts`: longitude/latitude per pixel from the sphere position (exact colours on a coarse 96 × 48 mesh, no pole pinching), one field texture refilled in place on a year change, grab-to-rotate (`grab.ts` solves yaw then pitch so the grabbed point stays under the pointer and north stays up; a flick coasts to a stop; OrbitControls only zooms; near the edge `softLimit()` eases the target by its on-screen distance from the centre, exact up to 30% of the radius and levelling off before 60%, so the per-pixel turn falls to about a sixth at the edge and to zero past it, measured in the browser as a smooth fall instead of the previous near-tripling), drawing only while something moves (0 frames when idle), a faint rim halo.
    - `timeline.ts` (1950–2100): the global mean as a Plot line (redrawn only on resize) with a needle for the shared year, dragged or clicked, a keyboard slider, ◀ ▶ buttons stepping one year.
    - Metric pane (2026-11-17, `MetricPane.svelte`): left, collapsible; the dataset and its metrics grouped by variable, for the same model/dataset selection. Data model: `Dataset` → `Metric` (field per year, global-mean series, statistics) in `src/data/cmip6.ts`; mock has four metrics (precipitation, wettest day, longest dry spell, temperature) with generic agreement/spread scaled per metric. The globe centres in the area right of the open pane by shifting the projection (`setViewOffset`), eased; on phones the pane overlays the page instead.
@@ -169,7 +174,7 @@ In progress:
    1. One `Colormap` model (`id`, `name`, `space`, positioned points) and one baked lookup table (`bakeLut`, 1024 entries, Lab or RGB blending) that the globe shader, the colour bar (a canvas, since CSS gradients cannot show Lab blending or hard steps exactly) and the PNG export all sample. Built-in viridis and magma move to the same file format, replacing `src/assets/colormaps.json`.
    2. A ColorMoves parser (`src/data/colormoves.ts`): all maps in a file, numeric coercion, sort and clamp `x`, at least two points, readable errors; unknown `space` falls back to RGB with a warning. Built-ins are the ColorMoves files in `src/assets/colormaps/` (only viridis and magma: decided 2026-11-17 that custom maps, including the team's two samples, arrive by upload).
    3. Import from the settings menu (file picker, drag and drop), stored in localStorage, removable; the first imported map is selected and a notice reports names, warnings or the error.
-   Checked (the team's "Divergent 1" and "Interlinked" samples, `data/colormap1.json` and `data/colormap.json`, uploaded through the menu populate the drop-down and draw on the globe): Lab round trips, L*=50 grey = sRGB 119, viridis unchanged from the old evenly spaced RGB blending (within 1/255), the Interlinked step at x = 0.08 within one table entry, Divergent 1's white midpoint, bad files rejected with messages; in the browser, import by menu and drop, persistence over a reload, removal, a bad file, the PNG.
+   Checked (the team's "Divergent 1" and "Interlinked" samples, now in `hydroviewer_data/colormaps/` (`colormap1.json`, `colormap.json`), uploaded through the menu populate the drop-down and draw on the globe): Lab round trips, L*=50 grey = sRGB 119, viridis unchanged from the old evenly spaced RGB blending (within 1/255), the Interlinked step at x = 0.08 within one table entry, Divergent 1's white midpoint, bad files rejected with messages; in the browser, import by menu and drop, persistence over a reload, removal, a bad file, the PNG.
    Later: export back to ColorMoves JSON, sharing through the URL, reversing, colour-range controls, labelling bands in the legend.
 7. **Uncertainty, spread and agreement** (2026-11-17: elevation and stippling built on mock data; decided that both exist and the user configures which statistic each reads, or off; which statistic comes first and the reference period for "change" are open). Precipitation stays the colour; a second statistic per cell needs its own visual channel. Candidates:
    - **Elevation (relief)**: built, with a height slider (0–20% of the radius, default 8%; the maximum keeps peaks clear of the closest zoom). Good for a smooth field and for seeing structure while rotating; weak face-on (read mostly from shading and the outline), weak on dark colormap ends, and it displaces the colour surface (grabbing and pointer reading become approximate on high relief). Agreement is shown as height above the sphere: flat = 50% (no consensus), top = 100%.
@@ -177,11 +182,11 @@ In progress:
    - **Value-suppressing colour** (desaturate or fade the colour where uncertainty is high): one channel, no geometry; needs a 2D lookup (value x uncertainty) and a legend that explains it.
    - **Contours of the second field** (e.g. the 66% and 90% agreement lines), as in the removed contour boxplot shaders.
    - **Toggle or swap**: a picker for what elevation (or the overlay) shows: agreement, inter-model spread (standard deviation), signal-to-noise; off for reading colour exactly.
-   **Output contract** (the simplest input these need; processing of the real high-resolution multi-model ensembles must produce it): per statistic, one float32 grid per time step on the same 1° grid and time axis as the field it accompanies, no NaN, CF `units` and `long_name`, a `display_range` (elevation maps it to flat..highest) and a `stipple_threshold` (cells at or above it are stippled). Stored next to the field, e.g. `pr_agreement` (fraction of models agreeing on the sign of change, 0.5–1), `pr_spread` (inter-model standard deviation of the change), `pr_snr`. In the app this is `Statistic` (`src/data/cmip6.ts`). Mock: `STATISTICS` in `src/data/mock.ts` (agreement and spread).
+   **Output contract** (the simplest input these need; processing of the real high-resolution multi-model ensembles must produce it): per statistic, one float32 grid per time step on the same 1° grid and time axis as the field it accompanies, no NaN, CF `units` and `long_name`, a `display_range` (elevation maps it to flat..highest) and a `stipple_threshold` (cells at or above it are stippled). Stored next to the field, e.g. `pr_agreement` (fraction of models agreeing on the sign of change, 0.5–1), `pr_spread` (inter-model standard deviation of the change), `pr_snr`. In the app this is `Statistic` (`src/data/cmip6.ts`). Mock: `statistics()` in `prep/make_mock.py` (agreement and spread), stored as `<metric>_agreement` and `<metric>_spread`.
 
 Next:
 
-8. **Real data** in place of the mock: the bucket via zarrita, `catalog.json`, the series layout, regridding to 1° in prep, and the R2 upload list from the emulator log.
+8. **Real data** in place of the mock. Done 2026-11-17: the app reads the bucket via zarrita from `catalog.json` (the mock). Left: prep for CMIP6 writing the mock's layout (annual metrics, statistics, global means, `catalog.json`), the series layout, regridding to 1°, and the R2 upload list from the emulator log.
 9. **Student options** (from the team's notes): colour ranges, line widths, background colour, image and configuration export.
 
 ## 9. Open questions
