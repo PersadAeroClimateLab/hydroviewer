@@ -1,9 +1,10 @@
 import type { Field } from '../data/cmip6';
-import { colorAt, type Palette } from './colormaps';
+import { bakeLut, lutColor, type Colormap } from './colormaps';
 
 // The field as an equirectangular PNG, one pixel per grid cell (north up, longitude -180 to 180 left to
 // right), coloured like the globe: same range, same colormap, no shading or coastlines.
-export function fieldPng(f: Field, colormap: Palette): Promise<Blob> {
+export function fieldPng(f: Field, colormap: Colormap): Promise<Blob> {
+  const lut = bakeLut(colormap);
   const [vmin, vmax] = f.range ?? [0, Math.max(...f.values)];
   const canvas = document.createElement('canvas');
   [canvas.width, canvas.height] = [f.width, f.height];
@@ -12,7 +13,7 @@ export function fieldPng(f: Field, colormap: Palette): Promise<Blob> {
   for (let j = 0; j < f.height; j++) {
     const row = (f.height - 1 - j) * f.width; // the grid runs south to north, images top to bottom
     for (let i = 0; i < f.width; i++) {
-      const [r, gr, b] = colorAt(colormap, (f.values[j * f.width + i] - vmin) / (vmax - vmin));
+      const [r, gr, b] = lutColor(lut, (f.values[j * f.width + i] - vmin) / (vmax - vmin));
       image.data.set([r, gr, b, 255], (row + i) * 4);
     }
   }

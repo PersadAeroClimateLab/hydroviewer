@@ -1,10 +1,11 @@
 <script lang="ts">
   import { MOCK, YEARS, mockField, mockSeries } from './data/mock';
-  import { colormaps, shared } from './state/shared.svelte';
+  import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
+  import { shared } from './state/shared.svelte';
   import SettingsMenu from './ui/SettingsMenu.svelte';
   import ViewportHost from './ui/ViewportHost.svelte';
   import { download, fieldPng } from './viewports/exportPng';
-  import { gradient } from './viewports/colormaps';
+  import { bakeLut, LUT_SIZE } from './viewports/colormaps';
   import { stageGlobe } from './viewports/stageGlobe';
   import { timeline } from './viewports/timeline';
 
@@ -12,12 +13,54 @@
   // needle sets the year. Data is mock (src/data/mock.ts).
   const globe = stageGlobe(mockField);
   const time = timeline(mockSeries, YEARS, (year) => (shared.year = year));
+  const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const downloadPng = async () =>
-    download(await fieldPng(await mockField(shared.year), shared.colormap), `hydroviewer-pr-${shared.year}-${shared.colormap}.png`);
+    download(
+      await fieldPng(await mockField(shared.year), shared.colormap),
+      `hydroviewer-pr-${shared.year}-${slug(shared.colormap.name)}.png`,
+    );
+
+  // A short message over the globe: import results and errors.
+  let notice = $state<{ text: string; error?: boolean }>();
+  let noticeTimer = 0;
+  const say = (text: string, error = false) => {
+    notice = { text, error };
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(() => (notice = undefined), error ? 8000 : 5000);
+  };
+
+  // Reads a ColorMoves export (from the menu or dropped on the page) and switches to its first map.
+  const importFile = async (file: File) => {
+    try {
+      const { maps, warnings } = importColormaps(await file.text());
+      shared.colormap = findColormap(maps[0].id)!;
+      say([`Imported ${maps.map((m) => m.name).join(', ')}.`, ...warnings].join(' '));
+    } catch (e) {
+      say(`Could not import ${file.name}: ${e instanceof Error ? e.message : e}`, true);
+    }
+  };
+  const remove = (id: string) => {
+    removeColormap(id);
+    if (shared.colormap.id === id) shared.colormap = colormaps.builtIn[0];
+  };
+
+  let bar: HTMLCanvasElement;
+  $effect(() => {
+    const lut = bakeLut(shared.colormap);
+    bar.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(lut), LUT_SIZE, 1), 0, 0);
+  });
   const step = (by: number) => (shared.year = Math.min(YEARS[1], Math.max(YEARS[0], shared.year + by)));
 </script>
 
-<main>
+<main
+  ondragover={(e) => e.dataTransfer?.types.includes('Files') && e.preventDefault()}
+  ondrop={(e) => {
+    const file = e.dataTransfer?.files[0];
+    if (!file) return;
+    e.preventDefault();
+    importFile(file);
+  }}
+>
   <div class="stage"><ViewportHost viewport={globe} /></div>
 
   <div class="hud">
@@ -29,18 +72,27 @@
     <section class="panel tools">
       <label>
         Colormap
-        <select bind:value={shared.colormap}>
-          {#each colormaps as c (c)}<option value={c}>{c}</option>{/each}
+        <select value={shared.colormap.id} onchange={(e) => (shared.colormap = findColormap(e.currentTarget.value)!)}>
+          {#each colormaps.builtIn as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
+          {#if colormaps.imported.length}
+            <optgroup label="Imported">
+              {#each colormaps.imported as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
+            </optgroup>
+          {/if}
         </select>
       </label>
-      <SettingsMenu onDownloadPng={downloadPng} />
+      <SettingsMenu onDownloadPng={downloadPng} onImport={importFile} imported={colormaps.imported} onRemove={remove} />
     </section>
 
     <section class="panel legend" aria-label="Colour scale">
       <div>{MOCK.units}</div>
-      <div class="bar" style:background={gradient(shared.colormap)}></div>
+      <canvas class="bar" width={LUT_SIZE} height="1" bind:this={bar}></canvas>
       <div class="ticks"><span>{MOCK.range[0]}</span><span>{MOCK.range[1]}</span></div>
     </section>
+
+    {#if notice}
+      <div class="panel notice" class:error={notice.error} role="status">{notice.text}</div>
+    {/if}
 
     <section class="panel time">
       <button aria-label="Previous year" disabled={shared.year <= YEARS[0]} onclick={() => step(-1)}>◀</button>
@@ -70,7 +122,7 @@
     padding: 16px;
     display: grid;
     gap: 12px;
-    grid-template: 'title tools' auto '. .' 1fr 'legend .' auto 'time time' auto / 1fr auto;
+    grid-template: 'title tools' auto 'notice notice' 1fr 'legend .' auto 'time time' auto / 1fr auto;
     pointer-events: none;
   }
   .panel {
@@ -113,6 +165,16 @@
   select {
     font: inherit;
     margin-left: 6px;
+    max-width: 14em;
+  }
+  .notice {
+    grid-area: notice;
+    justify-self: center;
+    align-self: start;
+    max-width: min(520px, 100%);
+  }
+  .notice.error {
+    border-color: #d0342c;
   }
   .legend {
     grid-area: legend;
@@ -121,6 +183,7 @@
     font-size: 12px;
   }
   .bar {
+    display: block;
     width: 160px;
     height: 10px;
     margin: 2px 0;

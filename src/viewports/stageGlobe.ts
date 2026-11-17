@@ -24,12 +24,11 @@ import {
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Field } from '../data/cmip6';
-import { colorAt, type Palette } from './colormaps';
+import { bakeLut, LUT_SIZE, type Colormap } from './colormaps';
 import { createCoastlines, disposeCoastlines } from './coastlines';
 import { solveGrab } from './grab';
 import type { Viewport } from './types';
 
-const LUT_SIZE = 256;
 const FOV = 30;
 const FILL = 0.78; // share of the shorter side the globe spans at the start
 const START = { lon: 15, lat: 12 }; // what faces the camera first
@@ -223,11 +222,12 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>): View
     });
     observer.observe(el);
 
-    let colormap: Palette | undefined;
-    const setColormap = (c: Palette) => {
-      if (c === colormap) return;
-      colormap = c;
-      for (let i = 0; i < LUT_SIZE; i++) lutData.set([...colorAt(c, i / (LUT_SIZE - 1)).map(Math.round), 255], i * 4);
+    let colormap = ''; // the current one, by content: an import can replace a map under the same id
+    const setColormap = (c: Colormap) => {
+      const key = JSON.stringify(c);
+      if (key === colormap) return;
+      colormap = key;
+      lutData.set(bakeLut(c));
       lut.needsUpdate = true;
       redraw();
     };

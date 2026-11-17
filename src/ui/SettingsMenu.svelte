@@ -1,8 +1,19 @@
 <script lang="ts">
   // Gear button with a drop-down of actions. Closes on choosing, Escape or a click elsewhere.
-  let { onDownloadPng }: { onDownloadPng: () => void } = $props();
+  let {
+    onDownloadPng,
+    onImport,
+    imported,
+    onRemove,
+  }: {
+    onDownloadPng: () => void;
+    onImport: (file: File) => void;
+    imported: { id: string; name: string }[];
+    onRemove: (id: string) => void;
+  } = $props();
   let open = $state(false);
   let root: HTMLDivElement;
+  let picker: HTMLInputElement;
 
   const choose = (action: () => void) => {
     open = false;
@@ -30,8 +41,34 @@
         Download PNG
         <small>Unfolded globe, equirectangular, one pixel per grid cell</small>
       </button>
+      <button role="menuitem" onclick={() => choose(() => picker.click())}>
+        Import colormap…
+        <small>SciVisColor ColorMoves JSON export (or drop the file on the page)</small>
+      </button>
+      {#if imported.length}
+        <div class="group" role="group" aria-label="Imported colormaps">
+          <small>Imported colormaps (this browser only)</small>
+          {#each imported as c (c.id)}
+            <div class="row">
+              <span>{c.name}</span>
+              <button class="remove" aria-label="Remove {c.name}" onclick={() => onRemove(c.id)}>✕</button>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </div>
   {/if}
+  <input
+    type="file"
+    accept=".json,application/json"
+    hidden
+    bind:this={picker}
+    onchange={() => {
+      const file = picker.files?.[0];
+      if (file) onImport(file);
+      picker.value = ''; // so the same file can be picked again
+    }}
+  />
 </div>
 
 <style>
@@ -82,5 +119,26 @@
     display: block;
     color: var(--muted);
     font-size: 12px;
+  }
+  .group {
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    padding: 6px 8px 2px;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .row span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .menu .remove {
+    width: auto;
+    padding: 2px 6px;
+    color: var(--muted);
   }
 </style>

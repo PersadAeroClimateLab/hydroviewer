@@ -21,10 +21,17 @@ analytic 360 × 180 annual-mean field for 1950–2100 and its global mean; no bu
 - **Timeline** (`timeline.ts`, bottom): the global mean 1950–2100 as a Plot line with a draggable year needle
   (also a keyboard slider) and ◀ ▶ buttons stepping one year.
 - **Title** (top left), **colormap** picker and **settings gear** (top right; its menu downloads the field as an
-  equirectangular PNG, one pixel per cell, `exportPng.ts`), **colour bar** (bottom left).
+  equirectangular PNG, one pixel per cell, `exportPng.ts`, and imports colormaps), **colour bar** (bottom left, a
+  canvas drawn from the same lookup table as the globe).
+- **Colormaps** are SciVisColor ColorMoves JSON exports (`{ colormaps: [{ name, space, points: [{ x, o, r, g, b }] }] }`),
+  parsed by `src/data/colormoves.ts`. Built-ins are the files in `src/assets/colormaps/` (id = file name; only
+  viridis and magma, by decision: custom maps arrive by upload). A new export dropped there would ship as built-in. Users
+  import their own through the gear menu or by dropping a file on the page; those live in localStorage
+  (`src/state/colormaps.svelte.ts`). `bakeLut()` in `src/viewports/colormaps.ts` blends the points in Lab or RGB
+  into one 1024-entry table that the globe shader, colour bar and PNG all sample. Opacity is ignored.
 
-Shared state is `{ colormap, year }` (`src/state/shared.svelte.ts`). Next: custom colormaps from SciVisColor
-ColorMoves (scoped in the plan), then real data from the bucket instead of the mock. No URL-hash state yet.
+Shared state is `{ colormap, year }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
+registry). Next: real data from the bucket instead of the mock. No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).
 
 **Removed (2026-11-17):** the trame/ParaView server and its iframe viewport, and the earlier analysis/layout grid
