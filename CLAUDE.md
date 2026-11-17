@@ -17,7 +17,9 @@ analytic 360 × 180 annual-mean field for 1950–2100 and its global mean; no bu
 - **Globe:** longitude/latitude per pixel from the sphere position (coarse mesh, no pole pinching), one float
   texture refilled in place when the year changes, colormap lookup in the fragment shader, Natural Earth
   coastlines, a faint rim halo. Grab-to-rotate keeps the grabbed point under the pointer (`grab.ts`, north
-  stays up, a flick coasts to a stop); OrbitControls only zooms. Draws only while something moves.
+  stays up, a flick coasts to a stop) within 30% of the globe's on-screen radius; beyond that `softLimit()` eases it
+  so the globe turns slower and slower toward the edge and stops past it (the edge is where a pixel covers a
+  large angle and dragging got erratic). OrbitControls only zooms. Draws only while something moves.
 - **Timeline** (`timeline.ts`, bottom): the global mean 1950–2100 as a Plot line with a draggable year needle
   (also a keyboard slider) and ◀ ▶ buttons stepping one year.
 - **Title** (top left), **colormap** picker and **settings gear** (top right; its menu downloads the field as an

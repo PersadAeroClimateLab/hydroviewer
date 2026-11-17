@@ -26,7 +26,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Field } from '../data/cmip6';
 import { bakeLut, LUT_SIZE, type Colormap } from './colormaps';
 import { createCoastlines, disposeCoastlines } from './coastlines';
-import { solveGrab } from './grab';
+import { softLimit, solveGrab } from './grab';
 import type { Viewport } from './types';
 
 const FOV = 30;
@@ -153,8 +153,7 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>): View
     const redraw = () => (frame ||= requestAnimationFrame(draw));
     controls.addEventListener('change', redraw);
 
-    // Where the pointer's ray meets the unit sphere, in view space; off the globe, the nearest point of
-    // its outline, so a drag past the edge keeps turning instead of stopping.
+    // Where the pointer's ray meets the unit sphere, in view space (camera on +z).
     const canvas = renderer.domElement;
     const ray = new Ray();
     const pointerOnSphere = (e: PointerEvent) => {
@@ -166,7 +165,12 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>): View
       const along = -ray.origin.dot(ray.direction); // to the point of the ray nearest the centre
       const near = ray.at(along, new Vector3());
       const hit = near.lengthSq() <= 1;
-      return { hit, point: hit ? ray.at(along - Math.sqrt(1 - near.lengthSq()), near) : near.normalize() };
+      if (hit) return { hit, point: ray.at(along - Math.sqrt(1 - near.lengthSq()), near) };
+      // Off the globe: the outline point in the pointer's direction, which stays put as the pointer moves out.
+      const d = camera.position.length();
+      const rim = Math.sqrt(1 - 1 / d ** 2);
+      const across = Math.hypot(near.x, near.y) || 1;
+      return { hit, point: new Vector3((near.x / across) * rim, (near.y / across) * rim, 1 / d) };
     };
 
     let grab: { lon: number; lat: number; id: number; t: number } | undefined;
@@ -176,7 +180,8 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>): View
       if (pointers.size > 1 || e.button !== 0) return void (grab = undefined); // pinch: zoom only
       const { hit, point } = pointerOnSphere(e);
       if (!hit) return;
-      const local = point.applyQuaternion(earth.quaternion.clone().invert());
+      // Grab the eased point, so a grab near the edge does not jump on the first move.
+      const local = softLimit(point, camera.position.length()).applyQuaternion(earth.quaternion.clone().invert());
       grab = { lon: Math.atan2(local.x, local.z), lat: Math.asin(MathUtils.clamp(local.y, -1, 1)), id: e.pointerId, t: e.timeStamp };
       spin = [0, 0];
       canvas.setPointerCapture(e.pointerId);
@@ -187,7 +192,8 @@ export const stageGlobe = (load: (year: number) => Field | Promise<Field>): View
         if (!grab) canvas.style.cursor = pointerOnSphere(e).hit ? 'grab' : '';
         return;
       }
-      const [y, p] = solveGrab(grab.lon, grab.lat, pointerOnSphere(e).point, yaw);
+      const target = softLimit(pointerOnSphere(e).point, camera.position.length());
+      const [y, p] = solveGrab(grab.lon, grab.lat, target, yaw);
       const dt = Math.max(e.timeStamp - grab.t, 1);
       spin = [(y - yaw) / dt, (p - pitch) / dt];
       [yaw, pitch, grab.t] = [y, p, e.timeStamp];
