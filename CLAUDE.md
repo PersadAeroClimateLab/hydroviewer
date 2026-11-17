@@ -35,7 +35,9 @@ done: greying out metrics a node lacks (every mock node has all four):
   and (catalog swapped in the browser) 45 models per scenario.
 
 - **Metric pane** (left, `src/ui/MetricPane.svelte`): app title, dataset (model, experiment, member) and its
-  metrics grouped by variable (mock: precipitation, wettest day, longest dry spell, temperature); picking one shows
+  metrics grouped (mock: mean precipitation and ten ETCCDI precipitation indices stored at yearly or monthly
+  frequency, in groups totals and intensity, extremes, heavy-precipitation days, spells; no temperature, no
+  daily data); picking one shows
   it on the globe, legend and timeline (`shared.metric`). Collapses to a title chip («, ☰). Open on wide screens,
   where the globe centres in the area right of it (`shared.insetLeft`; `setViewOffset` shifts the projection, the
   camera stays on its axis, eased); on phones it starts closed, covers the page when open and closes on a pick.
@@ -72,7 +74,12 @@ done: greying out metrics a node lacks (every mock node has all four):
     light on dark) decided at its centre.
   The PNG export has neither (colour only).
 - **Timeline** (`timeline.ts`, bottom): the global mean 1950–2100 as a Plot line with a draggable year needle
-  (also a keyboard slider) and ◀ ▶ buttons stepping one year.
+  (also a keyboard slider) and ◀ ▶ buttons stepping one year, over the node's plume (`Series.plume`, faint lines:
+  its ensemble's members for an ensemble or member, the scenario's models' ensemble means for the multi-model mean;
+  read whole per metric from the series store `members.zarr`, `seriesRows()` in `catalog.ts`). The selected member
+  (`shared.selection.member`, also one without maps) is drawn in the accent colour, and the line nearest the pointer
+  (within 6 px at its year) in the text colour, named with its value top right; both are an SVG overlay redrawn on
+  its own (`mark()`), not the chart.
 - **Colormap** picker and **settings gear** (top right; its menu downloads the field as an
   equirectangular PNG, one pixel per cell, `exportPng.ts`, and imports colormaps), **colour bar** (bottom left, a
   canvas drawn from the same lookup table as the globe). The legend panel is draggable anywhere over the globe
@@ -141,15 +148,16 @@ docker compose build web                          # after changing package.json 
   `/home/oxygen/Downloads/hydroviewer_data/mock` (the mock, the current `.env`), `.../cmip6` (the GFDL-CM4 slice
   below; no `catalog.json`, so the app cannot open it yet) and `.../colormaps` (ColorMoves test files). To switch,
   edit `.env` (or prefix a command with `DATA_DIR=...`) and run `docker compose up -d data`.
-- **Mock:** `docker compose --profile prep run --rm mock [--models 8] [--map-members 3] [--workers 6]`
-  (`prep/make_mock.py`, about 3.5 minutes and 21 GB for the defaults) writes a mock multi-model ensemble into
+- **Mock:** `docker compose --profile prep run --rm mock [--models 8] [--map-members 3] [--workers 4]`
+  (`prep/make_mock.py`, about 13 minutes and 59 GB for the defaults) writes a mock multi-model ensemble into
   `$DATA_DIR`, replacing a previous mock (it refuses to overwrite a catalog without `"mock": true`). Real model and
   member names (`prep/mock_ensembles.json`: 50 models, 1288 member runs with monthly pr in historical and an SSP in
   the cmip6-pds index, largest ensembles first), four SSPs, analytic values: each model its own bias and climate
   sensitivity, each scenario its forcing after 2015, each member its own year-to-year variability. The `mock`
   service mounts `prep/`, so edits need no image rebuild (only `docker compose --profile prep build mock` once).
   Layout (`docs/llm/DATA_TREE_PLAN.md` §7), under the CMIP6 key path: per model and scenario, map stores for the
-  first `--map-members` members (`.../<member>/annual.zarr`: per metric `pr`, `rx1day`, `cdd`, `tas` an array (year,
+  first `--map-members` members (`.../<member>/annual.zarr`: per metric (`pr`, `prcptot`, `sdii`, `rx1day`, `rx5day`, `r95p`, `r99p`, `r10mm`, `r20mm`, `cdd`, `cwd`; ETCCDI
+  values derived from the mean with plausible shapes, see `fields()`) an array (year,
   lat, lon), one year per chunk, with `display_range`, and `<metric>_global_mean` over `year`) and an ensemble store
   (`.../ensemble/annual.zarr`: mean of all members plus `<metric>_agreement` and `<metric>_spread` with
   `display_range` and `stipple_threshold`); per scenario a multi-model store

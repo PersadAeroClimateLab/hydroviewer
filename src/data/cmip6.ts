@@ -136,6 +136,7 @@ export interface Series {
   xLabel: string;
   binWidth?: number; // set for histograms
   range?: [number, number]; // colour scale of the matching map
+  plume?: { key: string; y: number[] }[]; // the runs behind a mean (members, or models' ensemble means), over `x`
 }
 
 const series = new Map<SeriesSource, Promise<Series>>();
