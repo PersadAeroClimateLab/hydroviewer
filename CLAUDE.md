@@ -49,7 +49,11 @@ done: greying out metrics a node lacks (every mock node has all four):
   coastlines, a faint rim halo. Grab-to-rotate keeps the grabbed point under the pointer (`grab.ts`, north
   stays up, a flick coasts to a stop) within 30% of the globe's on-screen radius; beyond that `softLimit()` eases it
   so the globe turns slower and slower toward the edge and stops past it (the edge is where a pixel covers a
-  large angle and dragging got erratic). OrbitControls only zooms. Draws only while something moves.
+  large angle and dragging got erratic). OrbitControls only zooms. Spins on its own by default (`shared.spin`; a turn in 90 s, eastward, paused
+  while grabbed and until a flick has coasted out; off by default under `prefers-reduced-motion`), toggled by the
+  Spin switch left of the colormap (a checkbox with `role="switch"`; on phones only the switch shows, its word stays
+  for screen readers). Draws only while something moves, so every frame while spinning and nothing while idle
+  with spin off (check idle frames with spin off).
 - **Elevation and stippling** show per-cell ensemble statistics (`Statistic` in `src/data/cmip6.ts`, the output
   contract: one grid per time step on the field's grid, `units`, `long_name`, `display_range`, `stipple_threshold`,
   `actual_range`).
@@ -93,7 +97,7 @@ done: greying out metrics a node lacks (every mock node has all four):
   (`src/state/colormaps.svelte.ts`). `bakeLut()` in `src/viewports/colormaps.ts` blends the points in Lab or RGB
   into one 1024-entry table that the globe shader, colour bar and PNG all sample. Opacity is ignored.
 
-Shared state is `{ colormap, metric, insetLeft, insetTop, selection, node, year, elevation, stipple, elevationScale, elevationMultiplier, stippleSize, thresholds }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
+Shared state is `{ colormap, metric, insetLeft, insetTop, spin, selection, node, year, elevation, stipple, elevationScale, elevationMultiplier, stippleSize, thresholds }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
 registry). Next: real data in the same layout as the mock (prep for CMIP6 writing `catalog.json` and annual
 metrics). No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).

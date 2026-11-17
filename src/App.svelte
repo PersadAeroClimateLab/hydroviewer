@@ -164,6 +164,10 @@
     <DataTree {catalog} bind:open={treeOpen} bind:bottom={treeBottom} />
 
     <section class="panel tools">
+      <label class="switch">
+        <input type="checkbox" role="switch" bind:checked={shared.spin} />
+        <span class="switch-text">Spin</span>
+      </label>
       <label>
         Colormap
         <select value={shared.colormap.id} onchange={(e) => (shared.colormap = findColormap(e.currentTarget.value)!)}>
@@ -338,6 +342,46 @@
       'pane legend .' auto
       'pane time time' auto / auto 1fr auto;
   }
+  /* A checkbox drawn as a switch: a track with a knob that slides right when on. */
+  .switch {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .switch input {
+    appearance: none;
+    position: relative;
+    width: 30px;
+    height: 18px;
+    margin: 0;
+    border-radius: 9px;
+    background: var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .switch input::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bg);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+    transition: translate 0.15s;
+  }
+  .switch input:checked {
+    background: var(--accent);
+  }
+  .switch input:checked::before {
+    translate: 12px 0;
+  }
+  .switch input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
   .tools {
     grid-area: tools;
     justify-self: end;
@@ -488,6 +532,14 @@
 
   @media (max-width: 720px) {
     /* Phones: the data tree's chip gets its own row; the open tree and metric pane cover the page instead. */
+    /* No room for the switch's word beside the colormap: screen readers still read it. */
+    .switch-text {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
     .hud,
     .hud.tree-open {
       padding: 12px;

@@ -13,6 +13,7 @@ export const ELEVATION_SCALE = { min: 0, max: 0.2, initial: 0.08 };
 // `elevationMultiplier` (an integer) multiplies it, so the slider keeps its fine steps at any height; the globe
 // keeps the closest zoom outside the peaks.
 export const ELEVATION_MULTIPLIER = { min: 1, max: 10 };
+// `spin`: the globe turns slowly on its own (on unless the system asks for reduced motion).
 // `stippleSize` is the spacing of stipple dots in degrees; each dot's radius is a fixed share of it. `thresholds`
 // holds stipple thresholds moved from their statistic's default, by `<metric>/<statistic>` (units differ per metric).
 export const STIPPLE_SIZE = { min: 1, max: 6, initial: 2.5 };
@@ -21,6 +22,7 @@ export const shared = $state<{
   metric: string;
   insetLeft: number;
   insetTop: number;
+  spin: boolean;
   selection: Selection;
   node: string;
   year: number;
@@ -35,6 +37,7 @@ export const shared = $state<{
   metric: 'pr',
   insetLeft: 0,
   insetTop: 0,
+  spin: !matchMedia('(prefers-reduced-motion: reduce)').matches,
   selection: { scenario: '' },
   node: '',
   year: 2025,
