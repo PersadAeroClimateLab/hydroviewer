@@ -213,9 +213,12 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
     renderer.outputColorSpace = LinearSRGBColorSpace; // the colormap already holds display colours
     el.append(renderer.domElement);
 
-    const lutData = new Uint8Array(LUT_SIZE * 4);
-    const lut = new DataTexture(lutData, LUT_SIZE, 1, RGBAFormat, UnsignedByteType);
-    lut.minFilter = lut.magFilter = LinearFilter;
+    const lookup = () => {
+      const texture = new DataTexture(new Uint8Array(LUT_SIZE * 4), LUT_SIZE, 1, RGBAFormat, UnsignedByteType);
+      texture.minFilter = texture.magFilter = LinearFilter;
+      return texture;
+    };
+    const [lut, columnLut] = [lookup(), lookup()];
     const light = new Vector3();
     // Shared by the surface and the columns (the same objects, so setting one sets both).
     const common = {
@@ -249,6 +252,7 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
       return g;
     };
     const columnUniforms = {
+      lut: { value: lut }, // the map's, or the columns' own (setColumnColormap)
       columnScale: { value: 0 },
       columnRadius: { value: 0 },
       statisticTop: { value: 1 },
@@ -417,13 +421,20 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
     });
     observer.observe(el);
 
-    let colormap = ''; // the current one, by content: an import can replace a map under the same id
-    const setColormap = (c: Colormap) => {
+    // The current maps, by content: an import can replace a map under the same id.
+    const baked = new Map<DataTexture, string>();
+    const bake = (texture: DataTexture, c: Colormap) => {
       const key = JSON.stringify(c);
-      if (key === colormap) return;
-      colormap = key;
-      lutData.set(bakeLut(c));
-      lut.needsUpdate = true;
+      if (key === baked.get(texture)) return;
+      baked.set(texture, key);
+      (texture.image.data as Uint8Array).set(bakeLut(c));
+      texture.needsUpdate = true;
+      redraw();
+    };
+    const setColumnColormap = (c: Colormap | null) => {
+      if (c) bake(columnLut, c);
+      if (columnUniforms.lut.value === (c ? columnLut : lut)) return;
+      columnUniforms.lut.value = c ? columnLut : lut;
       redraw();
     };
 
@@ -499,12 +510,14 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
       redraw();
     });
 
-    setColormap(initial.colormap);
+    bake(lut, initial.colormap);
+    setColumnColormap(initial.columnColormap);
     setData(initial);
 
     return {
       update(state) {
-        setColormap(state.colormap);
+        bake(lut, state.colormap);
+        setColumnColormap(state.columnColormap);
         setData(state);
         if (state.insetLeft !== inset[0] || state.insetTop !== inset[1]) {
           inset = [state.insetLeft, state.insetTop];
@@ -530,7 +543,7 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
         controls.dispose();
         listening.abort();
         coast?.geometry.dispose();
-        [common.field.value, common.stipple.value, lut, material, coastMaterial, geometry, columnMaterial, columns.geometry, cylinder, haloMaterial, haloGeometry].forEach((r) => r?.dispose());
+        [common.field.value, common.stipple.value, lut, columnLut, material, coastMaterial, geometry, columnMaterial, columns.geometry, cylinder, haloMaterial, haloGeometry].forEach((r) => r?.dispose());
         renderer.dispose();
         renderer.forceContextLoss();
         renderer.domElement.remove();

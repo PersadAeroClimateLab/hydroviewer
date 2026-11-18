@@ -14,6 +14,7 @@ export const COLUMN_SCALE = { min: 0, max: 0.2, initial: 0.08 };
 // `columnMultiplier` (an integer) multiplies it, so the slider keeps its fine steps at any height; the globe
 // keeps the closest zoom outside the tallest columns.
 export const COLUMN_MULTIPLIER = { min: 1, max: 10 };
+// `columnColormap` colours the columns (still by the metric's value) with a map of their own; null: the map's.
 // `spin`: the globe turns slowly on its own (on unless the system asks for reduced motion).
 // `stippleSize` is the spacing of stipple dots in degrees; each dot's radius (and its column's) is a fixed share of it. `thresholds`
 // holds stipple thresholds moved from their statistic's default, by `<metric>/<statistic>` (units differ per metric).
@@ -30,6 +31,7 @@ export const shared = $state<{
   stipple: string;
   columnScale: number;
   columnMultiplier: number;
+  columnColormap: Colormap | null;
   stippleSize: number;
   thresholds: Record<string, number>;
 }>({
@@ -44,6 +46,7 @@ export const shared = $state<{
   stipple: 'spread',
   columnScale: COLUMN_SCALE.initial,
   columnMultiplier: COLUMN_MULTIPLIER.min,
+  columnColormap: null,
   stippleSize: STIPPLE_SIZE.initial,
   thresholds: {},
 });

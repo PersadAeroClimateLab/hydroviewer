@@ -10,7 +10,7 @@
   import SettingsMenu from './ui/SettingsMenu.svelte';
   import ViewportHost from './ui/ViewportHost.svelte';
   import { download, fieldPng } from './viewports/exportPng';
-  import { bakeLut, LUT_SIZE } from './viewports/colormaps';
+  import { bakeLut, LUT_SIZE, type Colormap } from './viewports/colormaps';
   import { stageGlobe } from './viewports/stageGlobe';
   import { timeline } from './viewports/timeline';
 
@@ -105,6 +105,7 @@
   const remove = (id: string) => {
     removeColormap(id);
     if (shared.colormap.id === id) shared.colormap = colormaps.builtIn[0];
+    if (shared.columnColormap?.id === id) shared.columnColormap = null;
   };
 
   // The legend can be dragged anywhere over the globe; where it was left is kept in this browser.
@@ -127,13 +128,31 @@
   });
   const resetLegend = () => (legendAt = { x: 0, y: 0 });
 
+  const paint = (canvas: HTMLCanvasElement, c: Colormap) =>
+    canvas.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(bakeLut(c)), LUT_SIZE, 1), 0, 0);
   let bar: HTMLCanvasElement;
+  $effect(() => paint(bar, shared.colormap));
+  // The columns' own colour bar, shown while columns are drawn with a map other than the surface's.
+  const columnColours = $derived(
+    stipple && shared.columnScale > 0 && shared.columnColormap && shared.columnColormap.id !== shared.colormap.id
+      ? shared.columnColormap
+      : undefined,
+  );
+  let columnBar = $state<HTMLCanvasElement>();
   $effect(() => {
-    const lut = bakeLut(shared.colormap);
-    bar.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(lut), LUT_SIZE, 1), 0, 0);
+    if (columnBar && columnColours) paint(columnBar, columnColours);
   });
   const step = (by: number) => (shared.year = Math.min(years[1], Math.max(years[0], shared.year + by)));
 </script>
+
+{#snippet colormapOptions()}
+  {#each colormaps.builtIn as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
+  {#if colormaps.imported.length}
+    <optgroup label="Imported">
+      {#each colormaps.imported as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
+    </optgroup>
+  {/if}
+{/snippet}
 
 <main
   ondragover={(e) => e.dataTransfer?.types.includes('Files') && e.preventDefault()}
@@ -169,12 +188,7 @@
       <label>
         Colormap
         <select value={shared.colormap.id} onchange={(e) => (shared.colormap = findColormap(e.currentTarget.value)!)}>
-          {#each colormaps.builtIn as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
-          {#if colormaps.imported.length}
-            <optgroup label="Imported">
-              {#each colormaps.imported as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
-            </optgroup>
-          {/if}
+          {@render colormapOptions()}
         </select>
       </label>
       <SettingsMenu onDownloadPng={downloadPng} onImport={importFile} imported={colormaps.imported} onRemove={remove}>
@@ -235,6 +249,17 @@
             >
           </span>
         </div>
+        <label class="setting">
+          Column colours
+          <select
+            value={shared.columnColormap?.id ?? ''}
+            disabled={!stipple}
+            onchange={(e) => (shared.columnColormap = findColormap(e.currentTarget.value) ?? null)}
+          >
+            <option value="">Same as map</option>
+            {@render colormapOptions()}
+          </select>
+        </label>
         <button class="reset" onclick={resetLegend}>Reset legend position</button>
       </SettingsMenu>
     </section>
@@ -259,6 +284,11 @@
             <span>columns: height ∝ value, tallest at ≥ {fmt(stipple.range[1], stipple.units)}</span>
           {/if}
         </div>
+      {/if}
+      {#if columnColours}
+        <div class="extra">Column colours: {metric.name.toLowerCase()}, {metric.units}</div>
+        <canvas class="bar" width={LUT_SIZE} height="1" bind:this={columnBar}></canvas>
+        <div class="ticks"><span>{metric.range[0]}</span><span>{metric.range[1]}</span></div>
       {/if}
     </section>
 

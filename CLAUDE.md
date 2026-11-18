@@ -73,7 +73,9 @@ done: greying out metrics a node lacks (every mock node has all four):
     dot, from just under the surface to `value / top of display range` (clamped at 1) × `shared.columnScale` ×
     `shared.columnMultiplier` of the radius (a Column height slider in the gear menu, 0–20%, default 8%, times an
     integer multiplier from − / + buttons, ×1–×10; 0 leaves dots only; both disabled with stippling off). Coloured
-    with the field at the dot's centre, sides lit from the upper left. One instanced draw of every dot centre
+    with the field at the dot's centre, through the surface's colormap or one of their own (`shared.columnColormap`,
+    Column colours in the gear menu, "Same as map" = null; a second lookup table on the column material; while it
+    differs from the surface's, the legend adds a colour bar for the columns), sides lit from the upper left. One instanced draw of every dot centre
     (`dotCentres()`, the shader's layout; at most 41k at 1°); the vertex shader reads the statistic and collapses
     those below the threshold, so threshold, height and a year step only set uniforms or refill the texture. A new
     geometry per dot size (three fixes an instanced geometry's largest instance count when first drawn). The closest
@@ -97,9 +99,9 @@ done: greying out metrics a node lacks (every mock node has all four):
   viridis and magma, by decision: custom maps arrive by upload). A new export dropped there would ship as built-in. Users
   import their own through the gear menu or by dropping a file on the page; those live in localStorage
   (`src/state/colormaps.svelte.ts`). `bakeLut()` in `src/viewports/colormaps.ts` blends the points in Lab or RGB
-  into one 1024-entry table that the globe shader, colour bar and PNG all sample. Opacity is ignored.
+  into one 1024-entry table that the globe shader, colour bars and PNG all sample. Opacity is ignored.
 
-Shared state is `{ colormap, metric, insetLeft, insetTop, spin, selection, node, year, stipple, columnScale, columnMultiplier, stippleSize, thresholds }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
+Shared state is `{ colormap, metric, insetLeft, insetTop, spin, selection, node, year, stipple, columnScale, columnMultiplier, columnColormap, stippleSize, thresholds }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
 registry). Next: real data in the same layout as the mock (prep for CMIP6 writing `catalog.json` and annual
 metrics). No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).
