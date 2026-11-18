@@ -3,7 +3,7 @@
   import type { Dataset } from './data/cmip6';
   import { createTree } from './data/tree';
   import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
-  import { ELEVATION_MULTIPLIER, ELEVATION_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
+  import { COLUMN_MULTIPLIER, COLUMN_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
   import { draggable, type Offset } from './ui/draggable';
   import DataTree from './ui/DataTree.svelte';
   import MetricPane from './ui/MetricPane.svelte';
@@ -41,15 +41,13 @@
     );
   });
 
-  const globe = stageGlobe(() => dataset.metrics); // colour: the metric; elevation and stippling: its statistics
+  const globe = stageGlobe(() => dataset.metrics); // colour: the metric; stippling and columns: a statistic
   const metric = $derived(dataset.metrics.find((m) => m.id === shared.metric) ?? dataset.metrics[0]);
   const statistic = (id: string) => metric.statistics.find((s) => s.id === id);
-  const elevation = $derived(statistic(shared.elevation));
   const stipple = $derived(statistic(shared.stipple));
   // The stipple threshold: moved with the slider (per metric and statistic) or the statistic's default.
   const thresholdKey = $derived(`${metric.id}/${shared.stipple}`);
   const threshold = $derived(stipple ? (shared.thresholds[thresholdKey] ?? stipple.threshold) : 0);
-  const swap = () => ([shared.elevation, shared.stipple] = [shared.stipple, shared.elevation]);
   const fmt = (v: number, units: string) =>
     units.startsWith('fraction') ? `${Math.round(v * 100)}%` : `${Number(v.toPrecision(3))} ${units}`;
   // svelte-ignore state_referenced_locally
@@ -181,40 +179,6 @@
       </label>
       <SettingsMenu onDownloadPng={downloadPng} onImport={importFile} imported={colormaps.imported} onRemove={remove}>
         <label class="setting">
-          Elevation
-          <select bind:value={shared.elevation}>
-            <option value="">Off</option>
-            {#each metric.statistics as s (s.id)}<option value={s.id}>{s.name}</option>{/each}
-          </select>
-        </label>
-        <label class="setting">
-          <span>Height <small>{Math.round(shared.elevationScale * shared.elevationMultiplier * 100)}% of radius</small></span>
-          <input
-            type="range"
-            min={ELEVATION_SCALE.min}
-            max={ELEVATION_SCALE.max}
-            step="0.01"
-            disabled={!shared.elevation}
-            bind:value={shared.elevationScale}
-          />
-        </label>
-        <div class="setting">
-          <span>Height multiplier</span>
-          <span class="stepper">
-            <button
-              aria-label="Lower the height multiplier"
-              disabled={!shared.elevation || shared.elevationMultiplier <= ELEVATION_MULTIPLIER.min}
-              onclick={() => shared.elevationMultiplier--}>−</button
-            >
-            <output>×{shared.elevationMultiplier}</output>
-            <button
-              aria-label="Raise the height multiplier"
-              disabled={!shared.elevation || shared.elevationMultiplier >= ELEVATION_MULTIPLIER.max}
-              onclick={() => shared.elevationMultiplier++}>+</button
-            >
-          </span>
-        </div>
-        <label class="setting">
           Stippling
           <select bind:value={shared.stipple}>
             <option value="">Off</option>
@@ -244,6 +208,33 @@
             bind:value={shared.stippleSize}
           />
         </label>
+        <label class="setting">
+          <span>Column height <small>{Math.round(shared.columnScale * shared.columnMultiplier * 100)}% of radius</small></span>
+          <input
+            type="range"
+            min={COLUMN_SCALE.min}
+            max={COLUMN_SCALE.max}
+            step="0.01"
+            disabled={!stipple}
+            bind:value={shared.columnScale}
+          />
+        </label>
+        <div class="setting">
+          <span>Height multiplier</span>
+          <span class="stepper">
+            <button
+              aria-label="Lower the height multiplier"
+              disabled={!stipple || shared.columnMultiplier <= COLUMN_MULTIPLIER.min}
+              onclick={() => shared.columnMultiplier--}>−</button
+            >
+            <output>×{shared.columnMultiplier}</output>
+            <button
+              aria-label="Raise the height multiplier"
+              disabled={!stipple || shared.columnMultiplier >= COLUMN_MULTIPLIER.max}
+              onclick={() => shared.columnMultiplier++}>+</button
+            >
+          </span>
+        </div>
         <button class="reset" onclick={resetLegend}>Reset legend position</button>
       </SettingsMenu>
     </section>
@@ -260,19 +251,13 @@
       <div>{metric.name}, {metric.units}</div>
       <canvas class="bar" width={LUT_SIZE} height="1" bind:this={bar}></canvas>
       <div class="ticks"><span>{metric.range[0]}</span><span>{metric.range[1]}</span></div>
-      {#if elevation || stipple}
-        <button class="swap" aria-label="Swap elevation and stippling" title="Swap elevation and stippling" onclick={swap}>⇅</button>
-      {/if}
-      {#if elevation}
-        <div class="extra">
-          Elevation: {elevation.name.toLowerCase()}
-          <span>flat = {fmt(elevation.range[0], elevation.units)}, highest = {fmt(elevation.range[1], elevation.units)}</span>
-        </div>
-      {/if}
       {#if stipple}
         <div class="extra">
           <i class="dots" aria-hidden="true"></i>Stippling: {stipple.name.toLowerCase()}
           <span>dots where ≥ {fmt(threshold, stipple.units)}</span>
+          {#if shared.columnScale > 0}
+            <span>columns: height ∝ value, tallest at ≥ {fmt(stipple.range[1], stipple.units)}</span>
+          {/if}
         </div>
       {/if}
     </section>
@@ -445,12 +430,7 @@
     text-align: center;
     font-variant-numeric: tabular-nums;
   }
-  .swap {
-    float: right;
-    margin: 6px 0 0 8px;
-  }
-  .stepper button,
-  .swap {
+  .stepper button {
     font: inherit;
     color: var(--fg);
     background: none;

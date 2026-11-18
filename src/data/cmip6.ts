@@ -18,8 +18,8 @@ export interface Field extends Grid {
 
 // A per-cell statistic of an ensemble (agreement, spread, ...), the output side of the data contract for
 // uncertainty: one float32 grid per time step on the field's grid, CF `units`/`long_name`, a `display_range`
-// (elevation maps it to flat..highest), a `stipple_threshold` (cells at or above it are stippled, by default) and an
-// `actual_range` (min and max over all time steps: the limits of the threshold slider).
+// (a column reaches full height at its top), a `stipple_threshold` (cells at or above it are stippled, by default)
+// and an `actual_range` (min and max over all time steps: the limits of the threshold slider).
 export interface Statistic {
   id: string;
   name: string;
@@ -31,7 +31,7 @@ export interface Statistic {
 }
 
 // One variable or derived metric of a dataset: its field per year (coloured on the globe), its global-mean
-// series (the timeline) and the ensemble statistics that go with it (elevation, stippling).
+// series (the timeline) and the ensemble statistics that go with it (stippling and columns).
 export interface Metric {
   id: string;
   name: string;

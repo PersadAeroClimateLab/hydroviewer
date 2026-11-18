@@ -1,8 +1,11 @@
 import {
   AdditiveBlending,
   BackSide,
+  CylinderGeometry,
   DataTexture,
   FloatType,
+  InstancedBufferAttribute,
+  InstancedBufferGeometry,
   LinearFilter,
   LinearSRGBColorSpace,
   MathUtils,
@@ -36,58 +39,52 @@ const START = { lon: 15, lat: 12 }; // what faces the camera first
 const SPIN = (2 * Math.PI) / 90_000; // radians per millisecond when it spins on its own: a turn in 90 s
 
 const AMBIENT = 0.5; // share of the colour kept on surfaces facing away from the light
-// Light from the upper left of the camera, the usual hillshade direction: slopes read as light and shadow,
+// Light from the upper left of the camera, the usual hillshade direction: column sides read as light and shadow,
 // which a light from the camera itself would show only faintly face-on.
 const LIGHT = new Vector3(-0.45, 0.5, 0.74).normalize();
 // A stipple dot's radius as a share of the dot spacing (shared state, degrees): bigger dots, fewer of them.
 const DOT_RADIUS = 0.2;
+const COLUMN_SIDES = 8;
 
-// Longitude and latitude come from the sphere position (lon 0 at +z, lon 90 at +x, north at +y), so colours
-// are exact at any mesh resolution, with no pinching at the poles. The surface rises radially with a second
-// field, the relief (0 when there is none), sampled the same way in the vertex shader.
-const lonLat = /* glsl */ `
-  uniform sampler2D relief;
-  uniform vec2 reliefRange;
-  uniform float reliefScale;
-  vec2 lonLatUv(vec3 p) {
-    return vec2(atan(p.x, p.z) / 6.2831853 + 0.5, asin(clamp(p.y, -1.0, 1.0)) / 3.1415927 + 0.5);
-  }
-  float height(vec2 uv) {
-    return reliefScale * clamp((texture2D(relief, uv).r - reliefRange.x) / (reliefRange.y - reliefRange.x), 0.0, 1.0);
-  }
-`;
-const vertexShader = /* glsl */ `
-  ${lonLat}
-  uniform float lift; // coastlines sit just above the surface
-  varying vec3 vPos;
-  void main() {
-    vPos = normalize(position);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(vPos * (1.0 + lift + height(lonLatUv(vPos))), 1.0);
-  }
-`;
-// Shading: the relief's normal from its slope (central differences one grid cell apart), lit from a fixed direction
-// (`light`, in globe coordinates). With no relief it is plain shading of a sphere.
-const fragmentShader = /* glsl */ `
-  ${lonLat}
+// Shared by the surface and the columns: the field's colour, the stipple statistic and the light.
+const commonGlsl = /* glsl */ `
   uniform sampler2D field;
   uniform sampler2D lut;
   uniform vec2 range;
-  uniform vec2 texel; // one relief grid cell in uv
   uniform vec3 light;
   uniform sampler2D stipple;
-  uniform float stippleOn;
   uniform float stippleThreshold;
-  uniform float stippleSpacing; // degrees between rows, and between dots along a row (fewer toward the poles)
-  varying vec3 vPos;
-
+  vec2 lonLatUv(vec3 p) {
+    return vec2(atan(p.x, p.z) / 6.2831853 + 0.5, asin(clamp(p.y, -1.0, 1.0)) / 3.1415927 + 0.5);
+  }
   vec3 colorAt(vec2 uv) {
     float t = clamp((texture2D(field, uv).r - range.x) / (range.y - range.x), 0.0, 1.0);
     return texture2D(lut, vec2((0.5 + t * ${(LUT_SIZE - 1).toFixed(1)}) / ${LUT_SIZE.toFixed(1)}, 0.5)).rgb;
   }
+  float lit(vec3 n) {
+    return ${AMBIENT.toFixed(2)} + ${(1 - AMBIENT).toFixed(2)} * max(dot(n, light), 0.0);
+  }
+`;
+// Longitude and latitude come from the sphere position (lon 0 at +z, lon 90 at +x, north at +y), so colours
+// are exact at any mesh resolution, with no pinching at the poles.
+const vertexShader = /* glsl */ `
+  uniform float lift; // coastlines sit just above the surface
+  varying vec3 vPos;
+  void main() {
+    vPos = normalize(position);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(vPos * (1.0 + lift), 1.0);
+  }
+`;
+const fragmentShader = /* glsl */ `
+  ${commonGlsl}
+  uniform float stippleOn;
+  uniform float stippleSpacing; // degrees between rows, and between dots along a row (fewer toward the poles)
+  varying vec3 vPos;
 
   // A stipple dot: rgba with alpha 1 inside a dot whose centre cell is at or above the threshold, 0 elsewhere
   // (edges antialiased). Dots are fixed to the surface, so they turn with the globe, and each is whole: the
   // threshold and the ink (dark on light colours, light on dark) are decided at its centre, not per pixel.
+  // dotCentres() lays out the same centres for the columns.
   vec4 stippleDot(float lon, float lat) {
     float sp = stippleSpacing;
     float latD = degrees(lat), lonD = degrees(lon);
@@ -108,20 +105,48 @@ const fragmentShader = /* glsl */ `
     vec3 p = normalize(vPos);
     vec2 uv = lonLatUv(p);
     vec3 rgb = colorAt(uv);
-
-    float lon = (uv.x - 0.5) * 6.2831853, lat = (uv.y - 0.5) * 3.1415927;
-    float r = 1.0 + height(uv);
-    float dLon = (height(uv + vec2(texel.x, 0.0)) - height(uv - vec2(texel.x, 0.0))) / (2.0 * texel.x * 6.2831853);
-    float dLat = (height(uv + vec2(0.0, texel.y)) - height(uv - vec2(0.0, texel.y))) / (2.0 * texel.y * 3.1415927);
-    vec3 east = vec3(cos(lon), 0.0, -sin(lon));
-    vec3 north = vec3(-sin(lat) * sin(lon), cos(lat), -sin(lat) * cos(lon));
-    vec3 n = normalize(p - (dLon / max(cos(lat), 0.05) * east + dLat * north) / r);
     if (stippleOn > 0.5) {
-      vec4 stippled = stippleDot(lon, lat);
+      vec4 stippled = stippleDot((uv.x - 0.5) * 6.2831853, (uv.y - 0.5) * 3.1415927);
       rgb = mix(rgb, stippled.rgb, 0.9 * stippled.a);
     }
-    float lit = ${AMBIENT.toFixed(2)} + ${(1 - AMBIENT).toFixed(2)} * max(dot(n, light), 0.0);
-    gl_FragColor = vec4(rgb * lit, 1.0);
+    gl_FragColor = vec4(rgb * lit(p), 1.0);
+  }
+`;
+// A column through each stipple dot (one instance per dot centre, lon and lat in radians), standing
+// radially from just under the surface to 1 + scale × value / top of the display range (clamped there), as wide as
+// the dot. Below the threshold, or with no height, it collapses to a point and draws nothing, so the threshold,
+// height and a new year only change uniforms and the texture. Coloured with the field at its centre.
+const columnVertex = /* glsl */ `
+  ${commonGlsl}
+  attribute vec2 centre;
+  uniform float columnScale;
+  uniform float columnRadius; // in radians of arc, which is globe units at the surface
+  uniform float statisticTop;
+  varying vec3 vNormal;
+  varying vec3 vColor;
+  void main() {
+    float lon = centre.x, lat = centre.y;
+    vec2 uv = vec2(lon / 6.2831853 + 0.5, lat / 3.1415927 + 0.5);
+    float v = texture2D(stipple, uv).r;
+    float h = columnScale * clamp(v / statisticTop, 0.0, 1.0);
+    vec3 up = vec3(cos(lat) * sin(lon), sin(lat), cos(lat) * cos(lon));
+    vec3 east = vec3(cos(lon), 0.0, -sin(lon));
+    vec3 south = cross(east, up); // x, y, z to east, up, south keeps the geometry's winding
+    float base = 1.0 - columnRadius; // the base's rim stays under the curved surface
+    // CylinderGeometry stands on y (here 0 to 1), its cross-section in x and z.
+    vec3 p = up * mix(base, 1.0 + h, position.y) + (east * position.x + south * position.z) * columnRadius;
+    p *= step(stippleThreshold, v) * step(1e-4, h);
+    vNormal = east * normal.x + up * normal.y + south * normal.z;
+    vColor = colorAt(uv);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+  }
+`;
+const columnFragment = /* glsl */ `
+  ${commonGlsl}
+  varying vec3 vNormal;
+  varying vec3 vColor;
+  void main() {
+    gl_FragColor = vec4(vColor * lit(normalize(vNormal)), 1.0);
   }
 `;
 const coastShader = /* glsl */ `
@@ -162,10 +187,20 @@ const toXyz = (lon: number, lat: number, r: number): [number, number, number] =>
   return [r * Math.cos(p) * Math.sin(l), r * Math.sin(p), r * Math.cos(p) * Math.cos(l)];
 };
 
-// The main globe of the full-screen layout: the selected metric's field on a sphere with coastlines; the surface
-// can rise with one of its statistics (elevation) and be stippled where another passes its threshold, as picked
-// in the shared state. It centres in the area right of `insetLeft` (a side pane) and below `insetTop` (the data
-// tree), easing when they change.
+// Stipple dot centres (lon, lat in radians) for a spacing in degrees: the layout of stippleDot() in the shader.
+function dotCentres(spacing: number): Float32Array {
+  const out: number[] = [];
+  for (let latC = -90 + spacing / 2; latC < 90; latC += spacing) {
+    const n = Math.max(1, Math.floor((360 / spacing) * Math.cos(MathUtils.degToRad(latC)) + 0.5));
+    for (let j = 0; j < n; j++) out.push(MathUtils.degToRad(-180 + ((j + 0.5) * 360) / n), MathUtils.degToRad(latC));
+  }
+  return new Float32Array(out);
+}
+
+// The main globe of the full-screen layout: the selected metric's field on a sphere with coastlines, stippled
+// where one of its statistics passes its threshold (as picked in the shared state), with a column through each
+// dot as high as the statistic's value. It centres in the area right of `insetLeft` (a side pane) and below
+// `insetTop` (the data tree), easing when they change.
 // Drag to rotate (the point grabbed stays under the pointer, a flick coasts to a stop), scroll or pinch to zoom.
 // `metrics()` gives the shown node's metrics, whose loaders give the fields for a year (memoized by the caller);
 // they are read again when `node` in the shared state changes. Draws only while
@@ -181,29 +216,62 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
     const lutData = new Uint8Array(LUT_SIZE * 4);
     const lut = new DataTexture(lutData, LUT_SIZE, 1, RGBAFormat, UnsignedByteType);
     lut.minFilter = lut.magFilter = LinearFilter;
-    // Shared by the surface and the coastlines, so both rise together.
-    const reliefUniforms = { relief: { value: null as DataTexture | null }, reliefRange: { value: [0, 1] }, reliefScale: { value: 0 } };
     const light = new Vector3();
+    // Shared by the surface and the columns (the same objects, so setting one sets both).
+    const common = {
+      field: { value: null as DataTexture | null },
+      lut: { value: lut },
+      range: { value: [0, 1] },
+      light: { value: light },
+      stipple: { value: null as DataTexture | null },
+      stippleThreshold: { value: 0 },
+    };
     const material = new ShaderMaterial({
-      uniforms: {
-        ...reliefUniforms,
-        field: { value: null },
-        lut: { value: lut },
-        range: { value: [0, 1] },
-        texel: { value: [1, 1] },
-        light: { value: light },
-        lift: { value: 0 },
-        stipple: { value: null as DataTexture | null },
-        stippleOn: { value: 0 },
-        stippleSpacing: { value: initial.stippleSize },
-        stippleThreshold: { value: 0 },
-      },
+      uniforms: { ...common, lift: { value: 0 }, stippleOn: { value: 0 }, stippleSpacing: { value: initial.stippleSize } },
       vertexShader,
       fragmentShader,
     });
-    const geometry = new SphereGeometry(1, 360, 180); // a vertex per grid cell, so the relief is followed
+    const geometry = new SphereGeometry(1, 96, 48); // colours are per pixel, so a coarse mesh will do
     const globe = new Mesh(geometry, material);
     globe.visible = false; // until the first field arrives
+
+    // Columns: one instance per stipple dot, drawn in one call; the shader hides those below the threshold.
+    // A new geometry per dot spacing: three fixes an instanced geometry's largest instance count when first drawn.
+    const cylinder = new CylinderGeometry(1, 1, 1, COLUMN_SIDES).translate(0, 0.5, 0);
+    const columnGeometry = (spacing: number) => {
+      const g = new InstancedBufferGeometry();
+      g.setIndex(cylinder.index);
+      g.setAttribute('position', cylinder.getAttribute('position'));
+      g.setAttribute('normal', cylinder.getAttribute('normal'));
+      const centres = dotCentres(spacing);
+      g.setAttribute('centre', new InstancedBufferAttribute(centres, 2));
+      g.instanceCount = centres.length / 2;
+      return g;
+    };
+    const columnUniforms = {
+      columnScale: { value: 0 },
+      columnRadius: { value: 0 },
+      statisticTop: { value: 1 },
+    };
+    const columnMaterial = new ShaderMaterial({
+      uniforms: { ...common, ...columnUniforms },
+      vertexShader: columnVertex,
+      fragmentShader: columnFragment,
+    });
+    let spacing = initial.stippleSize;
+    const columns = new Mesh(columnGeometry(spacing), columnMaterial);
+    columns.frustumCulled = false; // the base geometry's bounds say nothing about where the instances stand
+    columns.visible = false;
+    columnUniforms.columnRadius.value = MathUtils.degToRad(DOT_RADIUS * spacing);
+    const setSpacing = (sp: number) => {
+      if (sp === spacing) return;
+      spacing = sp;
+      columns.geometry.dispose();
+      columns.geometry = columnGeometry(sp);
+      material.uniforms.stippleSpacing.value = sp;
+      columnUniforms.columnRadius.value = MathUtils.degToRad(DOT_RADIUS * sp);
+      redraw();
+    };
     const haloGeometry = new SphereGeometry(HALO, 64, 32);
     const haloMaterial = new ShaderMaterial({
       vertexShader: haloVertex,
@@ -214,7 +282,7 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
       depthWrite: false,
     });
     // The camera stays on +z; the globe and its coastlines turn (see solveGrab).
-    const earth = new Group().add(globe);
+    const earth = new Group().add(globe, columns);
     const scene = new Scene().add(new Mesh(haloGeometry, haloMaterial), earth);
     let [yaw, pitch] = [MathUtils.degToRad(-START.lon), MathUtils.degToRad(START.lat)];
     const turn = () => earth.rotation.set(pitch, yaw, 0, 'XYZ'); // Rx(pitch) * Ry(yaw)
@@ -228,7 +296,7 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
     controls.enablePan = false;
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    const MIN_DISTANCE = 1.25; // raised while the relief is higher (setScale)
+    const MIN_DISTANCE = 1.25; // raised while the columns can be higher (setScale)
     controls.minDistance = MIN_DISTANCE;
     controls.maxDistance = 10;
 
@@ -371,47 +439,43 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
       return gridTexture(renderer, f);
     };
     const rangeOf = (f: Field) => f.range ?? [0, Math.max(...f.values)];
-    // Elevation height (shared state: a fraction of the radius times an integer multiplier) applies only while a
-    // statistic is shown; changing it sets the uniform and keeps the closest zoom outside the peaks (the next
-    // frame's controls.update() clamps the camera).
-    let [scale, elevated] = [initial.elevationScale * initial.elevationMultiplier, false];
+    // Column height (shared state: a fraction of the radius times an integer multiplier) applies only while a
+    // statistic is stippled; changing it sets the uniform and keeps the closest zoom outside the tallest columns
+    // (the next frame's controls.update() clamps the camera).
+    let [scale, stippling] = [initial.columnScale * initial.columnMultiplier, false];
     const setScale = () => {
-      reliefUniforms.reliefScale.value = elevated ? scale : 0;
-      controls.minDistance = Math.max(MIN_DISTANCE, 1.05 + reliefUniforms.reliefScale.value);
+      columnUniforms.columnScale.value = scale;
+      columns.visible = stippling && scale > 0;
+      controls.minDistance = Math.max(MIN_DISTANCE, 1.05 + (columns.visible ? scale : 0));
       redraw();
     };
     // The stipple threshold: the statistic's default unless moved (shared `thresholds`); only a uniform changes.
     let [thresholds, stippled] = [initial.thresholds, undefined as { key: string; fallback: number } | undefined];
     const setThreshold = () => {
       const t = stippled ? (thresholds[stippled.key] ?? stippled.fallback) : 0;
-      if (t === material.uniforms.stippleThreshold.value) return;
-      material.uniforms.stippleThreshold.value = t;
+      if (t === common.stippleThreshold.value) return;
+      common.stippleThreshold.value = t;
       redraw();
     };
     let wanted = '';
-    const setData = async (state: { node: string; metric: string; year: number; elevation: string; stipple: string }) => {
-      const { node, metric, year, elevation, stipple } = state;
-      const key = `${node} ${metric} ${year} ${elevation} ${stipple}`;
+    const setData = async (state: { node: string; metric: string; year: number; stipple: string }) => {
+      const { node, metric, year, stipple } = state;
+      const key = `${node} ${metric} ${year} ${stipple}`;
       if (key === wanted) return;
       wanted = key;
       const shown = metrics();
       const m = shown.find((x) => x.id === metric) ?? shown[0];
-      const [e, s] = [elevation, stipple].map((id) => m.statistics.find((st) => st.id === id));
-      const [f, r, st] = await Promise.all([m.load(year), e?.load(year), s?.load(year)]);
+      const s = m.statistics.find((st) => st.id === stipple);
+      const [f, st] = await Promise.all([m.load(year), s?.load(year)]);
       if (key !== wanted || !alive) return; // a newer request won
-      const u = material.uniforms;
-      u.field.value = fill(u.field.value, f);
-      u.range.value = rangeOf(f);
-      elevated = Boolean(r);
+      common.field.value = fill(common.field.value, f);
+      common.range.value = rangeOf(f);
+      material.uniforms.stippleOn.value = st ? 1 : 0;
+      stippling = Boolean(st);
       setScale();
-      if (r) {
-        reliefUniforms.relief.value = fill(reliefUniforms.relief.value, r);
-        reliefUniforms.reliefRange.value = e!.range;
-        u.texel.value = [1 / r.width, 1 / r.height];
-      }
-      u.stippleOn.value = st ? 1 : 0;
       if (st) {
-        u.stipple.value = fill(u.stipple.value, st);
+        common.stipple.value = fill(common.stipple.value, st);
+        columnUniforms.statisticTop.value = s!.range[1];
         stippled = { key: `${m.id}/${s!.id}`, fallback: s!.threshold };
         setThreshold();
       }
@@ -421,9 +485,9 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
 
     let alive = true;
     let coast: LineSegments | undefined;
-    // Coastlines rise with the relief in the same vertex shader, a little above the surface.
+    // Coastlines a little above the surface, so they are not lost in it.
     const coastMaterial = new ShaderMaterial({
-      uniforms: { ...reliefUniforms, lift: { value: 0.003 } },
+      uniforms: { lift: { value: 0.003 } },
       vertexShader,
       fragmentShader: coastShader,
       transparent: true,
@@ -453,12 +517,9 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
           last = performance.now(); // no jump from the time it stood still
           redraw();
         }
-        if (state.stippleSize !== material.uniforms.stippleSpacing.value) {
-          material.uniforms.stippleSpacing.value = state.stippleSize;
-          redraw();
-        }
-        if (state.elevationScale * state.elevationMultiplier !== scale) {
-          scale = state.elevationScale * state.elevationMultiplier;
+        setSpacing(state.stippleSize);
+        if (state.columnScale * state.columnMultiplier !== scale) {
+          scale = state.columnScale * state.columnMultiplier;
           setScale();
         }
       },
@@ -469,8 +530,7 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
         controls.dispose();
         listening.abort();
         coast?.geometry.dispose();
-        const u = material.uniforms;
-        [u.field.value, u.stipple.value, reliefUniforms.relief.value, lut, material, coastMaterial, geometry, haloMaterial, haloGeometry].forEach((r) => r?.dispose());
+        [common.field.value, common.stipple.value, lut, material, coastMaterial, geometry, columnMaterial, columns.geometry, cylinder, haloMaterial, haloGeometry].forEach((r) => r?.dispose());
         renderer.dispose();
         renderer.forceContextLoss();
         renderer.domElement.remove();
