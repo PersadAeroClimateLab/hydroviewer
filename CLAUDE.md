@@ -42,7 +42,7 @@ done: greying out metrics a node lacks (every mock node has all four):
   where the globe centres in the area right of it (`shared.insetLeft`; `setViewOffset` shifts the projection, the
   camera stays on its axis, eased); on phones it starts closed, covers the page when open and closes on a pick.
   Data model in `src/data/cmip6.ts`: a `Dataset` has `Metric`s, each with its field per year, global-mean series
-  and `Statistic`s (same ids across metrics, so elevation/stippling picks survive a metric change).
+  and `Statistic`s (same ids across metrics, so the stippling pick survives a metric change).
 
 - **Globe:** longitude/latitude per pixel from the sphere position (coarse mesh, no pole pinching), one float
   texture refilled in place when the year changes, colormap lookup in the fragment shader, Natural Earth
@@ -54,28 +54,32 @@ done: greying out metrics a node lacks (every mock node has all four):
   Spin switch left of the colormap (a checkbox with `role="switch"`; on phones only the switch shows, its word stays
   for screen readers). Draws only while something moves, so every frame while spinning and nothing while idle
   with spin off (check idle frames with spin off).
-- **Elevation and stippling** show per-cell ensemble statistics (`Statistic` in `src/data/cmip6.ts`, the output
+- **Stippling and columns** show a per-cell ensemble statistic (`Statistic` in `src/data/cmip6.ts`, the output
   contract: one grid per time step on the field's grid, `units`, `long_name`, `display_range`, `stipple_threshold`,
   `actual_range`).
   Mock: computed from the runs in `prep/make_mock.py` (`Spread`): agreement (fraction of members, or of models for
   the multi-model mean, on the side of the majority's sign of change from each run's 1961–1990 mean, 0.5–1,
   threshold 0.8) and spread (standard deviation of that change; display range per metric in `METRICS`, threshold
-  half of it). A member shows its ensemble's statistics. The gear menu picks which statistic each shows, or off (`shared.elevation`,
-  `shared.stipple`; defaults agreement and spread); the legend explains both, and its ⇅ button swaps them (the
-  draggable action ignores pointer-downs on buttons, inputs, selects and links). A Threshold slider in the gear menu
+  half of it). A member shows its ensemble's statistics. The gear menu picks which statistic is stippled, or off
+  (`shared.stipple`, default spread); the legend explains it. A Threshold slider in the gear menu
   moves the stipple threshold between the statistic's `actual_range` (min and max over all years, written by prep,
   so the browser reads no extra data); moved values live in `shared.thresholds` by `<metric>/<statistic>`, and the
-  globe only sets a uniform. `stageGlobe(load, statistics)`:
-  - elevation: a 360 × 180-segment sphere displaced in the vertex shader (the top of the display range rises
-    `shared.elevationScale` × `shared.elevationMultiplier` of the radius: a Height slider in the gear menu, 0–20%,
-    default 8%, times an integer multiplier from − / + buttons, ×1–×10, so the slider keeps its fine steps at any
-    height; both disabled with elevation off; changing them only sets a uniform, and the closest zoom
-    (`controls.minDistance`) rises to stay 0.05 outside the highest peaks), coastlines displaced by the same shader, shading from the relief's slope per pixel, lit from
-    the upper left. Grabbing still intersects the unit sphere, so on high relief the grabbed point drifts by up to ~8%.
+  globe only sets a uniform. `stageGlobe(metrics)`:
   - stippling: in the fragment shader, dots fixed to the surface on rows `shared.stippleSize` degrees apart (a Dot
     size slider in the gear menu, 1–6°, default 2.5°; radius a fifth of the spacing, so bigger dots, fewer of them,
     same stippled area), fewer per row toward the poles, each whole: threshold and ink (dark on light colours,
     light on dark) decided at its centre.
+  - columns (2026-11-18, replacing the elevation relief): a radial 8-sided prism through each dot, as wide as the
+    dot, from just under the surface to `value / top of display range` (clamped at 1) × `shared.columnScale` ×
+    `shared.columnMultiplier` of the radius (a Column height slider in the gear menu, 0–20%, default 8%, times an
+    integer multiplier from − / + buttons, ×1–×10; 0 leaves dots only; both disabled with stippling off). Coloured
+    with the field at the dot's centre, through the surface's colormap or one of their own (`shared.columnColormap`,
+    Column colours in the gear menu, "Same as map" = null; a second lookup table on the column material; while it
+    differs from the surface's, the legend adds a colour bar for the columns), sides lit from the upper left. One instanced draw of every dot centre
+    (`dotCentres()`, the shader's layout; at most 41k at 1°); the vertex shader reads the statistic and collapses
+    those below the threshold, so threshold, height and a year step only set uniforms or refill the texture. A new
+    geometry per dot size (three fixes an instanced geometry's largest instance count when first drawn). The closest
+    zoom (`controls.minDistance`) stays 0.05 outside the tallest columns. Grabbing intersects the unit sphere.
   The PNG export has neither (colour only).
 - **Timeline** (`timeline.ts`, bottom): the global mean 1950–2100 as a Plot line with a draggable year needle
   (also a keyboard slider) and ◀ ▶ buttons stepping one year, over the node's plume (`Series.plume`, faint lines:
@@ -95,9 +99,9 @@ done: greying out metrics a node lacks (every mock node has all four):
   viridis and magma, by decision: custom maps arrive by upload). A new export dropped there would ship as built-in. Users
   import their own through the gear menu or by dropping a file on the page; those live in localStorage
   (`src/state/colormaps.svelte.ts`). `bakeLut()` in `src/viewports/colormaps.ts` blends the points in Lab or RGB
-  into one 1024-entry table that the globe shader, colour bar and PNG all sample. Opacity is ignored.
+  into one 1024-entry table that the globe shader, colour bars and PNG all sample. Opacity is ignored.
 
-Shared state is `{ colormap, metric, insetLeft, insetTop, spin, selection, node, year, elevation, stipple, elevationScale, elevationMultiplier, stippleSize, thresholds }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
+Shared state is `{ colormap, metric, insetLeft, insetTop, spin, selection, node, year, stipple, columnScale, columnMultiplier, columnColormap, stippleSize, thresholds }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
 registry). Next: real data in the same layout as the mock (prep for CMIP6 writing `catalog.json` and annual
 metrics). No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).
@@ -252,7 +256,7 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
 - float32, no NaN in data read by shaders (use a fill value or mask), CF attributes on all arrays,
   and a root `catalog.json`.
 - Bucket needs public read and CORS with `Range`. Do not depend on `Content-Encoding` for chunks.
-- Ensemble statistics (agreement, spread, ...) for elevation and stippling: one float32 grid per time step on the
+- Ensemble statistics (agreement, spread, ...) for stippling and columns: one float32 grid per time step on the
   field's grid and time axis, no NaN, `units`, `long_name`, `display_range`, `stipple_threshold`, `actual_range`
   (plan step 7).
 

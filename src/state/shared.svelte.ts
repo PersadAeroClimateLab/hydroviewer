@@ -7,14 +7,16 @@ import { colormaps } from './colormaps.svelte';
 // `metric` is the id of the metric on the globe and timeline; `insetLeft` is how many pixels a side pane covers
 // on the left (the globe centres right of it) and `insetTop` how many the open data tree covers at the top.
 // `selection` is the data tree's pick (scenario, model, member; set from the catalog before the app mounts) and
-// `node` the key of the node whose dataset the views show (set once it has loaded, so views reload then). `elevation` and `stipple` are statistic ids ('' = off); `elevationScale` is the height of the top of the
-// elevation's display range, as a fraction of the globe's radius.
-export const ELEVATION_SCALE = { min: 0, max: 0.2, initial: 0.08 };
-// `elevationMultiplier` (an integer) multiplies it, so the slider keeps its fine steps at any height; the globe
-// keeps the closest zoom outside the peaks.
-export const ELEVATION_MULTIPLIER = { min: 1, max: 10 };
+// `node` the key of the node whose dataset the views show (set once it has loaded, so views reload then).
+// `stipple` is the id of the statistic stippled ('' = off), with a column through each dot; `columnScale` is the
+// height of a column at the top of the statistic's display range, as a fraction of the globe's radius (0: dots only).
+export const COLUMN_SCALE = { min: 0, max: 0.2, initial: 0.08 };
+// `columnMultiplier` (an integer) multiplies it, so the slider keeps its fine steps at any height; the globe
+// keeps the closest zoom outside the tallest columns.
+export const COLUMN_MULTIPLIER = { min: 1, max: 10 };
+// `columnColormap` colours the columns (still by the metric's value) with a map of their own; null: the map's.
 // `spin`: the globe turns slowly on its own (on unless the system asks for reduced motion).
-// `stippleSize` is the spacing of stipple dots in degrees; each dot's radius is a fixed share of it. `thresholds`
+// `stippleSize` is the spacing of stipple dots in degrees; each dot's radius (and its column's) is a fixed share of it. `thresholds`
 // holds stipple thresholds moved from their statistic's default, by `<metric>/<statistic>` (units differ per metric).
 export const STIPPLE_SIZE = { min: 1, max: 6, initial: 2.5 };
 export const shared = $state<{
@@ -26,10 +28,10 @@ export const shared = $state<{
   selection: Selection;
   node: string;
   year: number;
-  elevation: string;
   stipple: string;
-  elevationScale: number;
-  elevationMultiplier: number;
+  columnScale: number;
+  columnMultiplier: number;
+  columnColormap: Colormap | null;
   stippleSize: number;
   thresholds: Record<string, number>;
 }>({
@@ -41,10 +43,10 @@ export const shared = $state<{
   selection: { scenario: '' },
   node: '',
   year: 2025,
-  elevation: 'agreement',
   stipple: 'spread',
-  elevationScale: ELEVATION_SCALE.initial,
-  elevationMultiplier: ELEVATION_MULTIPLIER.min,
+  columnScale: COLUMN_SCALE.initial,
+  columnMultiplier: COLUMN_MULTIPLIER.min,
+  columnColormap: null,
   stippleSize: STIPPLE_SIZE.initial,
   thresholds: {},
 });
