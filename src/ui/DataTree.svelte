@@ -109,7 +109,7 @@
   };
 </script>
 
-<div class="panel chip" bind:this={chipEl}>
+<div class="panel chip" bind:this={chipEl} data-no-shot>
   <button class="toggle" aria-expanded={open} aria-controls="data-tree" onclick={() => (open = !open)}>
     <span class="path">{#each path as part, i}{#if i}<span class="sep">›</span>{/if}<span>{part}</span>{/each}</span>
     <span aria-hidden="true">{open ? '▴' : '▾'}</span>
@@ -125,7 +125,7 @@
 
 {#if open}
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions: arrow keys move between its buttons, Escape closes -->
-  <section id="data-tree" class="panel tree" aria-label="Data: scenarios, models and members" bind:this={paneEl} onkeydown={keydown}>
+  <section data-no-shot id="data-tree" class="panel tree" aria-label="Data: scenarios, models and members" bind:this={paneEl} onkeydown={keydown}>
     <button class="close" aria-label="Close the data tree" onclick={() => (open = false)}>▴</button>
     <!-- svelte-ignore a11y_no_static_element_interactions: the pointer leaving the columns drops the preview -->
     <div class="columns" bind:this={columnsEl} onmouseleave={() => set(tree.leave(st))}>

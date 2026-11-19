@@ -10,7 +10,7 @@
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions: Escape closes it natively -->
-<dialog bind:this={dialog} aria-labelledby="about-title" onclick={(e) => e.target === dialog && dialog.close()}>
+<dialog data-no-shot bind:this={dialog} aria-labelledby="about-title" onclick={(e) => e.target === dialog && dialog.close()}>
   <header>
     <h2 id="about-title">Hydroviewer <small>{version}</small></h2>
     <button aria-label="Close" onclick={() => dialog.close()}>✕</button>

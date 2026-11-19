@@ -115,6 +115,13 @@ same). Not done: greying out metrics a node lacks (every mock node has all four)
   (the focused globe's `selection.member`, also one without maps) is drawn in the accent colour, and the line nearest the pointer
   (within 6 px at its year) in the text colour, named with its value top right; both are an SVG overlay redrawn on
   its own (`mark()`), not the chart.
+- **Camera** (top right, left of the Spin switch): saves a PNG (`hydroviewer-<metric>-<year>.png`, 2× pixels) of the
+  globes with their labels, the legend and the timeline under a heading ("Hydroviewer · Precipitation, mm/day"),
+  without the tree, metric pane, tools, menus, notices, × buttons and range sliders (all marked `data-no-shot`) or the
+  selection's highlight (`class:shooting` on `main`). `src/ui/screenshot.ts`: the globes' canvas is read through a
+  `capture` event that redraws and calls back in the same task (no `preserveDrawingBuffer`), laid over the canvas as
+  an image while html-to-image renders `main`, then cropped to the cells, legend and timeline. The legend panel keeps
+  its on-screen height, so a little space is left where its range slider was.
 - **Colormap** picker (`src/ui/ColormapPicker.svelte`, also the gear menu's Column colours with a "Same as map"
   entry): a button and a listbox, not a native select (which cannot show images in every browser), each entry with
   a preview swatch (`src/ui/swatch.ts`: the map's `bakeLut()` table as an image URL, cached by content so a
@@ -153,6 +160,7 @@ panels, URL-hash sync). The last version with all of it is merge `6506c10` on `m
 - Vite + TypeScript, Svelte 5 (plain Svelte, not SvelteKit)
 - three.js for maps and globes, Observable Plot for charts
 - zarrita.js reading Zarr v3 (`bytes` + `gzip` only) over HTTP
+- html-to-image for the camera button's picture only (loaded on click; reason in the plan's stack table)
 - Docker Compose for dev (`node:22-alpine`, Vite on port 5173, bind-mounted source); Python only in `prep/`
 
 ## Commands

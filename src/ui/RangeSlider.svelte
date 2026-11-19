@@ -22,7 +22,8 @@
   };
 </script>
 
-<div class="range" style:--lo={at(value[0])} style:--hi={at(value[1])}>
+<!-- Left out of screenshots: html-to-image cannot copy the thumbs' styles, and the ticks below give the range. -->
+<div class="range" data-no-shot style:--lo={at(value[0])} style:--hi={at(value[1])}>
   <input type="range" {min} {max} {step} value={value[0]} aria-label="{label} minimum" class:top={lowOnTop} oninput={(e) => set(e, false)} />
   <input type="range" {min} {max} {step} value={value[1]} aria-label="{label} maximum" oninput={(e) => set(e, true)} />
 </div>
