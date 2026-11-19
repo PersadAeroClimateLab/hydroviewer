@@ -3,6 +3,7 @@
   import type { Dataset } from './data/cmip6';
   import { createTree } from './data/tree';
   import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
+  import { add, focused, MAX_GLOBES, pick, remove, timed } from './state/globes';
   import { COLUMN_MULTIPLIER, COLUMN_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
   import { draggable, type Offset } from './ui/draggable';
   import DataTree from './ui/DataTree.svelte';
@@ -13,37 +14,61 @@
   import ViewportHost from './ui/ViewportHost.svelte';
   import { download, fieldPng } from './viewports/exportPng';
   import { bakeLut, LUT_SIZE, type Colormap } from './viewports/colormaps';
-  import { stageGlobe } from './viewports/stageGlobe';
+  import { FILL, globeStage, type Cell } from './viewports/globeStage';
   import { timeline } from './viewports/timeline';
 
-  // One full-screen globe with floating panels: a pane of the dataset's metrics on the left, the data tree at the
-  // top, and a timeline of the selected metric's global mean whose needle sets the year. The catalog and the first
-  // node's dataset are loaded before mounting (main.ts); the years are the first node's (every mock node has the
-  // same).
+  // Globes side by side with floating panels (docs/llm/MULTI_GLOBE_PLAN.md): a pane of the focused globe's metrics on
+  // the left, the data tree (editing the focused globe) at the top, and a timeline of the selected metric's global
+  // mean whose needle sets the year of the selected globes (all of them when none is). The catalog and the focused
+  // globe's dataset are loaded before mounting (main.ts); the years are its node's (every mock node has the same).
   const { catalog, dataset: first, years }: { catalog: Catalog; dataset: Dataset; years: [number, number] } = $props();
 
-  // The shown dataset follows the data tree's selection once the node has loaded (shared.node then changes and
-  // the views reload); a newer pick wins over a slow load. Not deep state: it holds loaders and typed arrays.
+  // A dataset per node, opened once and shared by the globes on it. Each globe's node follows its pick once that
+  // has loaded (its `node` then changes and the views reload); a newer pick wins over a slow load. Not deep state:
+  // datasets hold loaders and typed arrays.
   // svelte-ignore state_referenced_locally
-  let dataset = $state.raw(first);
+  let datasets = $state.raw(new Map([[focused(shared).node, first]]));
   // svelte-ignore state_referenced_locally
   const tree = createTree(catalog);
-  let opening = '';
+  const opened = new Map<string, Promise<Dataset>>();
+  const opening = new Map<number, string>(); // per globe, the node it waits for
   $effect(() => {
-    const node = tree.node({ selection: shared.selection, hover: {} });
-    const key = (opening = nodeKey(node));
-    if (key === shared.node) return;
-    openNode(catalog, node).then(
-      (opened) => {
-        if (opening !== key) return;
-        dataset = opened.dataset;
-        shared.node = key;
-      },
-      (e) => say(`Could not open ${key}: ${e instanceof Error ? e.message : e}`, true),
-    );
+    for (const g of shared.globes) {
+      const node = tree.node({ selection: g.selection, hover: {} });
+      const key = nodeKey(node);
+      if (key === g.node) opening.delete(g.id);
+      if (key === g.node || opening.get(g.id) === key) continue;
+      opening.set(g.id, key);
+      if (!opened.has(key)) opened.set(key, datasets.get(key) ? Promise.resolve(datasets.get(key)!) : openNode(catalog, node).then((o) => o.dataset));
+      const id = g.id;
+      opened.get(key)!.then(
+        (dataset) => {
+          if (opening.get(id) !== key) return;
+          if (!datasets.has(key)) datasets = new Map(datasets).set(key, dataset);
+          const globe = shared.globes.find((x) => x.id === id);
+          if (globe) globe.node = key;
+        },
+        (e) => {
+          opened.delete(key);
+          say(`Could not open ${key}: ${e instanceof Error ? e.message : e}`, true);
+        },
+      );
+    }
   });
+  // The focused globe's dataset (the last one loaded while its new pick loads) feeds the panes and the legend.
+  // svelte-ignore state_referenced_locally
+  let dataset = $state.raw(first);
+  $effect(() => {
+    const d = datasets.get(focused(shared).node);
+    if (d) dataset = d;
+  });
+  const focus = $derived(focused(shared));
 
-  const globe = stageGlobe(() => dataset.metrics); // colour: the metric; stippling and columns: a statistic
+  // Where each globe's cell is, for its label; reported by the stage as the layout changes.
+  let cells = $state<Cell[]>([]);
+  const pickGlobe = (id: number, additive: boolean) => Object.assign(shared, pick(shared, id, additive));
+  // colour: the metric; stippling and columns: a statistic
+  const globe = globeStage((node) => datasets.get(node)?.metrics, pickGlobe, (c) => (cells = c));
   const metric = $derived(dataset.metrics.find((m) => m.id === shared.metric) ?? dataset.metrics[0]);
   const statistic = (id: string) => metric.statistics.find((s) => s.id === id);
   const stipple = $derived(statistic(shared.stipple));
@@ -54,21 +79,28 @@
     units.startsWith('fraction') ? `${Math.round(v * 100)}%` : `${Number(v.toPrecision(3))} ${units}`;
   // svelte-ignore state_referenced_locally
   const time = timeline(
-    (id) => (dataset.metrics.find((m) => m.id === id) ?? dataset.metrics[0]).series(),
+    // By node, not the focused `dataset`, which follows a moment after the focus's node changes.
+    (node, id) => {
+      const d = datasets.get(node) ?? dataset;
+      return (d.metrics.find((m) => m.id === id) ?? d.metrics[0]).series();
+    },
     years,
-    (year) => (shared.year = year),
+    (year) => timed(shared).forEach((g) => (g.year = year)),
   );
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const downloadPng = async () =>
     download(
-      await fieldPng(await metric.load(shared.year), shared.colormap, shared.ranges[metric.id] ?? metric.range),
-      `hydroviewer-${metric.id}-${shared.year}-${slug(shared.colormap.name)}.png`,
+      await fieldPng(await metric.load(focus.year), shared.colormap, shared.ranges[metric.id] ?? metric.range),
+      `hydroviewer-${metric.id}-${focus.year}-${slug(shared.colormap.name)}.png`,
     );
 
   // The metric pane: open on wide screens, where the globe centres right of it; on phones it starts closed and
   // covers the page when opened, so it takes no room from the globe.
   const narrow = matchMedia('(max-width: 720px)');
   let wide = $state(!narrow.matches);
+  const max = $derived(wide ? MAX_GLOBES.wide : MAX_GLOBES.narrow);
+  const addGlobe = () => Object.assign(shared, add(shared, max));
+  const removeGlobe = (id: number) => Object.assign(shared, remove(shared, id));
   narrow.addEventListener('change', () => (wide = !narrow.matches));
   let paneOpen = $state(!narrow.matches);
   let paneWidth = $state(0);
@@ -81,8 +113,14 @@
   // below it (on phones it covers the page instead).
   let treeOpen = $state(false);
   let treeBottom = $state(0);
+  let chipBottom = $state(0);
   $effect(() => {
-    shared.insetTop = treeOpen && wide ? treeBottom : 0;
+    shared.insetTop = (treeOpen && wide ? treeBottom : chipBottom) + 8;
+  });
+  // The timeline: no row of globes sits behind it.
+  let timeHeight = $state(0);
+  $effect(() => {
+    shared.insetBottom = timeHeight + HUD_PADDING + 8;
   });
 
   // A short message over the globe: import results and errors.
@@ -104,7 +142,7 @@
       say(`Could not import ${file.name}: ${e instanceof Error ? e.message : e}`, true);
     }
   };
-  const remove = (id: string) => {
+  const removeMap = (id: string) => {
     removeColormap(id);
     if (shared.colormap.id === id) shared.colormap = colormaps.builtIn[0];
     if (shared.columnColormap?.id === id) shared.columnColormap = null;
@@ -144,7 +182,10 @@
   $effect(() => {
     if (columnBar && columnColours) paint(columnBar, columnColours);
   });
-  const step = (by: number) => (shared.year = Math.min(years[1], Math.max(years[0], shared.year + by)));
+  const step = (by: number) => {
+    const year = Math.min(years[1], Math.max(years[0], focus.year + by));
+    timed(shared).forEach((g) => (g.year = year));
+  };
 </script>
 
 <!-- A colour bar's range: a double slider within the metric's display range, moved ranges kept by metric. -->
@@ -167,13 +208,53 @@
     importFile(file);
   }}
 >
-  <div class="stage"><ViewportHost viewport={globe} /></div>
+  <div class="stage">
+    <!-- Behind the (transparent) canvas: the selected globes' cells. Over it: each globe's label, just above the
+         globe at the starting zoom (below, the legend would cover the left one); a click on it picks the globe like a
+         click on the globe (Shift, Ctrl, Cmd add). -->
+    {#each cells as c (c.id)}
+      <div
+        class="cell"
+        class:selected={shared.selected.includes(c.id)}
+        style:left="{c.x}px"
+        style:top="{c.y}px"
+        style:width="{c.width}px"
+        style:height="{c.height}px"
+      ></div>
+    {/each}
+    <ViewportHost viewport={globe} />
+    {#each cells as c (c.id)}
+      {@const g = shared.globes.find((x) => x.id === c.id)}
+      {#if g}
+        <div
+          class="cell-label"
+          class:selected={shared.selected.includes(c.id)}
+          class:focus={c.id === shared.focus}
+          style:left="{c.x + c.width / 2}px"
+          style:max-width="{c.width - 8}px"
+          style:top="{c.y + c.height / 2 - (FILL * Math.min(c.width, c.height)) / 2 - 12}px"
+        >
+          <button
+            class="name"
+            aria-pressed={shared.selected.includes(c.id)}
+            title="Click: move only this globe with the timeline (again: all). Shift-click: add or remove it."
+            onclick={(e) => pickGlobe(c.id, e.shiftKey || e.ctrlKey || e.metaKey)}
+          >
+            {tree.path({ selection: g.selection, hover: {} }).join(' › ')} · {g.year}
+          </button>
+          {#if shared.globes.length > 1}
+            <button class="remove" aria-label="Remove this globe" title="Remove this globe" onclick={() => removeGlobe(c.id)}>×</button>
+          {/if}
+        </div>
+      {/if}
+    {/each}
+  </div>
 
   <div class="hud" class:pane-open={paneOpen && wide} class:tree-open={treeOpen}>
     <MetricPane
       dataset={dataset}
       selected={metric.id}
-      year={shared.year}
+      year={focus.year}
       bind:open={paneOpen}
       bind:width={paneWidth}
       onSelect={(id) => {
@@ -182,7 +263,14 @@
       }}
     />
 
-    <DataTree {catalog} bind:open={treeOpen} bind:bottom={treeBottom} />
+    <DataTree
+      {catalog}
+      bind:open={treeOpen}
+      bind:bottom={treeBottom}
+      bind:chipBottom
+      onAdd={addGlobe}
+      canAdd={shared.globes.length < max}
+    />
 
     <section class="panel tools">
       <label class="switch">
@@ -193,7 +281,7 @@
         <span aria-hidden="true">Colormap</span>
         <ColormapPicker label="Colormap" value={shared.colormap} onchange={(c) => (shared.colormap = c!)} />
       </div>
-      <SettingsMenu onDownloadPng={downloadPng} onImport={importFile} imported={colormaps.imported} onRemove={remove}>
+      <SettingsMenu onDownloadPng={downloadPng} onImport={importFile} imported={colormaps.imported} onRemove={removeMap}>
         <label class="setting">
           Stippling
           <select bind:value={shared.stipple}>
@@ -297,10 +385,10 @@
       <div class="panel notice" class:error={notice.error} role="status">{notice.text}</div>
     {/if}
 
-    <section class="panel time">
-      <button aria-label="Previous year" disabled={shared.year <= years[0]} onclick={() => step(-1)}>◀</button>
+    <section class="panel time" bind:offsetHeight={timeHeight}>
+      <button aria-label="Previous year" disabled={focus.year <= years[0]} onclick={() => step(-1)}>◀</button>
       <div class="track"><ViewportHost viewport={time} /></div>
-      <button aria-label="Next year" disabled={shared.year >= years[1]} onclick={() => step(1)}>▶</button>
+      <button aria-label="Next year" disabled={focus.year >= years[1]} onclick={() => step(1)}>▶</button>
     </section>
   </div>
 </main>
@@ -316,6 +404,54 @@
     position: absolute;
     inset: 0;
     background: radial-gradient(circle at 50% 45%, var(--stage-inner), var(--stage-outer));
+  }
+  .cell {
+    position: absolute;
+    border-radius: 16px;
+    pointer-events: none;
+  }
+  .cell.selected {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  .cell-label {
+    position: absolute;
+    translate: -50% -100%;
+    display: flex;
+    font-size: 12px;
+    color: var(--fg);
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+  .cell-label button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  .cell-label .name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 2px 10px;
+  }
+  .cell-label .remove {
+    padding: 0 8px 0 2px;
+    opacity: 0.7;
+  }
+  .cell-label .remove:hover {
+    opacity: 1;
+  }
+  .cell-label.focus {
+    font-weight: 600;
+  }
+  .cell-label.selected {
+    color: var(--on-accent);
+    background: var(--accent);
+    border-color: var(--accent);
   }
 
   /* Panels float over the globe; the empty middle passes pointer events through to it. */

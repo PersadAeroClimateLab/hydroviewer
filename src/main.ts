@@ -6,15 +6,17 @@ import { dataBase } from './data/config';
 import { createTree } from './data/tree';
 import { shared } from './state/shared.svelte';
 
-// The catalog, and the data tree's first selection (SSP2-4.5's multi-model mean if there is one) opened.
+// The catalog, and one globe on the data tree's first selection (SSP2-4.5's multi-model mean if there is one), opened
+// before mounting; the tree's + adds more (docs/llm/MULTI_GLOBE_PLAN.md).
 const target = document.getElementById('app')!;
 loadCatalog()
   .then(async (catalog) => {
     const tree = createTree(catalog);
     const start = tree.initial();
-    shared.selection = start.selection;
-    shared.node = nodeKey(tree.node(start));
-    return { catalog, ...(await openNode(catalog, tree.node(start))) };
+    const node = tree.node(start);
+    shared.globes = [{ id: 0, selection: start.selection, node: nodeKey(node), year: 2025 }];
+    shared.focus = 0;
+    return { catalog, ...(await openNode(catalog, node)) };
   })
   .then(
     (props) => mount(App, { target, props }),

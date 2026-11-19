@@ -1,13 +1,14 @@
-import type { Selection } from '../data/tree';
 import type { Colormap } from '../viewports/colormaps';
 import { colormaps } from './colormaps.svelte';
+import type { Globe } from './globes';
 
 // State shared by every viewport. Kept to plain values: typed arrays must stay out of deep reactive state.
 // The colormap itself (not its id) is shared, so viewports need no registry.
-// `metric` is the id of the metric on the globe and timeline; `insetLeft` is how many pixels a side pane covers
-// on the left (the globe centres right of it) and `insetTop` how many the open data tree covers at the top.
-// `selection` is the data tree's pick (scenario, model, member; set from the catalog before the app mounts) and
-// `node` the key of the node whose dataset the views show (set once it has loaded, so views reload then).
+// `metric` is the id of the metric on the globes and timeline; `insetLeft` is how many pixels a side pane covers
+// on the left (the globes centre right of it), `insetTop` how many the tree's chip or open pane covers at the top and
+// `insetBottom` how many the timeline covers at the bottom.
+// `globes`, `focus` and `selected`: the globes side by side, each on its own node and year (set from the catalog
+// before the app mounts), the one the tree and timeline follow, and the ones the timeline moves (src/state/globes.ts).
 // `stipple` is the id of the statistic stippled ('' = off), with a column through each dot; `columnScale` is the
 // height of a column at the top of the statistic's display range, as a fraction of the globe's radius (0: dots only).
 export const COLUMN_SCALE = { min: 0, max: 0.2, initial: 0.08 };
@@ -26,10 +27,11 @@ export const shared = $state<{
   metric: string;
   insetLeft: number;
   insetTop: number;
+  insetBottom: number;
   spin: boolean;
-  selection: Selection;
-  node: string;
-  year: number;
+  globes: Globe[];
+  focus: number;
+  selected: number[];
   stipple: string;
   columnScale: number;
   columnMultiplier: number;
@@ -43,10 +45,11 @@ export const shared = $state<{
   metric: 'pr',
   insetLeft: 0,
   insetTop: 0,
+  insetBottom: 0,
   spin: !matchMedia('(prefers-reduced-motion: reduce)').matches,
-  selection: { scenario: '' },
-  node: '',
-  year: 2025,
+  globes: [],
+  focus: 0,
+  selected: [],
   stipple: 'spread',
   columnScale: COLUMN_SCALE.initial,
   columnMultiplier: COLUMN_MULTIPLIER.min,
