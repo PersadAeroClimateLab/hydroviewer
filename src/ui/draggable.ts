@@ -48,6 +48,7 @@ export function draggable(node: HTMLElement, options: Options) {
     node.style.cursor = '';
   };
   const key = (e: KeyboardEvent) => {
+    if (e.target !== node) return; // a control inside has the focus and the keys
     const step = e.shiftKey ? 40 : 8;
     const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
     if (!d) return;

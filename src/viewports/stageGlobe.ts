@@ -253,6 +253,7 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
     };
     const columnUniforms = {
       lut: { value: lut }, // the map's, or the columns' own (setColumnColormap)
+      range: { value: [0, 1] }, // the map's, or the columns' own (setRanges)
       columnScale: { value: 0 },
       columnRadius: { value: 0 },
       statisticTop: { value: 1 },
@@ -468,6 +469,20 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
       common.stippleThreshold.value = t;
       redraw();
     };
+    // Colour ranges: the metric's (from its field) unless moved (shared `ranges`, `columnRanges`); only uniforms change.
+    // The columns follow the map's range unless they have a colormap of their own.
+    let [ranges, columnRanges, ownColumnMap] = [initial.ranges, initial.columnRanges, false];
+    let showing: { id: string; range: [number, number] } | undefined; // the metric on the globe now
+    const setRanges = () => {
+      if (!showing) return;
+      const map = ranges[showing.id] ?? showing.range;
+      const column = ownColumnMap ? (columnRanges[showing.id] ?? showing.range) : map;
+      const [u, v] = [common.range.value, columnUniforms.range.value];
+      if (u[0] === map[0] && u[1] === map[1] && v[0] === column[0] && v[1] === column[1]) return;
+      common.range.value = [map[0], map[1]];
+      columnUniforms.range.value = [column[0], column[1]];
+      redraw();
+    };
     let wanted = '';
     const setData = async (state: { node: string; metric: string; year: number; stipple: string }) => {
       const { node, metric, year, stipple } = state;
@@ -480,7 +495,8 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
       const [f, st] = await Promise.all([m.load(year), s?.load(year)]);
       if (key !== wanted || !alive) return; // a newer request won
       common.field.value = fill(common.field.value, f);
-      common.range.value = rangeOf(f);
+      showing = { id: m.id, range: rangeOf(f) };
+      setRanges();
       material.uniforms.stippleOn.value = st ? 1 : 0;
       stippling = Boolean(st);
       setScale();
@@ -525,6 +541,9 @@ export const stageGlobe = (metrics: () => Metric[]): Viewport => ({
         }
         thresholds = state.thresholds;
         setThreshold();
+        [ranges, columnRanges] = [state.ranges, state.columnRanges];
+        ownColumnMap = Boolean(state.columnColormap) && state.columnColormap!.id !== state.colormap.id;
+        setRanges();
         if (state.spin !== spinning) {
           spinning = state.spin;
           last = performance.now(); // no jump from the time it stood still
