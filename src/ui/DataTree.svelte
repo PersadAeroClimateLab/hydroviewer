@@ -8,12 +8,23 @@
   // The data tree (docs/llm/DATA_TREE_PLAN.md): how the data is organised, scenarios › models › members, as columns
   // joined by links; the rules are in data/tree.ts, this only draws them. Closed, a chip at the top reads out the
   // selection; open, the pane drops below it. It shows and changes the focused globe's pick
-  // (src/state/globes.ts). `bottom` is the open pane's lower edge in the HUD, so the globes can centre below it.
+  // (src/state/globes.ts); its + adds a globe (a copy of the focused one, which the tree then edits). `bottom` is the
+  // open pane's lower edge in the HUD and `chipBottom` the chip's, so the globes can stay below them.
   let {
     catalog,
     open = $bindable(false),
     bottom = $bindable(0),
-  }: { catalog: Catalog; open: boolean; bottom?: number } = $props();
+    chipBottom = $bindable(0),
+    onAdd,
+    canAdd,
+  }: { catalog: Catalog; open: boolean; bottom?: number; chipBottom?: number; onAdd: () => void; canAdd: boolean } = $props();
+  let chipEl: HTMLDivElement;
+  $effect(() => {
+    const chip = chipEl;
+    const observer = new ResizeObserver(() => (chipBottom = chip.offsetTop + chip.offsetHeight));
+    observer.observe(chip);
+    return () => observer.disconnect();
+  });
 
   // svelte-ignore state_referenced_locally
   const tree = createTree(catalog); // the catalog is loaded once, before the app mounts
@@ -98,11 +109,18 @@
   };
 </script>
 
-<div class="panel chip">
+<div class="panel chip" bind:this={chipEl}>
   <button class="toggle" aria-expanded={open} aria-controls="data-tree" onclick={() => (open = !open)}>
     <span class="path">{#each path as part, i}{#if i}<span class="sep">›</span>{/if}<span>{part}</span>{/each}</span>
     <span aria-hidden="true">{open ? '▴' : '▾'}</span>
   </button>
+  <button
+    class="add"
+    aria-label="Add a globe (a copy of this one)"
+    title={canAdd ? 'Add a globe: a copy of this one, which the tree then changes' : 'No room for more globes'}
+    disabled={!canAdd}
+    onclick={onAdd}>+</button
+  >
 </div>
 
 {#if open}
@@ -217,11 +235,31 @@
     max-width: 100%;
     min-width: 0;
     padding: 4px;
+    display: flex;
+    align-items: center;
+  }
+  .add {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    margin-left: 2px;
+    border-left: 1px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    font-size: 18px;
+    line-height: 1;
+  }
+  .add:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--fg) 10%, transparent);
+  }
+  .add:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
   .toggle {
     display: flex;
     gap: 10px;
     align-items: center;
+    min-width: 0;
     max-width: 100%;
     padding: 4px 8px;
   }

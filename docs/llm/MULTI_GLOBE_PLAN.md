@@ -3,7 +3,7 @@
 Several globes side by side, each showing its own node of the data tree (scenario › model › member, or an ensemble
 or multi-model mean) at its own year, in a grid that grows and shrinks as globes are added and removed. One legend
 for all of them. A globe (grid cell) can be selected; the timeline sets the year of the selected globes. Branch
-`multi-globe`. Status: **decided 2026-11-19 (§10); stage 1 built 2026-11-19 (§11).**
+`multi-globe`. Status: **decided 2026-11-19 (§10); stages 1 and 2 built 2026-11-19 (§11, §12).**
 
 ## 1. Stages (as asked)
 
@@ -180,3 +180,25 @@ both from the tree pane as well as the grid). b and c are not planned.
   flick coasts for several seconds, at a few frames per second); no console errors.
 - Left for stage 2: the selected-cell tint spans the full height (behind the timeline) until `insetBottom` exists;
   three in a row on a phone are small until the layout picks rows.
+
+## 12. Stage 2 as built (2026-11-19)
+
+- `layout(ids, area, gap)` in `src/viewports/grid.ts` (tests in `tests/grid.test.ts`): the column count giving the
+  biggest globe; on a tie within half a pixel the fewest empty places (first built with "more columns", which made
+  four globes 3 + 1 in a 1000 × 600 area; the test now covers it); a short last row centred.
+- The area: right of `insetLeft`, below `insetTop` (now always set: the tree's chip, or its open pane, plus 8 px),
+  above `insetBottom` (new: the timeline's height plus padding). Cells move to a new layout over 300 ms by elapsed
+  time (first built per frame, a quarter of the way each frame: with six globes on software GL that took seconds).
+- `add()` and `remove()` in `src/state/globes.ts` (tests): + in the tree's chip copies the focused globe (pick,
+  node, year) after it and focuses it, replacing a selection if there was one; × on each label removes a globe, the
+  focus moving to the last selected one or a neighbour; never fewer than one, at most 6 (`MAX_GLOBES`, 3 on phones).
+  With the add, stage 3 (option a) is mostly in place: the tree edits the focus, + copies it, × removes.
+- Checked in the browser: 3 → a row, 4 → 2 × 2, 5 → 3 + 2 centred, 6 → 3 × 2 and + disabled; cells 8 px clear of
+  the chip and the timeline; adding during a scrub keeps the years in step; the tree edits the new globe; removing
+  the focus moves it on and re-enables +; no idle frames with spin off; no console errors. Phone (390 × 844): three
+  globes make 2 + 1 (a hair bigger than a column of three once the chip row and timeline take their room); + is
+  disabled at 3.
+- Known: the floating legend covers part of the lower-left globe (draggable); labels lose their year to the
+  ellipsis on phones.
+- After review: the page starts with one globe (the tree's first selection) instead of the three fixed ones of stage 1;
+  + adds more.

@@ -5,7 +5,8 @@ import type { Globe } from './globes';
 // State shared by every viewport. Kept to plain values: typed arrays must stay out of deep reactive state.
 // The colormap itself (not its id) is shared, so viewports need no registry.
 // `metric` is the id of the metric on the globes and timeline; `insetLeft` is how many pixels a side pane covers
-// on the left (the globes centre right of it) and `insetTop` how many the open data tree covers at the top.
+// on the left (the globes centre right of it), `insetTop` how many the tree's chip or open pane covers at the top and
+// `insetBottom` how many the timeline covers at the bottom.
 // `globes`, `focus` and `selected`: the globes side by side, each on its own node and year (set from the catalog
 // before the app mounts), the one the tree and timeline follow, and the ones the timeline moves (src/state/globes.ts).
 // `stipple` is the id of the statistic stippled ('' = off), with a column through each dot; `columnScale` is the
@@ -26,6 +27,7 @@ export const shared = $state<{
   metric: string;
   insetLeft: number;
   insetTop: number;
+  insetBottom: number;
   spin: boolean;
   globes: Globe[];
   focus: number;
@@ -43,6 +45,7 @@ export const shared = $state<{
   metric: 'pr',
   insetLeft: 0,
   insetTop: 0,
+  insetBottom: 0,
   spin: !matchMedia('(prefers-reduced-motion: reduce)').matches,
   globes: [],
   focus: 0,

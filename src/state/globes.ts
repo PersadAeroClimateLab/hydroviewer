@@ -18,6 +18,9 @@ export interface Globes {
   selected: number[];
 }
 
+// At most this many globes (decision D6; D8 for phones): bandwidth while scrubbing them together, and cell size.
+export const MAX_GLOBES = { wide: 6, narrow: 3 };
+
 export const focused = (s: Globes): Globe => s.globes.find((g) => g.id === s.focus) ?? s.globes[0];
 
 export const timed = (s: Globes): Globe[] => (s.selected.length ? s.globes.filter((g) => s.selected.includes(g.id)) : s.globes);
@@ -30,4 +33,27 @@ export function pick(s: Pick<Globes, 'focus' | 'selected'>, id: number, additive
   if (!s.selected.includes(id)) return { focus: id, selected: [...s.selected, id] };
   const selected = s.selected.filter((x) => x !== id);
   return { focus: selected.at(-1) ?? s.focus, selected };
+}
+
+// A new globe: a copy of the focused one (pick, node and year), placed after it and focused, so the data tree then
+// edits it. If globes were selected, it replaces them (the timeline charts the focus, so it should also move it).
+// Unchanged at `max` globes.
+export function add(s: Globes, max: number): Globes {
+  if (s.globes.length >= max) return s;
+  const f = focused(s);
+  const id = Math.max(...s.globes.map((g) => g.id)) + 1;
+  const globes = [...s.globes];
+  globes.splice(globes.indexOf(f) + 1, 0, { ...f, id, selection: { ...f.selection } });
+  return { globes, focus: id, selected: s.selected.length ? [id] : [] };
+}
+
+// Without a globe; the last one stays. If it was the focus, the focus moves to the last selected globe left, else
+// to its neighbour (the next one, or the one before at the end).
+export function remove(s: Globes, id: number): Globes {
+  const at = s.globes.findIndex((g) => g.id === id);
+  if (at < 0 || s.globes.length === 1) return s;
+  const globes = s.globes.filter((g) => g.id !== id);
+  const selected = s.selected.filter((x) => x !== id);
+  const focus = s.focus !== id ? s.focus : (selected.at(-1) ?? globes[Math.min(at, globes.length - 1)].id);
+  return { globes, focus, selected };
 }

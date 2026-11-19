@@ -4,7 +4,10 @@ import type { Metric } from '../data/cmip6';
 import { createCoastlines, disposeCoastlines } from './coastlines';
 import { createGlobe, globeKit, LIGHT, toXyz } from './globe';
 import { softLimit, solveGrab } from './grab';
+import { layout, type Cell } from './grid';
 import type { Viewport } from './types';
+
+export type { Cell };
 
 const FOV = 30;
 export const FILL = 0.78; // share of a cell's shorter side the globe spans at the start
@@ -13,29 +16,16 @@ const SPIN = (2 * Math.PI) / 90_000; // radians per millisecond when it spins on
 const CLICK = 4; // px a press may move and still be a click (which selects the globe) rather than a drag
 const MIN_DISTANCE = 1.25; // closest zoom, raised while columns can be higher (update)
 const GAP = 16; // px between cells: each globe is clipped to its cell, so zoomed in they stay apart
-
-// A globe's place on the stage, in CSS px from the stage's top left.
-export interface Cell {
-  id: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-// Stage 1 of docs/llm/MULTI_GLOBE_PLAN.md: the globes in one row across the area, GAP apart. Stage 2 fits a grid to
-// the count.
-const row = (ids: number[], area: Omit<Cell, 'id'>): Cell[] => {
-  const width = Math.max(1, (area.width - GAP * (ids.length - 1)) / ids.length); // the stage starts 1 px wide
-  return ids.map((id, i) => ({ id, x: area.x + i * (width + GAP), y: area.y, width, height: area.height }));
-};
+const MOVE = 300; // ms for the cells to move to a new layout, at any frame rate
 
 // The globes side by side, one per entry of `globes` in the shared state, each in its cell of one canvas: one
 // WebGL context for all of them (a page keeps at most 16), drawn cell by cell with a scissor. The globes turn and
 // zoom together (decision D3): drag any of them to rotate (the point grabbed stays under the pointer, a flick
 // coasts to a stop), scroll or pinch to zoom; a click without a drag picks the globe (`onPick`, additive with
-// Shift, Ctrl or Cmd). The cells fill the area right of `insetLeft` (a side pane) and below `insetTop` (the data
-// tree), easing when they change; `onCells` reports them, for labels drawn over the stage. `metrics(node)` gives a
+// Shift, Ctrl or Cmd). The cells are a grid fitted to their number (`layout()` in grid.ts) in the area the panels
+// leave: right of `insetLeft` (the metric pane), below `insetTop` (the tree's chip or open pane), above `insetBottom`
+// (the timeline). When the area or the number of globes changes they ease to their new places; `onCells` reports
+// them as they move, for labels drawn over the stage. `metrics(node)` gives a
 // loaded node's metrics. Draws only while something changes: a frame per input event, frames while a flick or a zoom
 // damps out, and every frame while the globes spin on their own (`spin`: eastward, paused while grabbed, after a
 // flick has coasted out).
@@ -79,13 +69,35 @@ export const globeStage = (
     };
 
     let [width, height] = [1, 1];
-    let inset = [initial.insetLeft, initial.insetTop]; // target, in px
-    let shown = [...inset]; // current, eased toward the target
-    let cells: Cell[] = [];
-    const frameCells = () => {
-      const [w, h] = [Math.max(width - shown[0], width * 0.4), Math.max(height - shown[1], height * 0.4)];
-      cells = row(order, { x: width - w, y: height - h, width: w, height: h });
+    let inset = [initial.insetLeft, initial.insetTop, initial.insetBottom]; // px the panels cover
+    let target: Cell[] = []; // where the cells go
+    let cells: Cell[] = []; // where they are drawn
+    let move: { from: Map<number, Cell>; at: number } | undefined; // a move to `target` under way
+    // The grid for the area the panels leave (at least 40% of each side). `snap`: straight there (a resize), else
+    // moved over MOVE ms (an inset, or a globe added or removed; new cells appear in place).
+    const frameCells = (snap: boolean) => {
+      const [w, h] = [Math.max(width - inset[0], width * 0.4), Math.max(height - inset[1] - inset[2], height * 0.4)];
+      target = layout(order, { x: width - w, y: Math.max(0, Math.min(inset[1], height - h)), width: w, height: h }, GAP);
+      move = snap ? undefined : { from: new Map(cells.map((c) => [c.id, c])), at: performance.now() };
+      if (snap) {
+        cells = target;
+        onCells(cells);
+      }
+      redraw();
+    };
+    const ease = (now: number) => {
+      if (!move) return;
+      const t = Math.min(1, Math.max(0, (now - move.at) / MOVE));
+      const k = t * t * (3 - 2 * t); // smoothstep
+      const { from } = move;
+      const mix = (a: number, b: number) => a + (b - a) * k;
+      cells = target.map((c) => {
+        const f = from.get(c.id);
+        return f ? { id: c.id, x: mix(f.x, c.x), y: mix(f.y, c.y), width: mix(f.width, c.width), height: mix(f.height, c.height) } : c;
+      });
       onCells(cells);
+      if (t < 1) redraw();
+      else move = undefined;
     };
 
     let frame = 0;
@@ -107,11 +119,7 @@ export const globeStage = (
         turn();
         redraw();
       }
-      if (shown[0] !== inset[0] || shown[1] !== inset[1]) {
-        shown = shown.map((s, i) => (Math.abs(inset[i] - s) < 0.5 ? inset[i] : s + (inset[i] - s) * 0.25));
-        frameCells();
-        redraw();
-      }
+      ease(now);
       last = now;
       kit.uniforms.light.value.copy(LIGHT).applyQuaternion(orientation.quaternion.clone().invert()); // fixed to the view
       renderer.setScissorTest(false);
@@ -216,8 +224,7 @@ export const globeStage = (
       if (!w || !h) return;
       renderer.setSize(w, h, false); // the canvas is sized by CSS
       [width, height] = [w, h];
-      frameCells();
-      redraw();
+      frameCells(true);
     });
     observer.observe(el);
 
@@ -240,13 +247,12 @@ export const globeStage = (
           for (const id of ids) if (!globes.has(id)) globes.set(id, createGlobe(kit, metrics, redraw));
           order = ids;
           turn();
-          frameCells();
-          redraw();
+          frameCells(false);
         }
         for (const g of state.globes) globes.get(g.id)!.update(g, state);
-        if (state.insetLeft !== inset[0] || state.insetTop !== inset[1]) {
-          inset = [state.insetLeft, state.insetTop];
-          redraw(); // eases toward it frame by frame
+        if (state.insetLeft !== inset[0] || state.insetTop !== inset[1] || state.insetBottom !== inset[2]) {
+          inset = [state.insetLeft, state.insetTop, state.insetBottom];
+          frameCells(false);
         }
         if (state.spin !== spinning) {
           spinning = state.spin;

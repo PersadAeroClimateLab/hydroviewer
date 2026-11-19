@@ -3,7 +3,7 @@
   import type { Dataset } from './data/cmip6';
   import { createTree } from './data/tree';
   import { colormaps, findColormap, importColormaps, removeColormap } from './state/colormaps.svelte';
-  import { focused, pick, timed } from './state/globes';
+  import { add, focused, MAX_GLOBES, pick, remove, timed } from './state/globes';
   import { COLUMN_MULTIPLIER, COLUMN_SCALE, STIPPLE_SIZE, shared } from './state/shared.svelte';
   import { draggable, type Offset } from './ui/draggable';
   import DataTree from './ui/DataTree.svelte';
@@ -98,6 +98,9 @@
   // covers the page when opened, so it takes no room from the globe.
   const narrow = matchMedia('(max-width: 720px)');
   let wide = $state(!narrow.matches);
+  const max = $derived(wide ? MAX_GLOBES.wide : MAX_GLOBES.narrow);
+  const addGlobe = () => Object.assign(shared, add(shared, max));
+  const removeGlobe = (id: number) => Object.assign(shared, remove(shared, id));
   narrow.addEventListener('change', () => (wide = !narrow.matches));
   let paneOpen = $state(!narrow.matches);
   let paneWidth = $state(0);
@@ -110,8 +113,14 @@
   // below it (on phones it covers the page instead).
   let treeOpen = $state(false);
   let treeBottom = $state(0);
+  let chipBottom = $state(0);
   $effect(() => {
-    shared.insetTop = treeOpen && wide ? treeBottom : 0;
+    shared.insetTop = (treeOpen && wide ? treeBottom : chipBottom) + 8;
+  });
+  // The timeline: no row of globes sits behind it.
+  let timeHeight = $state(0);
+  $effect(() => {
+    shared.insetBottom = timeHeight + HUD_PADDING + 8;
   });
 
   // A short message over the globe: import results and errors.
@@ -133,7 +142,7 @@
       say(`Could not import ${file.name}: ${e instanceof Error ? e.message : e}`, true);
     }
   };
-  const remove = (id: string) => {
+  const removeMap = (id: string) => {
     removeColormap(id);
     if (shared.colormap.id === id) shared.colormap = colormaps.builtIn[0];
     if (shared.columnColormap?.id === id) shared.columnColormap = null;
@@ -217,19 +226,26 @@
     {#each cells as c (c.id)}
       {@const g = shared.globes.find((x) => x.id === c.id)}
       {#if g}
-        <button
+        <div
           class="cell-label"
           class:selected={shared.selected.includes(c.id)}
           class:focus={c.id === shared.focus}
-          aria-pressed={shared.selected.includes(c.id)}
-          title="Click: move only this globe with the timeline (again: all). Shift-click: add or remove it."
           style:left="{c.x + c.width / 2}px"
           style:max-width="{c.width - 8}px"
           style:top="{c.y + c.height / 2 - (FILL * Math.min(c.width, c.height)) / 2 - 12}px"
-          onclick={(e) => pickGlobe(c.id, e.shiftKey || e.ctrlKey || e.metaKey)}
         >
-          {tree.path({ selection: g.selection, hover: {} }).join(' › ')} · {g.year}
-        </button>
+          <button
+            class="name"
+            aria-pressed={shared.selected.includes(c.id)}
+            title="Click: move only this globe with the timeline (again: all). Shift-click: add or remove it."
+            onclick={(e) => pickGlobe(c.id, e.shiftKey || e.ctrlKey || e.metaKey)}
+          >
+            {tree.path({ selection: g.selection, hover: {} }).join(' › ')} · {g.year}
+          </button>
+          {#if shared.globes.length > 1}
+            <button class="remove" aria-label="Remove this globe" title="Remove this globe" onclick={() => removeGlobe(c.id)}>×</button>
+          {/if}
+        </div>
       {/if}
     {/each}
   </div>
@@ -247,7 +263,14 @@
       }}
     />
 
-    <DataTree {catalog} bind:open={treeOpen} bind:bottom={treeBottom} />
+    <DataTree
+      {catalog}
+      bind:open={treeOpen}
+      bind:bottom={treeBottom}
+      bind:chipBottom
+      onAdd={addGlobe}
+      canAdd={shared.globes.length < max}
+    />
 
     <section class="panel tools">
       <label class="switch">
@@ -258,7 +281,7 @@
         <span aria-hidden="true">Colormap</span>
         <ColormapPicker label="Colormap" value={shared.colormap} onchange={(c) => (shared.colormap = c!)} />
       </div>
-      <SettingsMenu onDownloadPng={downloadPng} onImport={importFile} imported={colormaps.imported} onRemove={remove}>
+      <SettingsMenu onDownloadPng={downloadPng} onImport={importFile} imported={colormaps.imported} onRemove={removeMap}>
         <label class="setting">
           Stippling
           <select bind:value={shared.stipple}>
@@ -362,7 +385,7 @@
       <div class="panel notice" class:error={notice.error} role="status">{notice.text}</div>
     {/if}
 
-    <section class="panel time">
+    <section class="panel time" bind:offsetHeight={timeHeight}>
       <button aria-label="Previous year" disabled={focus.year <= years[0]} onclick={() => step(-1)}>◀</button>
       <div class="track"><ViewportHost viewport={time} /></div>
       <button aria-label="Next year" disabled={focus.year >= years[1]} onclick={() => step(1)}>▶</button>
@@ -394,17 +417,33 @@
   .cell-label {
     position: absolute;
     translate: -50% -100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font: inherit;
+    display: flex;
     font-size: 12px;
     color: var(--fg);
     background: color-mix(in srgb, var(--bg) 85%, transparent);
     border: 1px solid var(--border);
     border-radius: 999px;
-    padding: 2px 10px;
+  }
+  .cell-label button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
     cursor: pointer;
+  }
+  .cell-label .name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 2px 10px;
+  }
+  .cell-label .remove {
+    padding: 0 8px 0 2px;
+    opacity: 0.7;
+  }
+  .cell-label .remove:hover {
+    opacity: 1;
   }
   .cell-label.focus {
     font-weight: 600;
