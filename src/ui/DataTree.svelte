@@ -2,12 +2,13 @@
   import { tick } from 'svelte';
   import type { Catalog } from '../data/catalog';
   import { ALL, createTree, type Item, type TreeState } from '../data/tree';
+  import { focused } from '../state/globes';
   import { shared } from '../state/shared.svelte';
 
   // The data tree (docs/llm/DATA_TREE_PLAN.md): how the data is organised, scenarios › models › members, as columns
   // joined by links; the rules are in data/tree.ts, this only draws them. Closed, a chip at the top reads out the
-  // selection; open, the pane drops below it. `bottom` is the open pane's lower edge in the HUD, so the globe can
-  // centre below it.
+  // selection; open, the pane drops below it. It shows and changes the focused globe's pick
+  // (src/state/globes.ts). `bottom` is the open pane's lower edge in the HUD, so the globes can centre below it.
   let {
     catalog,
     open = $bindable(false),
@@ -17,9 +18,9 @@
   // svelte-ignore state_referenced_locally
   const tree = createTree(catalog); // the catalog is loaded once, before the app mounts
   let hover = $state<TreeState['hover']>({});
-  const st = $derived<TreeState>({ selection: shared.selection, hover });
+  const st = $derived<TreeState>({ selection: focused(shared).selection, hover });
   const set = (next: TreeState) => {
-    shared.selection = next.selection;
+    focused(shared).selection = next.selection;
     hover = next.hover;
   };
   const [scenarios, models, members] = $derived(([0, 1, 2] as const).map((c) => tree.items(st, c)));

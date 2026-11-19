@@ -1,16 +1,19 @@
 import type { Series } from '../data/cmip6';
+import { focused } from '../state/globes';
 import type { Viewport } from './types';
 
 const MARGIN = { top: 22, right: 22, bottom: 22, left: 36 }; // sides fit the end ticks and needle label
 const NEAR = 6; // px: how close the pointer must be to a plume line to pick it out
 
 // A time axis that doubles as a chart: the series as a line (Observable Plot, drawn once per resize) over its
-// plume (the members or models behind a mean, faint), and a needle marking the shared year. Drag the needle or click
-// the chart to move it; it is also a keyboard slider (arrows, Page Up/Down, Home/End). Moving the needle only
-// restyles two elements, so it is cheap. The selected member's line is drawn in the accent colour, and a line near
-// the pointer is picked out and named; both are an overlay redrawn on its own, not the chart.
+// plume (the members or models behind a mean, faint), and a needle marking the year, all of the focused globe
+// (src/state/globes.ts); small ticks on the axis mark the other globes' years. Drag the needle or click the chart to
+// move it (`onYear` sets the year of the globes the timeline moves); it is also a keyboard slider (arrows, Page
+// Up/Down, Home/End). Moving the needle only restyles a few elements, so it is cheap. The selected member's line is
+// drawn in the accent colour, and a line near the pointer is picked out and named; both are an overlay redrawn on
+// its own, not the chart.
 export const timeline = (
-  load: (metric: string) => Series | Promise<Series>, // the selected metric's series, of the shown node
+  load: (node: string, metric: string) => Series | Promise<Series>, // a loaded node's series for a metric
   range: [number, number],
   onYear: (year: number) => void,
 ): Viewport => ({
@@ -39,14 +42,17 @@ export const timeline = (
     tip.style.cssText =
       `position:absolute;top:2px;right:${MARGIN.right}px;font:11px system-ui,sans-serif;color:var(--fg);` +
       'pointer-events:none;display:none';
-    el.append(needle, tip);
+    const ticks = document.createElement('div'); // the other globes' years
+    ticks.style.cssText = 'position:absolute;inset:0;pointer-events:none';
+    el.append(ticks, needle, tip);
 
-    let year = initial.year;
+    let year = focused(initial).year;
+    let others: number[] = []; // the other globes' years, where they differ from the focus's
     let svg: (SVGSVGElement & { scale(name: string): { apply(v: number): number; invert(p: number): number } }) | undefined;
     let values = new Map<number, number>();
     let [xs, units] = [[] as number[], ''];
     let plume: { key: string; y: number[] }[] = [];
-    let highlight = initial.selection.member; // the selected member, even without maps (the node is then its ensemble)
+    let highlight = focused(initial).selection.member; // the selected member, even without maps (the node is then its ensemble)
     let hovered: { key: string; at: number } | undefined; // a plume line near the pointer, and the year index there
 
     // The overlay: the highlighted and hovered plume lines, drawn into the chart's SVG.
@@ -79,6 +85,15 @@ export const timeline = (
       const [x, y] = [svg.scale('x'), svg.scale('y')];
       needle.style.left = `${x.apply(year)}px`;
       needle.style.display = '';
+      ticks.replaceChildren(
+        ...others.map((o) => {
+          const t = document.createElement('div');
+          t.style.cssText =
+            `position:absolute;left:${x.apply(o) - 1}px;bottom:${MARGIN.bottom}px;width:2px;height:10px;` +
+            'background:var(--accent);opacity:0.6';
+          return t;
+        }),
+      );
       const v = values.get(year);
       dot.style.display = v === undefined ? 'none' : '';
       if (v !== undefined) dot.style.top = `${y.apply(v) - (MARGIN.top - 4)}px`;
@@ -91,11 +106,11 @@ export const timeline = (
     let draw = () => {};
     const observer = new ResizeObserver(() => draw());
     let alive = true;
-    let shown = `${initial.node} ${initial.metric}`; // the node and metric drawn (or loading)
+    let shown = `${focused(initial).node} ${initial.metric}`; // the node and metric drawn (or loading)
     const plot = import('@observablehq/plot');
     // Loads a metric's series and draws it; a newer pick (another metric or node) or unmounting wins over a slow load.
-    const show = async (key: string, id: string) => {
-      const [Plot, s] = await Promise.all([plot, load(id)]);
+    const show = async (key: string, node: string, id: string) => {
+      const [Plot, s] = await Promise.all([plot, load(node, id)]);
       if (!alive || key !== shown) return;
       const rows = s.x.map((x, i) => ({ x, y: s.y[i] }));
       values = new Map(rows.map((r) => [r.x, r.y]));
@@ -129,7 +144,7 @@ export const timeline = (
       draw();
       observer.observe(el); // redraws on resize (observing again is a no-op)
     };
-    show(shown, initial.metric);
+    show(shown, focused(initial).node, initial.metric);
 
     const fromPointer = (e: PointerEvent) => svg && set(svg.scale('x').invert(e.clientX - el.getBoundingClientRect().left));
     let dragging = false;
@@ -174,12 +189,14 @@ export const timeline = (
     place();
     return {
       update(state) {
-        year = state.year;
+        const f = focused(state);
+        year = f.year;
+        others = [...new Set(state.globes.map((g) => g.year))].filter((y) => y !== year);
         place();
-        const key = `${state.node} ${state.metric}`;
-        if (key !== shown) show((shown = key), state.metric);
-        if (state.selection.member !== highlight) {
-          highlight = state.selection.member;
+        const key = `${f.node} ${state.metric}`;
+        if (key !== shown) show((shown = key), f.node, state.metric);
+        if (f.selection.member !== highlight) {
+          highlight = f.selection.member;
           mark();
         }
       },

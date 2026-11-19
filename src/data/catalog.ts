@@ -85,13 +85,18 @@ async function plume(catalog: Catalog, node: Node, metric: string): Promise<{ ke
   return run.members.map((member, i) => ({ key: member, y: row(all, run.series + i) }));
 }
 
-// A field per year, keeping only the latest request per array: the globe and the PNG export share it.
+// A field per year, keeping the last few years asked for per array: globes, the PNG export and globes at other years
+// share them (two globes on one node, or members of one ensemble, which share its statistics, would otherwise evict
+// each other's year on every redraw). At most ~0.26 MB per kept year.
+const KEEP = 8;
 function grids(array: zarr.Array<zarr.DataType, zarr.Readable>, years: number[]) {
   const attrs = array.attrs as Attrs;
-  let kept: { year: number; field: Promise<Field> } | undefined;
+  const kept = new Map<number, Promise<Field>>(); // oldest first
   return (year: number) => {
-    if (kept?.year !== year) {
-      const field = zarr.get(array, [years.indexOf(year), null, null]).then(({ data }) => ({
+    let field = kept.get(year);
+    if (field) kept.delete(year); // moved to the newest end below
+    else {
+      field = zarr.get(array, [years.indexOf(year), null, null]).then(({ data }) => ({
         values: data as Float32Array,
         height: array.shape[1],
         width: array.shape[2],
@@ -99,9 +104,10 @@ function grids(array: zarr.Array<zarr.DataType, zarr.Readable>, years: number[])
         label: `${attrs.long_name} · ${year}`,
         range: attrs.display_range,
       }));
-      kept = { year, field };
+      if (kept.size >= KEEP) kept.delete(kept.keys().next().value!);
     }
-    return kept.field;
+    kept.set(year, field);
+    return field;
   };
 }
 

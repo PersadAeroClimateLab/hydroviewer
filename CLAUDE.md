@@ -10,17 +10,23 @@ change.
 
 ## Project state
 
-Front-end overhaul merged into `main` (2026-11-17). In progress: the data tree on branch `data-tree`
-(`docs/llm/DATA_TREE_PLAN.md`, plan step 8b). `App.svelte` is a full-screen
-three.js globe (`src/viewports/stageGlobe.ts`) with floating panels, on **mock data read from the bucket** (a
-multi-model, multi-scenario ensemble of analytic 360 × 180 annual fields for 1950–2100 written by `prep/make_mock.py`;
-see Data path). `main.ts` loads the bucket's `catalog.json` (`loadCatalog()`), opens the SSP2-4.5 multi-model mean
-(`openNode()` in `src/data/catalog.ts`) and then mounts `App` with it and its years; if that fails the page shows
-only the error. The data tree pane picks a node (`shared.selection`); `App` opens it (`openNode`, each store opened
-once) and, once loaded, swaps its `dataset` (`$state.raw`) and sets `shared.node` (the node's key, `nodeKey()`), on
-which the globe and timeline reload (they read the metrics through a getter); a newer pick wins over a slow load,
-and a failure shows a notice. The timeline's year range is the first node's (every mock node has the same). Not
-done: greying out metrics a node lacks (every mock node has all four):
+Front-end overhaul merged into `main` (2026-11-17); the data tree (`docs/llm/DATA_TREE_PLAN.md`, plan step 8b)
+merged since. In progress: multiple globes on branch `multi-globe` (`docs/llm/MULTI_GLOBE_PLAN.md`, plan step 8c;
+decided; stage 1 built: three fixed globes, selection, per-globe years). `App.svelte` is a full-screen
+stage of three.js globes side by side (`src/viewports/globeStage.ts`, one `globe.ts` per globe) with floating
+panels, on **mock data read from the bucket** (a multi-model, multi-scenario ensemble of analytic 360 × 180 annual
+fields for 1950–2100 written by `prep/make_mock.py`; see Data path). `main.ts` loads the bucket's `catalog.json`
+(`loadCatalog()`), sets up three globes (stage 1: the SSP1-2.6, SSP2-4.5 and SSP5-8.5 multi-model means), opens the
+focused one (SSP2-4.5, `openNode()` in `src/data/catalog.ts`) and then mounts `App` with it and its years; if that
+fails the page shows only the error. Each globe (`shared.globes`: `{ id, selection, node, year }`, rules in
+`src/state/globes.ts`, tested in `tests/globes.test.ts`) has its own pick and year; `App` keeps a dataset per node key
+(`openNode`, each store and node opened once, shared by globes on one node) and sets the globe's `node` once loaded,
+on which it reloads; a newer pick wins over a slow load, and a failure shows a notice. The **focus** (`shared.focus`)
+is the globe the data tree edits, whose dataset the metric pane, legend and PNG export use and whose series the
+timeline charts; `shared.selected` are the globes the timeline moves (none: all, decision D5). A click on a globe
+(or its label) selects it alone, again on the only selected one deselects it, Shift/Ctrl/Cmd-click toggles
+(`pick()`); a drag rotates instead. The timeline's year range is the focus's first node's (every mock node has the
+same). Not done: greying out metrics a node lacks (every mock node has all four):
 
 - **Data tree** (top, `src/ui/DataTree.svelte`; rules in `src/data/tree.ts`, tested in `tests/tree.test.ts`): closed,
   a chip at the top centre reads out the selection ("SSP2-4.5 › CanESM5 › Ensemble (50)") and toggles the pane;
@@ -44,7 +50,13 @@ done: greying out metrics a node lacks (every mock node has all four):
   Data model in `src/data/cmip6.ts`: a `Dataset` has `Metric`s, each with its field per year, global-mean series
   and `Statistic`s (same ids across metrics, so the stippling pick survives a metric change).
 
-- **Globe:** longitude/latitude per pixel from the sphere position (coarse mesh, no pole pinching), one float
+- **Globes** (`globeStage.ts`): one `WebGLRenderer` and canvas for all (Chromium keeps 16 WebGL contexts per page),
+  each globe drawn into its cell with `setViewport`/`setScissor` and one camera aimed per cell; shared across globes
+  (`globeKit()` in `globe.ts`): geometry, coastlines, lookup tables, light, column settings; per globe
+  (`createGlobe()`): its field and stipple textures, ranges, threshold and latest-wins loading. Stage 1 lays the cells
+  out in one row (`row()`); `onCells` reports them to `App`, which draws a label above each globe (path and year;
+  accent when selected, bold for the focus; a button, so keyboard-selectable) and a tint behind selected cells. All
+  globes share one orientation and zoom (D3). Per globe: longitude/latitude per pixel from the sphere position (coarse mesh, no pole pinching), one float
   texture refilled in place when the year changes, colormap lookup in the fragment shader, Natural Earth
   coastlines, a faint rim halo. Grab-to-rotate keeps the grabbed point under the pointer (`grab.ts`, north
   stays up, a flick coasts to a stop) within 30% of the globe's on-screen radius; beyond that `softLimit()` eases it
@@ -64,7 +76,7 @@ done: greying out metrics a node lacks (every mock node has all four):
   (`shared.stipple`, default spread); the legend explains it. A Threshold slider in the gear menu
   moves the stipple threshold between the statistic's `actual_range` (min and max over all years, written by prep,
   so the browser reads no extra data); moved values live in `shared.thresholds` by `<metric>/<statistic>`, and the
-  globe only sets a uniform. `stageGlobe(metrics)`:
+  globe only sets a uniform. Per globe (`createGlobe()`):
   - stippling: in the fragment shader, dots fixed to the surface on rows `shared.stippleSize` degrees apart (a Dot
     size slider in the gear menu, 1–6°, default 2.5°; radius a fifth of the spacing, so bigger dots, fewer of them,
     same stippled area), fewer per row toward the poles, each whole: threshold and ink (dark on light colours,
@@ -81,11 +93,13 @@ done: greying out metrics a node lacks (every mock node has all four):
     geometry per dot size (three fixes an instanced geometry's largest instance count when first drawn). The closest
     zoom (`controls.minDistance`) stays 0.05 outside the tallest columns. Grabbing intersects the unit sphere.
   The PNG export has neither (colour only).
-- **Timeline** (`timeline.ts`, bottom): the global mean 1950–2100 as a Plot line with a draggable year needle
-  (also a keyboard slider) and ◀ ▶ buttons stepping one year, over the node's plume (`Series.plume`, faint lines:
+- **Timeline** (`timeline.ts`, bottom): the focused globe's global mean 1950–2100 as a Plot line with a draggable
+  year needle at its year (also a keyboard slider) and ◀ ▶ buttons stepping one year, both setting the year of the
+  selected globes (all when none is; they snap to one year); small accent ticks on the axis mark the other globes'
+  years. The series is loaded by node key (not the focused `dataset`, which follows a moment later). Over the node's plume (`Series.plume`, faint lines:
   its ensemble's members for an ensemble or member, the scenario's models' ensemble means for the multi-model mean;
   read whole per metric from the series store `members.zarr`, `seriesRows()` in `catalog.ts`). The selected member
-  (`shared.selection.member`, also one without maps) is drawn in the accent colour, and the line nearest the pointer
+  (the focused globe's `selection.member`, also one without maps) is drawn in the accent colour, and the line nearest the pointer
   (within 6 px at its year) in the text colour, named with its value top right; both are an SVG overlay redrawn on
   its own (`mark()`), not the chart.
 - **Colormap** picker (`src/ui/ColormapPicker.svelte`, also the gear menu's Column colours with a "Same as map"
@@ -111,7 +125,7 @@ done: greying out metrics a node lacks (every mock node has all four):
   (`src/state/colormaps.svelte.ts`). `bakeLut()` in `src/viewports/colormaps.ts` blends the points in Lab or RGB
   into one 1024-entry table that the globe shader, colour bars and PNG all sample. Opacity is ignored.
 
-Shared state is `{ colormap, metric, insetLeft, insetTop, spin, selection, node, year, stipple, columnScale, columnMultiplier, columnColormap, stippleSize, thresholds, ranges, columnRanges }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
+Shared state is `{ colormap, metric, insetLeft, insetTop, spin, globes, focus, selected, stipple, columnScale, columnMultiplier, columnColormap, stippleSize, thresholds, ranges, columnRanges }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
 registry). Next: real data in the same layout as the mock (prep for CMIP6 writing `catalog.json` and annual
 metrics). No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).
