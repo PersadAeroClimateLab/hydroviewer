@@ -54,7 +54,7 @@ same). Not done: greying out metrics a node lacks (every mock node has all four)
   each globe drawn into its cell with `setViewport`/`setScissor` and one camera aimed per cell; shared across globes
   (`globeKit()` in `globe.ts`): geometry, coastlines, lookup tables, light, column settings; per globe
   (`createGlobe()`): its field and stipple textures, ranges, threshold and latest-wins loading. Stage 1 lays the cells
-  out in one row (`row()`); `onCells` reports them to `App`, which draws a label above each globe (path and year;
+  out in one row (`row()`), 16 px apart (`GAP`: each globe is clipped to its cell, so zoomed in they stay apart); `onCells` reports them to `App`, which draws a label above each globe (path and year;
   accent when selected, bold for the focus; a button, so keyboard-selectable) and a tint behind selected cells. All
   globes share one orientation and zoom (D3). Per globe: longitude/latitude per pixel from the sphere position (coarse mesh, no pole pinching), one float
   texture refilled in place when the year changes, colormap lookup in the fragment shader, Natural Earth

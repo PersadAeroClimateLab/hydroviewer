@@ -173,6 +173,7 @@ both from the tree pane as well as the grid). b and c are not planned.
   a tint behind selected cells. `DataTree` edits the focused globe; the timeline follows it and loads series by
   node key (through the focused `dataset` it charted the previous node's series for a moment: a race).
 - `grids()` keeps 8 years per array.
+- Cells 16 px apart (`GAP`, added after review): zoomed in, each globe is clipped short of its neighbour.
 - Checked in the browser: one WebGL canvas; clicking the middle globe moves only it; Shift-click adds the left one
   (focus moves, both snap to one year, a tick marks the third's); clicking twice clears (all move); a drag rotates
   all and selects nothing; the tree edits only the focus; no frames while idle with spin off (on software GL a

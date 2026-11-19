@@ -12,6 +12,7 @@ const START = { lon: 15, lat: 12 }; // what faces the camera first
 const SPIN = (2 * Math.PI) / 90_000; // radians per millisecond when it spins on its own: a turn in 90 s
 const CLICK = 4; // px a press may move and still be a click (which selects the globe) rather than a drag
 const MIN_DISTANCE = 1.25; // closest zoom, raised while columns can be higher (update)
+const GAP = 16; // px between cells: each globe is clipped to its cell, so zoomed in they stay apart
 
 // A globe's place on the stage, in CSS px from the stage's top left.
 export interface Cell {
@@ -22,9 +23,12 @@ export interface Cell {
   height: number;
 }
 
-// Stage 1 of docs/llm/MULTI_GLOBE_PLAN.md: the globes in one row across the area. Stage 2 fits a grid to the count.
-const row = (ids: number[], area: Omit<Cell, 'id'>): Cell[] =>
-  ids.map((id, i) => ({ id, x: area.x + (i * area.width) / ids.length, y: area.y, width: area.width / ids.length, height: area.height }));
+// Stage 1 of docs/llm/MULTI_GLOBE_PLAN.md: the globes in one row across the area, GAP apart. Stage 2 fits a grid to
+// the count.
+const row = (ids: number[], area: Omit<Cell, 'id'>): Cell[] => {
+  const width = Math.max(1, (area.width - GAP * (ids.length - 1)) / ids.length); // the stage starts 1 px wide
+  return ids.map((id, i) => ({ id, x: area.x + i * (width + GAP), y: area.y, width, height: area.height }));
+};
 
 // The globes side by side, one per entry of `globes` in the shared state, each in its cell of one canvas: one
 // WebGL context for all of them (a page keeps at most 16), drawn cell by cell with a scissor. The globes turn and

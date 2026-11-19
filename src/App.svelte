@@ -207,10 +207,10 @@
       <div
         class="cell"
         class:selected={shared.selected.includes(c.id)}
-        style:left="{c.x + 6}px"
-        style:top="{c.y + 6}px"
-        style:width="{c.width - 12}px"
-        style:height="{c.height - 12}px"
+        style:left="{c.x}px"
+        style:top="{c.y}px"
+        style:width="{c.width}px"
+        style:height="{c.height}px"
       ></div>
     {/each}
     <ViewportHost viewport={globe} />
