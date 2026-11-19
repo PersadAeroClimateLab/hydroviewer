@@ -8,12 +8,14 @@
     onImport,
     imported,
     onRemove,
+    onAbout,
   }: {
     children?: Snippet; // extra settings shown at the top of the menu
     onDownloadPng: () => void;
     onImport: (file: File) => void;
     imported: { id: string; name: string }[];
     onRemove: (id: string) => void;
+    onAbout: () => void;
   } = $props();
   let open = $state(false);
   let root: HTMLDivElement;
@@ -49,6 +51,10 @@
       <button role="menuitem" onclick={() => choose(() => picker.click())}>
         Import colormap…
         <small>SciVisColor ColorMoves JSON export (or drop the file on the page)</small>
+      </button>
+      <button role="menuitem" onclick={() => choose(onAbout)}>
+        About Hydroviewer
+        <small>Contact, version, data credits</small>
       </button>
       {#if imported.length}
         <div class="group" role="group" aria-label="Imported colormaps">

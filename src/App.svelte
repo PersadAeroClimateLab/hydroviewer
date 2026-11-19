@@ -8,6 +8,7 @@
   import { draggable, type Offset } from './ui/draggable';
   import DataTree from './ui/DataTree.svelte';
   import MetricPane from './ui/MetricPane.svelte';
+  import About from './ui/About.svelte';
   import ColormapPicker from './ui/ColormapPicker.svelte';
   import RangeSlider from './ui/RangeSlider.svelte';
   import SettingsMenu from './ui/SettingsMenu.svelte';
@@ -182,6 +183,7 @@
   $effect(() => {
     if (columnBar && columnColours) paint(columnBar, columnColours);
   });
+  let about: ReturnType<typeof About>;
   const step = (by: number) => {
     const year = Math.min(years[1], Math.max(years[0], focus.year + by));
     timed(shared).forEach((g) => (g.year = year));
@@ -281,7 +283,7 @@
         <span aria-hidden="true">Colormap</span>
         <ColormapPicker label="Colormap" value={shared.colormap} onchange={(c) => (shared.colormap = c!)} />
       </div>
-      <SettingsMenu onDownloadPng={downloadPng} onImport={importFile} imported={colormaps.imported} onRemove={removeMap}>
+      <SettingsMenu onDownloadPng={downloadPng} onImport={importFile} imported={colormaps.imported} onRemove={removeMap} onAbout={() => about.show()}>
         <label class="setting">
           Stippling
           <select bind:value={shared.stipple}>
@@ -380,6 +382,8 @@
         {@render scale(shared.columnRanges, 'Column colour range')}
       {/if}
     </section>
+
+    <About mock={catalog.mock ?? false} bind:this={about} />
 
     {#if notice}
       <div class="panel notice" class:error={notice.error} role="status">{notice.text}</div>

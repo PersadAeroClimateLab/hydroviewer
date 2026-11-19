@@ -1,8 +1,10 @@
 <script lang="ts">
   import type { Dataset } from '../data/cmip6';
+  import Contact from './Contact.svelte';
 
   // Left pane: the app title, the dataset, and its metrics grouped by variable; picking one shows it on the
-  // globe and timeline. Collapses to a title chip.
+  // globe and timeline. Collapses to a title chip. The developer's contact sits at its foot (the page's bottom left),
+  // small and muted.
   let {
     dataset,
     selected,
@@ -46,6 +48,7 @@
         {/each}
       </ul>
     {/each}
+    <footer class="contact"><Contact /></footer>
   </nav>
 {:else}
   <div class="panel chip">
@@ -65,7 +68,19 @@
     box-sizing: border-box;
     overflow-y: auto;
     padding: 12px;
+    display: flex;
+    flex-direction: column;
   }
+  /* Pushed to the bottom when the metrics leave room; after them (scrolling with them) when they do not. */
+  .contact {
+    margin-top: auto;
+    padding: 12px 8px 0;
+    display: flex;
+    flex-direction: column;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
   .chip {
     grid-area: pane;
     align-self: start;
