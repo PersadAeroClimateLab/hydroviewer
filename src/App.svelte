@@ -7,6 +7,7 @@
   import { draggable, type Offset } from './ui/draggable';
   import DataTree from './ui/DataTree.svelte';
   import MetricPane from './ui/MetricPane.svelte';
+  import ColormapPicker from './ui/ColormapPicker.svelte';
   import RangeSlider from './ui/RangeSlider.svelte';
   import SettingsMenu from './ui/SettingsMenu.svelte';
   import ViewportHost from './ui/ViewportHost.svelte';
@@ -157,15 +158,6 @@
   </div>
 {/snippet}
 
-{#snippet colormapOptions()}
-  {#each colormaps.builtIn as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
-  {#if colormaps.imported.length}
-    <optgroup label="Imported">
-      {#each colormaps.imported as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
-    </optgroup>
-  {/if}
-{/snippet}
-
 <main
   ondragover={(e) => e.dataTransfer?.types.includes('Files') && e.preventDefault()}
   ondrop={(e) => {
@@ -197,12 +189,10 @@
         <input type="checkbox" role="switch" bind:checked={shared.spin} />
         <span class="switch-text">Spin</span>
       </label>
-      <label>
-        Colormap
-        <select value={shared.colormap.id} onchange={(e) => (shared.colormap = findColormap(e.currentTarget.value)!)}>
-          {@render colormapOptions()}
-        </select>
-      </label>
+      <div>
+        <span aria-hidden="true">Colormap</span>
+        <ColormapPicker label="Colormap" value={shared.colormap} onchange={(c) => (shared.colormap = c!)} />
+      </div>
       <SettingsMenu onDownloadPng={downloadPng} onImport={importFile} imported={colormaps.imported} onRemove={remove}>
         <label class="setting">
           Stippling
@@ -261,17 +251,16 @@
             >
           </span>
         </div>
-        <label class="setting">
-          Column colours
-          <select
-            value={shared.columnColormap?.id ?? ''}
+        <div class="setting">
+          <span aria-hidden="true">Column colours</span>
+          <ColormapPicker
+            label="Column colours"
+            none="Same as map"
+            value={shared.columnColormap}
             disabled={!stipple}
-            onchange={(e) => (shared.columnColormap = findColormap(e.currentTarget.value) ?? null)}
-          >
-            <option value="">Same as map</option>
-            {@render colormapOptions()}
-          </select>
-        </label>
+            onchange={(c) => (shared.columnColormap = c)}
+          />
+        </div>
         <button class="reset" onclick={resetLegend}>Reset legend position</button>
       </SettingsMenu>
     </section>
