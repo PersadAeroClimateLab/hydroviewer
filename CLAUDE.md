@@ -49,6 +49,14 @@ same). Not done: greying out metrics a node lacks (every mock node has all four)
   it on the globe, legend and timeline (`shared.metric`). Collapses to a title chip («, ☰). Open on wide screens,
   where the globe centres in the area right of it (`shared.insetLeft`; `setViewOffset` shifts the projection, the
   camera stays on its axis, eased); on phones it starts closed, covers the page when open and closes on a pick.
+  At its foot (the page's bottom left), small and muted, the developer's contact (`src/ui/Contact.svelte`, values in
+  `src/contact.ts`): the name ("Cameron Cummins"), the address as a mailto link with the subject "Hydroviewer feedback" and a
+  copy button ("Copied" for 1.5 s; falls back to `execCommand('copy')` where the Clipboard API is missing, i.e. not
+  https or localhost), and, after a blank line's space, "Report an issue" (the GitHub repo's new-issue page). The address is decoded with `atob`
+  at run time, so the built files never hold it whole (a string join was folded back by the minifier; checked with
+  grep on `dist/`). Hidden with the pane folded; the gear menu's **About Hydroviewer** (`src/ui/About.svelte`, a
+  native modal `<dialog>`) has it too, with the version (`package.json`, now `0.1.0`) and credits: the CMIP6
+  acknowledgement for real data or a mock-data note (`catalog.mock`), Natural Earth, viridis/magma (CC0), SciVisColor.
   Data model in `src/data/cmip6.ts`: a `Dataset` has `Metric`s, each with its field per year, global-mean series
   and `Statistic`s (same ids across metrics, so the stippling pick survives a metric change).
 
