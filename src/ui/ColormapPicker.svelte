@@ -205,7 +205,7 @@
       display: none;
     }
     .current .swatch {
-      width: 36px;
+      width: 28px;
     }
   }
   .group {

@@ -26,7 +26,7 @@
 </script>
 
 {#if open}
-  <nav class="panel pane" aria-label="Metrics" bind:clientWidth={width}>
+  <nav class="panel pane" aria-label="Metrics" bind:clientWidth={width} data-no-shot>
     <header>
       <h1>Hydroviewer</h1>
       <button class="fold" aria-label="Hide metrics" aria-expanded="true" onclick={() => (open = false)}>«</button>
@@ -51,7 +51,7 @@
     <footer class="contact"><Contact /></footer>
   </nav>
 {:else}
-  <div class="panel chip">
+  <div class="panel chip" data-no-shot>
     <button class="fold" aria-label="Show metrics" aria-expanded="false" onclick={() => (open = true)}>☰</button>
     <div>
       <h1>Hydroviewer</h1>

@@ -121,6 +121,9 @@ export const globeStage = (
       }
       ease(now);
       last = now;
+      render();
+    };
+    const render = () => {
       kit.uniforms.light.value.copy(LIGHT).applyQuaternion(orientation.quaternion.clone().invert()); // fixed to the view
       renderer.setScissorTest(false);
       renderer.clear(); // also where a cell was before the layout changed
@@ -138,6 +141,13 @@ export const globeStage = (
     };
     const redraw = () => (frame ||= requestAnimationFrame(draw));
     controls.addEventListener('change', redraw);
+    // A picture of the globes for a screenshot: a `capture` event on the canvas, whose detail is called with a PNG
+    // data URL. The drawing buffer is only readable in the task that drew it (no preserveDrawingBuffer, which
+    // would cost every frame), so it is drawn again here first.
+    const capture = (e: Event) => {
+      render();
+      (e as CustomEvent<(png: string) => void>).detail(renderer.domElement.toDataURL('image/png'));
+    };
 
     // The cell under the pointer, and where the pointer's ray meets the unit sphere there, in view space.
     const canvas = renderer.domElement;
@@ -218,6 +228,7 @@ export const globeStage = (
     canvas.addEventListener('pointermove', onMove, { signal });
     canvas.addEventListener('pointerup', onUp, { signal });
     canvas.addEventListener('pointercancel', (e) => ((press = undefined), onUp(e)), { signal });
+    canvas.addEventListener('capture', capture, { signal });
 
     const observer = new ResizeObserver(() => {
       const [w, h] = [el.clientWidth, el.clientHeight];

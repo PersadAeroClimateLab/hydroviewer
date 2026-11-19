@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte';
   import { nodeKey, openNode, type Catalog } from './data/catalog';
   import type { Dataset } from './data/cmip6';
   import { createTree } from './data/tree';
@@ -14,6 +15,7 @@
   import SettingsMenu from './ui/SettingsMenu.svelte';
   import ViewportHost from './ui/ViewportHost.svelte';
   import { download, fieldPng } from './viewports/exportPng';
+  import { screenshot } from './ui/screenshot';
   import { bakeLut, LUT_SIZE, type Colormap } from './viewports/colormaps';
   import { FILL, globeStage, type Cell } from './viewports/globeStage';
   import { timeline } from './viewports/timeline';
@@ -184,6 +186,22 @@
     if (columnBar && columnColours) paint(columnBar, columnColours);
   });
   let about: ReturnType<typeof About>;
+  // The camera: a picture of the globes with their labels, the legend and the timeline (src/ui/screenshot.ts).
+  let main: HTMLElement;
+  let shooting = $state(false);
+  const savePicture = async () => {
+    shooting = true; // also drops the selection's highlight from the picture (class:shooting)
+    await tick();
+    try {
+      const keep = [...main.querySelectorAll('.cell, .legend, .time')];
+      const blob = await screenshot(main, keep, `Hydroviewer · ${metric.name}, ${metric.units}`);
+      download(blob, `hydroviewer-${metric.id}-${focus.year}.png`);
+    } catch (e) {
+      say(`Could not save the picture: ${e instanceof Error ? e.message : e}`, true);
+    } finally {
+      shooting = false;
+    }
+  };
   const step = (by: number) => {
     const year = Math.min(years[1], Math.max(years[0], focus.year + by));
     timed(shared).forEach((g) => (g.year = year));
@@ -196,12 +214,14 @@
   <RangeSlider min={metric.range[0]} max={metric.range[1]} {value} {label} onchange={(v) => (moved[metric.id] = v)} />
   <div class="ticks">
     <span>{Number(value[0].toPrecision(3))}</span>
-    {#if moved[metric.id]}<button class="reset-range" onclick={() => delete moved[metric.id]}>Reset</button>{/if}
+    {#if moved[metric.id]}<button data-no-shot class="reset-range" onclick={() => delete moved[metric.id]}>Reset</button>{/if}
     <span>{Number(value[1].toPrecision(3))}</span>
   </div>
 {/snippet}
 
 <main
+  bind:this={main}
+  class:shooting
   ondragover={(e) => e.dataTransfer?.types.includes('Files') && e.preventDefault()}
   ondrop={(e) => {
     const file = e.dataTransfer?.files[0];
@@ -245,7 +265,7 @@
             {tree.path({ selection: g.selection, hover: {} }).join(' › ')} · {g.year}
           </button>
           {#if shared.globes.length > 1}
-            <button class="remove" aria-label="Remove this globe" title="Remove this globe" onclick={() => removeGlobe(c.id)}>×</button>
+            <button data-no-shot class="remove" aria-label="Remove this globe" title="Remove this globe" onclick={() => removeGlobe(c.id)}>×</button>
           {/if}
         </div>
       {/if}
@@ -274,7 +294,21 @@
       canAdd={shared.globes.length < max}
     />
 
-    <section class="panel tools">
+    <section class="panel tools" data-no-shot>
+      <button
+        class="camera"
+        aria-label="Save a picture of the globes, legend and timeline"
+        title="Save a picture of the globes, legend and timeline (PNG)"
+        disabled={shooting}
+        onclick={savePicture}
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M9 3 7.2 5H4.5A2.5 2.5 0 0 0 2 7.5v10A2.5 2.5 0 0 0 4.5 20h15a2.5 2.5 0 0 0 2.5-2.5v-10A2.5 2.5 0 0 0 19.5 5h-2.7L15 3H9Zm3 5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"
+          />
+        </svg>
+      </button>
       <label class="switch">
         <input type="checkbox" role="switch" bind:checked={shared.spin} />
         <span class="switch-text">Spin</span>
@@ -386,7 +420,7 @@
     <About mock={catalog.mock ?? false} bind:this={about} />
 
     {#if notice}
-      <div class="panel notice" class:error={notice.error} role="status">{notice.text}</div>
+      <div data-no-shot class="panel notice" class:error={notice.error} role="status">{notice.text}</div>
     {/if}
 
     <section class="panel time" bind:offsetHeight={timeHeight}>
@@ -413,6 +447,10 @@
     position: absolute;
     border-radius: 16px;
     pointer-events: none;
+  }
+  .shooting .cell.selected {
+    background: none;
+    box-shadow: none;
   }
   .cell.selected {
     background: color-mix(in srgb, var(--accent) 8%, transparent);
@@ -457,6 +495,11 @@
     background: var(--accent);
     border-color: var(--accent);
   }
+  .shooting .cell-label.selected {
+    color: var(--fg);
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    border-color: var(--border);
+  }
 
   /* Panels float over the globe; the empty middle passes pointer events through to it. */
   .hud {
@@ -499,6 +542,23 @@
       'pane time time' auto / auto 1fr auto;
   }
   /* A checkbox drawn as a switch: a track with a knob that slides right when on. */
+  .camera {
+    display: flex;
+    padding: 4px;
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .camera:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--fg) 10%, transparent);
+  }
+  .camera:disabled {
+    opacity: 0.4;
+    cursor: progress;
+  }
   .switch {
     display: flex;
     align-items: center;
@@ -692,6 +752,11 @@
 
   @media (max-width: 720px) {
     /* Phones: the data tree's chip gets its own row; the open tree and metric pane cover the page instead. */
+    /* The tools row is tight with the camera: smaller gaps. */
+    .tools {
+      gap: 4px;
+      padding: 4px;
+    }
     /* No room for the switch's word beside the colormap: screen readers still read it. */
     .switch-text {
       position: absolute;
