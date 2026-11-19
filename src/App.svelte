@@ -7,6 +7,7 @@
   import { draggable, type Offset } from './ui/draggable';
   import DataTree from './ui/DataTree.svelte';
   import MetricPane from './ui/MetricPane.svelte';
+  import RangeSlider from './ui/RangeSlider.svelte';
   import SettingsMenu from './ui/SettingsMenu.svelte';
   import ViewportHost from './ui/ViewportHost.svelte';
   import { download, fieldPng } from './viewports/exportPng';
@@ -59,7 +60,7 @@
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const downloadPng = async () =>
     download(
-      await fieldPng(await metric.load(shared.year), shared.colormap),
+      await fieldPng(await metric.load(shared.year), shared.colormap, shared.ranges[metric.id] ?? metric.range),
       `hydroviewer-${metric.id}-${shared.year}-${slug(shared.colormap.name)}.png`,
     );
 
@@ -144,6 +145,17 @@
   });
   const step = (by: number) => (shared.year = Math.min(years[1], Math.max(years[0], shared.year + by)));
 </script>
+
+<!-- A colour bar's range: a double slider within the metric's display range, moved ranges kept by metric. -->
+{#snippet scale(moved: Record<string, [number, number]>, label: string)}
+  {@const value = moved[metric.id] ?? metric.range}
+  <RangeSlider min={metric.range[0]} max={metric.range[1]} {value} {label} onchange={(v) => (moved[metric.id] = v)} />
+  <div class="ticks">
+    <span>{Number(value[0].toPrecision(3))}</span>
+    {#if moved[metric.id]}<button class="reset-range" onclick={() => delete moved[metric.id]}>Reset</button>{/if}
+    <span>{Number(value[1].toPrecision(3))}</span>
+  </div>
+{/snippet}
 
 {#snippet colormapOptions()}
   {#each colormaps.builtIn as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
@@ -271,11 +283,11 @@
       tabindex="0"
       style:translate="{legendAt.x}px {legendAt.y}px"
       use:draggable={{ at: legendAt, move: (at) => (legendAt = at) }}
-      ondblclick={resetLegend}
+      ondblclick={(e) => !(e.target as Element).closest('input, button') && resetLegend()}
     >
       <div>{metric.name}, {metric.units}</div>
       <canvas class="bar" width={LUT_SIZE} height="1" bind:this={bar}></canvas>
-      <div class="ticks"><span>{metric.range[0]}</span><span>{metric.range[1]}</span></div>
+      {@render scale(shared.ranges, 'Colour range')}
       {#if stipple}
         <div class="extra">
           <i class="dots" aria-hidden="true"></i>Stippling: {stipple.name.toLowerCase()}
@@ -288,7 +300,7 @@
       {#if columnColours}
         <div class="extra">Column colours: {metric.name.toLowerCase()}, {metric.units}</div>
         <canvas class="bar" width={LUT_SIZE} height="1" bind:this={columnBar}></canvas>
-        <div class="ticks"><span>{metric.range[0]}</span><span>{metric.range[1]}</span></div>
+        {@render scale(shared.columnRanges, 'Column colour range')}
       {/if}
     </section>
 
@@ -459,6 +471,15 @@
     min-width: 2.2em;
     text-align: center;
     font-variant-numeric: tabular-nums;
+  }
+  .reset-range {
+    font: inherit;
+    color: var(--muted);
+    background: none;
+    border: 0;
+    padding: 0;
+    text-decoration: underline;
+    cursor: pointer;
   }
   .stepper button {
     font: inherit;

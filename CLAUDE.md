@@ -90,10 +90,15 @@ done: greying out metrics a node lacks (every mock node has all four):
   its own (`mark()`), not the chart.
 - **Colormap** picker and **settings gear** (top right; its menu downloads the field as an
   equirectangular PNG, one pixel per cell, `exportPng.ts`, and imports colormaps), **colour bar** (bottom left, a
-  canvas drawn from the same lookup table as the globe). The legend panel is draggable anywhere over the globe
-  (`src/ui/draggable.ts`, a Svelte action: pointer or arrow keys, kept inside the page, re-clamped on resize; moves
-  by `translate` only, so the globe does not redraw); its offset is kept in localStorage and reset by double-click
-  or the gear menu.
+  canvas drawn from the same lookup table as the globe). Under each colour bar (the map's, and the columns' while
+  they have their own colormap) a double slider (`src/ui/RangeSlider.svelte`: two overlaid native range inputs, only
+  the thumbs take the pointer, kept a step apart) moves its min and max within the metric's display range (metrics
+  have no `actual_range` yet, so it cannot widen past it); moved ranges live in `shared.ranges` and
+  `shared.columnRanges` by metric id, a Reset link appears under a moved one, the globe only sets uniforms (columns
+  without their own colormap follow the map's range) and the PNG export uses the map's range. The legend panel is
+  draggable anywhere over the globe (`src/ui/draggable.ts`, a Svelte action: pointer or arrow keys while the panel
+  itself has focus, kept inside the page, re-clamped on resize; moves by `translate` only, so the globe does not
+  redraw); its offset is kept in localStorage and reset by double-click (not on its controls) or the gear menu.
 - **Colormaps** are SciVisColor ColorMoves JSON exports (`{ colormaps: [{ name, space, points: [{ x, o, r, g, b }] }] }`),
   parsed by `src/data/colormoves.ts`. Built-ins are the files in `src/assets/colormaps/` (id = file name; only
   viridis and magma, by decision: custom maps arrive by upload). A new export dropped there would ship as built-in. Users
@@ -101,7 +106,7 @@ done: greying out metrics a node lacks (every mock node has all four):
   (`src/state/colormaps.svelte.ts`). `bakeLut()` in `src/viewports/colormaps.ts` blends the points in Lab or RGB
   into one 1024-entry table that the globe shader, colour bars and PNG all sample. Opacity is ignored.
 
-Shared state is `{ colormap, metric, insetLeft, insetTop, spin, selection, node, year, stipple, columnScale, columnMultiplier, columnColormap, stippleSize, thresholds }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
+Shared state is `{ colormap, metric, insetLeft, insetTop, spin, selection, node, year, stipple, columnScale, columnMultiplier, columnColormap, stippleSize, thresholds, ranges, columnRanges }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
 registry). Next: real data in the same layout as the mock (prep for CMIP6 writing `catalog.json` and annual
 metrics). No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).

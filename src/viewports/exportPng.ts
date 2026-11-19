@@ -3,9 +3,8 @@ import { bakeLut, lutColor, type Colormap } from './colormaps';
 
 // The field as an equirectangular PNG, one pixel per grid cell (north up, longitude -180 to 180 left to
 // right), coloured like the globe: same range, same colormap, no shading or coastlines.
-export function fieldPng(f: Field, colormap: Colormap): Promise<Blob> {
+export function fieldPng(f: Field, colormap: Colormap, [vmin, vmax]: [number, number]): Promise<Blob> {
   const lut = bakeLut(colormap);
-  const [vmin, vmax] = f.range ?? [0, Math.max(...f.values)];
   const canvas = document.createElement('canvas');
   [canvas.width, canvas.height] = [f.width, f.height];
   const g = canvas.getContext('2d')!;

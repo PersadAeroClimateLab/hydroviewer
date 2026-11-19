@@ -18,6 +18,8 @@ export const COLUMN_MULTIPLIER = { min: 1, max: 10 };
 // `spin`: the globe turns slowly on its own (on unless the system asks for reduced motion).
 // `stippleSize` is the spacing of stipple dots in degrees; each dot's radius (and its column's) is a fixed share of it. `thresholds`
 // holds stipple thresholds moved from their statistic's default, by `<metric>/<statistic>` (units differ per metric).
+// `ranges` and `columnRanges` hold colour ranges moved from the metric's display range, by metric id: the map's, and
+// the columns' while they have a colormap of their own (otherwise they follow the map's).
 export const STIPPLE_SIZE = { min: 1, max: 6, initial: 2.5 };
 export const shared = $state<{
   colormap: Colormap;
@@ -34,6 +36,8 @@ export const shared = $state<{
   columnColormap: Colormap | null;
   stippleSize: number;
   thresholds: Record<string, number>;
+  ranges: Record<string, [number, number]>;
+  columnRanges: Record<string, [number, number]>;
 }>({
   colormap: colormaps.builtIn[0],
   metric: 'pr',
@@ -49,6 +53,8 @@ export const shared = $state<{
   columnColormap: null,
   stippleSize: STIPPLE_SIZE.initial,
   thresholds: {},
+  ranges: {},
+  columnRanges: {},
 });
 
 export type SharedState = typeof shared;
