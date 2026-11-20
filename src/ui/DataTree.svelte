@@ -1,12 +1,12 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import type { Catalog } from '../data/catalog';
+  import { datasetLabel, type Catalog } from '../data/catalog';
   import { ALL, createTree, type Item, type TreeState } from '../data/tree';
   import { focused } from '../state/globes';
   import { shared } from '../state/shared.svelte';
 
-  // The data tree (docs/llm/DATA_TREE_PLAN.md): how the data is organised, scenarios › models › members, as columns
-  // joined by links; the rules are in data/tree.ts, this only draws them. Closed, a chip at the top reads out the
+  // The data tree (docs/llm/DATA_TREE_PLAN.md): how the data is organised, dataset › scenarios › models › members,
+  // as columns joined by links (the dataset, one per bucket, is only a label); the rules are in data/tree.ts, this only draws them. Closed, a chip at the top reads out the
   // selection; open, the pane drops below it. It shows and changes the focused globe's pick
   // (src/state/globes.ts); its + adds a globe (a copy of the focused one, which the tree then edits). `bottom` is the
   // open pane's lower edge in the HUD and `chipBottom` the chip's, so the globes can stay below them.
@@ -51,11 +51,17 @@
   const measure = () => {
     if (!columnsEl) return;
     const origin = columnsEl.getBoundingClientRect();
-    const find = (column: number, id: string) => columnsEl!.querySelector(`[data-column="${column}"][data-id="${CSS.escape(id)}"]`);
+    const find = (column: number | string, id: string) => columnsEl!.querySelector(`[data-column="${column}"][data-id="${CSS.escape(id)}"]`);
     const modelBoxes = [...columnsEl.querySelectorAll('[data-column="1"]')].map((e) => e.getBoundingClientRect());
     const band = (modelsEl?.querySelector('ul')?.getBoundingClientRect().top ?? origin.top) - 3 - origin.top;
-    curves = tree.links(st).flatMap((link) => {
-      const [a, b] = [find(link.level, link.from), find(link.level + 1, link.to)].map((e) => e?.getBoundingClientRect());
+    // The dataset to the scenario the columns show (hovered or picked), then the tree's links.
+    const scenario = st.hover.scenario ?? st.selection.scenario;
+    const pairs = [
+      { from: find('dataset', 'dataset'), to: find(0, scenario), fixed: scenario === st.selection.scenario, weight: 1 },
+      ...tree.links(st).map((l) => ({ from: find(l.level, l.from), to: find(l.level + 1, l.to), fixed: l.fixed, weight: l.weight })),
+    ];
+    curves = pairs.flatMap((link) => {
+      const [a, b] = [link.from, link.to].map((e) => e?.getBoundingClientRect());
       if (!a || !b || !a.width || !b.width) return [];
       const [x1, y1, x2, y2] = [a.right + 4 - origin.left, a.top + a.height / 2 - origin.top, b.left - 4 - origin.left, b.top + b.height / 2 - origin.top];
       // A link that would cross other models' names (several sub-columns) runs along the band above the first row
@@ -125,13 +131,24 @@
 
 {#if open}
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions: arrow keys move between its buttons, Escape closes -->
-  <section data-no-shot id="data-tree" class="panel tree" aria-label="Data: scenarios, models and members" bind:this={paneEl} onkeydown={keydown}>
+  <section data-no-shot id="data-tree" class="panel tree" aria-label="Data: dataset, scenarios, models and members" bind:this={paneEl} onkeydown={keydown}>
     <button class="close" aria-label="Close the data tree" onclick={() => (open = false)}>▴</button>
     <!-- svelte-ignore a11y_no_static_element_interactions: the pointer leaving the columns drops the preview -->
     <div class="columns" bind:this={columnsEl} onmouseleave={() => set(tree.leave(st))}>
       <svg class="links" aria-hidden="true">
         {#each curves as c}<path d={c.d} class:fixed={c.fixed} stroke-width={c.width} />{/each}
       </svg>
+
+      <section class="column dataset">
+        <h2>Dataset</h2>
+        <ul>
+          <li>
+            <div class="item on fixed" data-column="dataset" data-id="dataset">
+              {datasetLabel(catalog)}<small>{catalog.scenarios.length} scenarios</small>
+            </div>
+          </li>
+        </ul>
+      </section>
 
       <section class="column scenarios">
         <h2>Scenario</h2>
@@ -341,6 +358,7 @@
     column-gap: 16px;
   }
   li button,
+  li .item,
   .ensemble {
     display: flex;
     justify-content: space-between;
@@ -356,7 +374,8 @@
     font-size: 12px;
     font-variant-numeric: tabular-nums;
   }
-  .on {
+  .on,
+  li .item.on {
     color: var(--fg);
   }
   .fixed {

@@ -17,6 +17,7 @@ export interface Run {
 
 export interface Catalog {
   mock?: boolean;
+  dataset?: { label: string }; // what the bucket holds, e.g. "CMIP6 · AWS" (older catalogs: none)
   facets: string[];
   scenarios: { id: string; label: string }[];
   metrics: { id: string; group: string; statistics: string[] }[];
@@ -24,6 +25,9 @@ export interface Catalog {
   multimodel: Record<string, { store: string; models: number }>; // per scenario
   runs: Run[];
 }
+
+// The dataset's name for the data tree's first column.
+export const datasetLabel = (catalog: Catalog) => catalog.dataset?.label ?? (catalog.mock ? 'Mock data' : 'CMIP6');
 
 // A node of the tree: a scenario's multi-model mean (no model), a model's ensemble (no member) or one member.
 export interface Node {

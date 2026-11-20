@@ -94,7 +94,7 @@ Our bucket mirrors its key path: `CMIP6/<activity>/<institution>/<model>/<experi
 
 ### Dev bucket emulator
 
-Each data directory is one bucket root. `$DATA_DIR` (in `.env`, default `./data`) picks the one the emulator serves and prep writes into; data lives outside the repo (decided 2026-11-17: in the sandbox, `/home/oxygen/Downloads/hydroviewer_data/{mock,cmip6}`, because home is snapshotted), and switching is `docker compose up -d data` after changing it. The `data` compose service is nginx serving `$DATA_DIR` with S3-style read behaviour (config in `tools/bucket/default.conf`): `Access-Control-Allow-Origin: *`, preflight, `Range`, ETag, `Content-Range` exposed, no compression, 404 for missing keys. Its access log shows which keys a page reads, i.e. what must be uploaded. Measured 2026-11-16 with the removed grid shell: 19 keys, 3.4 MB of the 352 MB store (all of `aggregates.zarr` plus one `map.zarr` chunk); a time control will need every `map.zarr` chunk.
+Each data directory is one bucket root. `$DATA_DIR` (in `.env`, default `./data`) is the one prep writes into and, by default, the emulator serves (the mock); `$CMIP6_DIR`, when set and holding a `catalog.json`, is served instead (decided 2026-11-20, `tools/bucket/choose-bucket.sh`); data lives outside the repo (decided 2026-11-17: in the sandbox, `/home/oxygen/Downloads/hydroviewer_data/{mock,cmip6}`, because home is snapshotted), and switching is `docker compose up -d data` after changing it. The `data` compose service is nginx serving that bucket with S3-style read behaviour (config in `tools/bucket/default.conf`): `Access-Control-Allow-Origin: *`, preflight, `Range`, ETag, `Content-Range` exposed, no compression, 404 for missing keys, `Cache-Control: no-cache` (2026-11-20: without it a browser kept the mock's catalog and stores for hours after a switch to the real data, by its heuristic from `Last-Modified`). Its access log shows which keys a page reads, i.e. what must be uploaded. Measured 2026-11-16 with the removed grid shell: 19 keys, 3.4 MB of the 352 MB store (all of `aggregates.zarr` plus one `map.zarr` chunk); a time control will need every `map.zarr` chunk.
 
 ### Sizes (float32, 1°)
 
@@ -207,7 +207,9 @@ Next:
 
 ## 9. Open questions
 
-- Bucket provider details and CDN, and who owns CORS and access configuration.
+- Bucket provider details and CDN, and who owns CORS and access configuration. Also the cache policy: a rebuilt
+  bucket under the same keys can be mixed with cached old chunks unless objects carry `Cache-Control` (or keys are
+  versioned).
 - Colour range per year (fixed across the timeline, as now) or per field.
 - Stored precision (bit-round to ~0.4% or quantise to uint16, about half the bytes), the monthly map chunking, and
   whether daily data ships at all and in which layouts (`docs/llm/BANDWIDTH.md`).

@@ -136,7 +136,8 @@ def stage_publish(args, c) -> list[str]:
         return failed
     # No build date: a rebuild elsewhere should give the same bytes (SHA256SUMS).
     source = {"manifest_sha256": info["manifest_sha256"], "keepbits": args.keepbits}
-    rows = finish(out, runs, [results[id(r)]["series"] for r in runs], multi, {"mock": False, "source": source})
+    catalog = {"mock": False, "dataset": {"label": "CMIP6 · AWS"}, "source": source}  # the data tree's first column
+    rows = finish(out, runs, [results[id(r)]["series"] for r in runs], multi, catalog)
     print(f"publish: {len(runs)} model-scenario runs, {rows} member runs into {out}")
     return []
 

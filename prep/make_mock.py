@@ -160,7 +160,7 @@ def main() -> None:
                 multi[id] = {"store": f"CMIP6/ScenarioMIP/multimodel/{id}/annual.zarr", "models": len(stores)}
         tasks = [(out, id, [r["ensemble"] for r in runs if r["scenario"] == id], m["store"], ABOUT) for id, m in multi.items()]
         list(pool.map(multimodel, *zip(*tasks)))
-    row = finish(out, runs, series, multi, {"mock": True})
+    row = finish(out, runs, series, multi, {"mock": True, "dataset": {"label": "Mock data"}})
     print(
         f"wrote {len(models)} models, {len(runs)} model-scenario runs, {row} members "
         f"({sum(len(r['maps']) for r in runs)} with maps) into {out} in {time.time() - started:.0f} s"
