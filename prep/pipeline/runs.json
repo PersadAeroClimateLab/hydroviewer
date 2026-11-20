@@ -1,0 +1,3017 @@
+{
+ "about": "Source stores for the Hydroviewer bucket; written by prep/pipeline (manifest.py), read by every later stage.",
+ "catalogue": "https://cmip6-pds.s3.amazonaws.com/pangeo-cmip6.csv",
+ "rules": {
+  "historical": [
+   1950,
+   2014
+  ],
+  "scenario": [
+   2015,
+   2100
+  ],
+  "max_members": 10,
+  "models": [
+   "CanESM5",
+   "MPI-ESM1-2-LR",
+   "EC-Earth3",
+   "UKESM1-0-LL",
+   "MIROC6",
+   "IPSL-CM6A-LR",
+   "EC-Earth3-Veg",
+   "ACCESS-CM2",
+   "CESM2",
+   "KACE-1-0-G"
+  ]
+ },
+ "counts": {
+  "members": 84,
+  "scenario_runs": 261,
+  "ssp126": 66,
+  "ssp245": 71,
+  "ssp370": 61,
+  "ssp585": 63
+ },
+ "members": [
+  {
+   "model": "CanESM5",
+   "institution": "CCCma",
+   "member": "r1i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CCCma/CanESM5/historical/r1i1p1f1/day/pr/gn/v20190429/",
+   "shape": [
+    64,
+    128
+   ],
+   "calendar": "noleap",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp126/r1i1p1f1/day/pr/gn/v20190429/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp245/r1i1p1f1/day/pr/gn/v20190429/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp370/r1i1p1f1/day/pr/gn/v20190429/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r1i1p1f1/day/pr/gn/v20190429/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "CanESM5",
+   "institution": "CCCma",
+   "member": "r2i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CCCma/CanESM5/historical/r2i1p1f1/day/pr/gn/v20190429/",
+   "shape": [
+    64,
+    128
+   ],
+   "calendar": "noleap",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp126/r2i1p1f1/day/pr/gn/v20190429/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp245/r2i1p1f1/day/pr/gn/v20190429/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp370/r2i1p1f1/day/pr/gn/v20190429/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r2i1p1f1/day/pr/gn/v20190429/"
+   },
+   "parents": {
+    "ssp126": "r2i1p1f1",
+    "ssp245": "r2i1p1f1",
+    "ssp370": "r2i1p1f1",
+    "ssp585": "r2i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "CanESM5",
+   "institution": "CCCma",
+   "member": "r3i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CCCma/CanESM5/historical/r3i1p1f1/day/pr/gn/v20190429/",
+   "shape": [
+    64,
+    128
+   ],
+   "calendar": "noleap",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp126/r3i1p1f1/day/pr/gn/v20190429/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp245/r3i1p1f1/day/pr/gn/v20190429/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp370/r3i1p1f1/day/pr/gn/v20190429/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r3i1p1f1/day/pr/gn/v20190429/"
+   },
+   "parents": {
+    "ssp126": "r3i1p1f1",
+    "ssp245": "r3i1p1f1",
+    "ssp370": "r3i1p1f1",
+    "ssp585": "r3i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "CanESM5",
+   "institution": "CCCma",
+   "member": "r4i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CCCma/CanESM5/historical/r4i1p1f1/day/pr/gn/v20190429/",
+   "shape": [
+    64,
+    128
+   ],
+   "calendar": "noleap",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp126/r4i1p1f1/day/pr/gn/v20190429/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp245/r4i1p1f1/day/pr/gn/v20190429/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp370/r4i1p1f1/day/pr/gn/v20190429/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r4i1p1f1/day/pr/gn/v20190429/"
+   },
+   "parents": {
+    "ssp126": "r4i1p1f1",
+    "ssp245": "r4i1p1f1",
+    "ssp370": "r4i1p1f1",
+    "ssp585": "r4i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "CanESM5",
+   "institution": "CCCma",
+   "member": "r5i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CCCma/CanESM5/historical/r5i1p1f1/day/pr/gn/v20190429/",
+   "shape": [
+    64,
+    128
+   ],
+   "calendar": "noleap",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp126/r5i1p1f1/day/pr/gn/v20190429/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp245/r5i1p1f1/day/pr/gn/v20190429/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp370/r5i1p1f1/day/pr/gn/v20190429/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r5i1p1f1/day/pr/gn/v20190429/"
+   },
+   "parents": {
+    "ssp126": "r5i1p1f1",
+    "ssp245": "r5i1p1f1",
+    "ssp370": "r5i1p1f1",
+    "ssp585": "r5i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "CanESM5",
+   "institution": "CCCma",
+   "member": "r6i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CCCma/CanESM5/historical/r6i1p1f1/day/pr/gn/v20190429/",
+   "shape": [
+    64,
+    128
+   ],
+   "calendar": "noleap",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp126/r6i1p1f1/day/pr/gn/v20190429/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp245/r6i1p1f1/day/pr/gn/v20190429/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp370/r6i1p1f1/day/pr/gn/v20190429/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r6i1p1f1/day/pr/gn/v20190429/"
+   },
+   "parents": {
+    "ssp126": "r6i1p1f1",
+    "ssp245": "r6i1p1f1",
+    "ssp370": "r6i1p1f1",
+    "ssp585": "r6i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "CanESM5",
+   "institution": "CCCma",
+   "member": "r7i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CCCma/CanESM5/historical/r7i1p1f1/day/pr/gn/v20190429/",
+   "shape": [
+    64,
+    128
+   ],
+   "calendar": "noleap",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp126/r7i1p1f1/day/pr/gn/v20190429/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp245/r7i1p1f1/day/pr/gn/v20190429/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp370/r7i1p1f1/day/pr/gn/v20190429/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r7i1p1f1/day/pr/gn/v20190429/"
+   },
+   "parents": {
+    "ssp126": "r7i1p1f1",
+    "ssp245": "r7i1p1f1",
+    "ssp370": "r7i1p1f1",
+    "ssp585": "r7i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "CanESM5",
+   "institution": "CCCma",
+   "member": "r8i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CCCma/CanESM5/historical/r8i1p1f1/day/pr/gn/v20190429/",
+   "shape": [
+    64,
+    128
+   ],
+   "calendar": "noleap",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp126/r8i1p1f1/day/pr/gn/v20190429/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp245/r8i1p1f1/day/pr/gn/v20190429/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp370/r8i1p1f1/day/pr/gn/v20190429/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r8i1p1f1/day/pr/gn/v20190429/"
+   },
+   "parents": {
+    "ssp126": "r8i1p1f1",
+    "ssp245": "r8i1p1f1",
+    "ssp370": "r8i1p1f1",
+    "ssp585": "r8i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "CanESM5",
+   "institution": "CCCma",
+   "member": "r9i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CCCma/CanESM5/historical/r9i1p1f1/day/pr/gn/v20190429/",
+   "shape": [
+    64,
+    128
+   ],
+   "calendar": "noleap",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp126/r9i1p1f1/day/pr/gn/v20190429/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp245/r9i1p1f1/day/pr/gn/v20190429/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp370/r9i1p1f1/day/pr/gn/v20190429/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r9i1p1f1/day/pr/gn/v20190429/"
+   },
+   "parents": {
+    "ssp126": "r9i1p1f1",
+    "ssp245": "r9i1p1f1",
+    "ssp370": "r9i1p1f1",
+    "ssp585": "r9i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "CanESM5",
+   "institution": "CCCma",
+   "member": "r10i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CCCma/CanESM5/historical/r10i1p1f1/day/pr/gn/v20190429/",
+   "shape": [
+    64,
+    128
+   ],
+   "calendar": "noleap",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp126/r10i1p1f1/day/pr/gn/v20190429/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp245/r10i1p1f1/day/pr/gn/v20190429/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp370/r10i1p1f1/day/pr/gn/v20190429/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r10i1p1f1/day/pr/gn/v20190429/"
+   },
+   "parents": {
+    "ssp126": "r10i1p1f1",
+    "ssp245": "r10i1p1f1",
+    "ssp370": "r10i1p1f1",
+    "ssp585": "r10i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MPI-ESM1-2-LR",
+   "institution": "MPI-M",
+   "member": "r1i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MPI-M/MPI-ESM1-2-LR/historical/r1i1p1f1/day/pr/gn/v20190710/",
+   "shape": [
+    96,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp126/r1i1p1f1/day/pr/gn/v20190710/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp245/r1i1p1f1/day/pr/gn/v20190710/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp370/r1i1p1f1/day/pr/gn/v20190710/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp585/r1i1p1f1/day/pr/gn/v20190710/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MPI-ESM1-2-LR",
+   "institution": "MPI-M",
+   "member": "r2i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MPI-M/MPI-ESM1-2-LR/historical/r2i1p1f1/day/pr/gn/v20190710/",
+   "shape": [
+    96,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp126/r2i1p1f1/day/pr/gn/v20190710/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp245/r2i1p1f1/day/pr/gn/v20190710/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp370/r2i1p1f1/day/pr/gn/v20190710/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp585/r2i1p1f1/day/pr/gn/v20190710/"
+   },
+   "parents": {
+    "ssp126": "r2i1p1f1",
+    "ssp245": "r2i1p1f1",
+    "ssp370": "r2i1p1f1",
+    "ssp585": "r2i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MPI-ESM1-2-LR",
+   "institution": "MPI-M",
+   "member": "r3i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MPI-M/MPI-ESM1-2-LR/historical/r3i1p1f1/day/pr/gn/v20190710/",
+   "shape": [
+    96,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp126/r3i1p1f1/day/pr/gn/v20190710/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp245/r3i1p1f1/day/pr/gn/v20190710/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp370/r3i1p1f1/day/pr/gn/v20190710/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp585/r3i1p1f1/day/pr/gn/v20190710/"
+   },
+   "parents": {
+    "ssp126": "r3i1p1f1",
+    "ssp245": "r3i1p1f1",
+    "ssp370": "r3i1p1f1",
+    "ssp585": "r3i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MPI-ESM1-2-LR",
+   "institution": "MPI-M",
+   "member": "r4i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MPI-M/MPI-ESM1-2-LR/historical/r4i1p1f1/day/pr/gn/v20190710/",
+   "shape": [
+    96,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp126/r4i1p1f1/day/pr/gn/v20190710/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp245/r4i1p1f1/day/pr/gn/v20190710/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp370/r4i1p1f1/day/pr/gn/v20190710/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp585/r4i1p1f1/day/pr/gn/v20190710/"
+   },
+   "parents": {
+    "ssp126": "r4i1p1f1",
+    "ssp245": "r4i1p1f1",
+    "ssp370": "r4i1p1f1",
+    "ssp585": "r4i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MPI-ESM1-2-LR",
+   "institution": "MPI-M",
+   "member": "r5i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MPI-M/MPI-ESM1-2-LR/historical/r5i1p1f1/day/pr/gn/v20190710/",
+   "shape": [
+    96,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp126/r5i1p1f1/day/pr/gn/v20190710/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp245/r5i1p1f1/day/pr/gn/v20190710/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp370/r5i1p1f1/day/pr/gn/v20190710/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp585/r5i1p1f1/day/pr/gn/v20190710/"
+   },
+   "parents": {
+    "ssp126": "r5i1p1f1",
+    "ssp245": "r5i1p1f1",
+    "ssp370": "r5i1p1f1",
+    "ssp585": "r5i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MPI-ESM1-2-LR",
+   "institution": "MPI-M",
+   "member": "r6i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MPI-M/MPI-ESM1-2-LR/historical/r6i1p1f1/day/pr/gn/v20190710/",
+   "shape": [
+    96,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp126/r6i1p1f1/day/pr/gn/v20190710/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp245/r6i1p1f1/day/pr/gn/v20190710/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp370/r6i1p1f1/day/pr/gn/v20190710/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp585/r6i1p1f1/day/pr/gn/v20190710/"
+   },
+   "parents": {
+    "ssp126": "r6i1p1f1",
+    "ssp245": "r6i1p1f1",
+    "ssp370": "r6i1p1f1",
+    "ssp585": "r6i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MPI-ESM1-2-LR",
+   "institution": "MPI-M",
+   "member": "r7i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MPI-M/MPI-ESM1-2-LR/historical/r7i1p1f1/day/pr/gn/v20190710/",
+   "shape": [
+    96,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp126/r7i1p1f1/day/pr/gn/v20190710/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp245/r7i1p1f1/day/pr/gn/v20190710/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp370/r7i1p1f1/day/pr/gn/v20190710/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp585/r7i1p1f1/day/pr/gn/v20190710/"
+   },
+   "parents": {
+    "ssp126": "r7i1p1f1",
+    "ssp245": "r7i1p1f1",
+    "ssp370": "r7i1p1f1",
+    "ssp585": "r7i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MPI-ESM1-2-LR",
+   "institution": "MPI-M",
+   "member": "r8i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MPI-M/MPI-ESM1-2-LR/historical/r8i1p1f1/day/pr/gn/v20190710/",
+   "shape": [
+    96,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp126/r8i1p1f1/day/pr/gn/v20190710/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp245/r8i1p1f1/day/pr/gn/v20190710/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp370/r8i1p1f1/day/pr/gn/v20190710/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp585/r8i1p1f1/day/pr/gn/v20190710/"
+   },
+   "parents": {
+    "ssp126": "r8i1p1f1",
+    "ssp245": "r8i1p1f1",
+    "ssp370": "r8i1p1f1",
+    "ssp585": "r8i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MPI-ESM1-2-LR",
+   "institution": "MPI-M",
+   "member": "r9i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MPI-M/MPI-ESM1-2-LR/historical/r9i1p1f1/day/pr/gn/v20190710/",
+   "shape": [
+    96,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp126/r9i1p1f1/day/pr/gn/v20190710/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp245/r9i1p1f1/day/pr/gn/v20190710/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp370/r9i1p1f1/day/pr/gn/v20190710/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp585/r9i1p1f1/day/pr/gn/v20190710/"
+   },
+   "parents": {
+    "ssp126": "r9i1p1f1",
+    "ssp245": "r9i1p1f1",
+    "ssp370": "r9i1p1f1",
+    "ssp585": "r9i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MPI-ESM1-2-LR",
+   "institution": "MPI-M",
+   "member": "r10i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MPI-M/MPI-ESM1-2-LR/historical/r10i1p1f1/day/pr/gn/v20190710/",
+   "shape": [
+    96,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp126/r10i1p1f1/day/pr/gn/v20190710/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp245/r10i1p1f1/day/pr/gn/v20190710/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp370/r10i1p1f1/day/pr/gn/v20190710/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MPI-M/MPI-ESM1-2-LR/ssp585/r10i1p1f1/day/pr/gn/v20190710/"
+   },
+   "parents": {
+    "ssp126": "r10i1p1f1",
+    "ssp245": "r10i1p1f1",
+    "ssp370": "r10i1p1f1",
+    "ssp585": "r10i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3",
+   "institution": "EC-Earth-Consortium",
+   "member": "r1i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r1i1p1f1/day/pr/gr/v20200310/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp126/r1i1p1f1/day/pr/gr/v20200310/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r1i1p1f1/day/pr/gr/v20200310/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp370/r1i1p1f1/day/pr/gr/v20200310/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp585/r1i1p1f1/day/pr/gr/v20200310/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3",
+   "institution": "EC-Earth-Consortium",
+   "member": "r2i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r2i1p1f1/day/pr/gr/v20200310/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r2i1p1f1/day/pr/gr/v20201215/"
+   },
+   "parents": {
+    "ssp245": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3",
+   "institution": "EC-Earth-Consortium",
+   "member": "r4i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r4i1p1f1/day/pr/gr/v20200425/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp126/r4i1p1f1/day/pr/gr/v20200425/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r4i1p1f1/day/pr/gr/v20200425/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp370/r4i1p1f1/day/pr/gr/v20200425/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp585/r4i1p1f1/day/pr/gr/v20200425/"
+   },
+   "parents": {
+    "ssp126": "r4i1p1f1",
+    "ssp245": "r4i1p1f1",
+    "ssp370": "r4i1p1f1",
+    "ssp585": "r4i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3",
+   "institution": "EC-Earth-Consortium",
+   "member": "r6i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r6i1p1f1/day/pr/gr/v20200201/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp126/r6i1p1f1/day/pr/gr/v20200201/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r6i1p1f1/day/pr/gr/v20200201/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp370/r6i1p1f1/day/pr/gr/v20200201/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp585/r6i1p1f1/day/pr/gr/v20200201/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3",
+   "institution": "EC-Earth-Consortium",
+   "member": "r7i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r7i1p1f1/day/pr/gr/v20201217/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r7i1p1f1/day/pr/gr/v20201217/"
+   },
+   "parents": {
+    "ssp245": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3",
+   "institution": "EC-Earth-Consortium",
+   "member": "r9i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r9i1p1f1/day/pr/gr/v20200201/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp126/r9i1p1f1/day/pr/gr/v20200514/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r9i1p1f1/day/pr/gr/v20200201/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp370/r9i1p1f1/day/pr/gr/v20200201/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp585/r9i1p1f1/day/pr/gr/v20200201/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3",
+   "institution": "EC-Earth-Consortium",
+   "member": "r10i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r10i1p1f1/day/pr/gr/v20201221/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r10i1p1f1/day/pr/gr/v20201221/"
+   },
+   "parents": {
+    "ssp245": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3",
+   "institution": "EC-Earth-Consortium",
+   "member": "r11i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r11i1p1f1/day/pr/gr/v20200201/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp126/r11i1p1f1/day/pr/gr/v20200201/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r11i1p1f1/day/pr/gr/v20200201/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp370/r11i1p1f1/day/pr/gr/v20200201/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp585/r11i1p1f1/day/pr/gr/v20200201/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {
+    "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r11i1p1f1/day/pr/gr/v20200201/": 1
+   }
+  },
+  {
+   "model": "EC-Earth3",
+   "institution": "EC-Earth-Consortium",
+   "member": "r12i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r12i1p1f1/day/pr/gr/v20201230/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r12i1p1f1/day/pr/gr/v20201230/"
+   },
+   "parents": {
+    "ssp245": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3",
+   "institution": "EC-Earth-Consortium",
+   "member": "r14i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r14i1p1f1/day/pr/gr/v20201218/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r14i1p1f1/day/pr/gr/v20201218/"
+   },
+   "parents": {
+    "ssp245": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3",
+   "institution": "EC-Earth-Consortium",
+   "member": "r15i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r15i1p1f1/day/pr/gr/v20200201/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp126/r15i1p1f1/day/pr/gr/v20200201/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp370/r15i1p1f1/day/pr/gr/v20200201/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp585/r15i1p1f1/day/pr/gr/v20200201/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {
+    "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r15i1p1f1/day/pr/gr/v20200201/": 1
+   }
+  },
+  {
+   "model": "UKESM1-0-LL",
+   "institution": "MOHC",
+   "member": "r1i1p1f2",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MOHC/UKESM1-0-LL/historical/r1i1p1f2/day/pr/gn/v20190627/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp126/r1i1p1f2/day/pr/gn/v20190708/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp245/r1i1p1f2/day/pr/gn/v20190715/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp370/r1i1p1f2/day/pr/gn/v20190726/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp585/r1i1p1f2/day/pr/gn/v20190726/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f2",
+    "ssp245": "r1i1p1f2",
+    "ssp370": "r1i1p1f2",
+    "ssp585": "r1i1p1f2"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "UKESM1-0-LL",
+   "institution": "MOHC",
+   "member": "r2i1p1f2",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MOHC/UKESM1-0-LL/historical/r2i1p1f2/day/pr/gn/v20190708/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp126/r2i1p1f2/day/pr/gn/v20190801/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp245/r2i1p1f2/day/pr/gn/v20190718/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp370/r2i1p1f2/day/pr/gn/v20190718/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp585/r2i1p1f2/day/pr/gn/v20190726/"
+   },
+   "parents": {
+    "ssp126": "r2i1p1f2",
+    "ssp245": "r2i1p1f2",
+    "ssp370": "r2i1p1f2",
+    "ssp585": "r2i1p1f2"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "UKESM1-0-LL",
+   "institution": "MOHC",
+   "member": "r3i1p1f2",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MOHC/UKESM1-0-LL/historical/r3i1p1f2/day/pr/gn/v20190708/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp126/r3i1p1f2/day/pr/gn/v20190724/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp245/r3i1p1f2/day/pr/gn/v20190801/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp370/r3i1p1f2/day/pr/gn/v20190726/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp585/r3i1p1f2/day/pr/gn/v20190813/"
+   },
+   "parents": {
+    "ssp126": "r3i1p1f2",
+    "ssp245": "r3i1p1f2",
+    "ssp370": "r3i1p1f2",
+    "ssp585": "r3i1p1f2"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "UKESM1-0-LL",
+   "institution": "MOHC",
+   "member": "r4i1p1f2",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MOHC/UKESM1-0-LL/historical/r4i1p1f2/day/pr/gn/v20190708/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp126/r4i1p1f2/day/pr/gn/v20190815/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp245/r4i1p1f2/day/pr/gn/v20190815/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp370/r4i1p1f2/day/pr/gn/v20190813/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp585/r4i1p1f2/day/pr/gn/v20190814/"
+   },
+   "parents": {
+    "ssp126": "r4i1p1f2",
+    "ssp245": "r4i1p1f2",
+    "ssp370": "r4i1p1f2",
+    "ssp585": "r4i1p1f2"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "UKESM1-0-LL",
+   "institution": "MOHC",
+   "member": "r8i1p1f2",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MOHC/UKESM1-0-LL/historical/r8i1p1f2/day/pr/gn/v20190708/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp126/r8i1p1f2/day/pr/gn/v20190801/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp245/r8i1p1f2/day/pr/gn/v20190801/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp370/r8i1p1f2/day/pr/gn/v20190813/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp585/r8i1p1f2/day/pr/gn/v20190906/"
+   },
+   "parents": {
+    "ssp126": "r8i1p1f2",
+    "ssp245": "r8i1p1f2",
+    "ssp370": "r8i1p1f2",
+    "ssp585": "r8i1p1f2"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "UKESM1-0-LL",
+   "institution": "MOHC",
+   "member": "r9i1p1f2",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MOHC/UKESM1-0-LL/historical/r9i1p1f2/day/pr/gn/v20191015/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp126/r9i1p1f2/day/pr/gn/v20200708/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp245/r9i1p1f2/day/pr/gn/v20210507/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp370/r9i1p1f2/day/pr/gn/v20200602/"
+   },
+   "parents": {
+    "ssp126": "r9i1p1f2",
+    "ssp245": "r9i1p1f2",
+    "ssp370": "r9i1p1f2"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "UKESM1-0-LL",
+   "institution": "MOHC",
+   "member": "r10i1p1f2",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MOHC/UKESM1-0-LL/historical/r10i1p1f2/day/pr/gn/v20191213/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp126/r10i1p1f2/day/pr/gn/v20200706/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp370/r10i1p1f2/day/pr/gn/v20200603/"
+   },
+   "parents": {
+    "ssp126": "r10i1p1f2",
+    "ssp370": "r10i1p1f2"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "UKESM1-0-LL",
+   "institution": "MOHC",
+   "member": "r11i1p1f2",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MOHC/UKESM1-0-LL/historical/r11i1p1f2/day/pr/gn/v20191209/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp126/r11i1p1f2/day/pr/gn/v20200710/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp245/r11i1p1f2/day/pr/gn/v20210507/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp370/r11i1p1f2/day/pr/gn/v20200603/"
+   },
+   "parents": {
+    "ssp126": "r11i1p1f2",
+    "ssp245": "r11i1p1f2",
+    "ssp370": "r11i1p1f2"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "UKESM1-0-LL",
+   "institution": "MOHC",
+   "member": "r12i1p1f2",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MOHC/UKESM1-0-LL/historical/r12i1p1f2/day/pr/gn/v20191210/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp126/r12i1p1f2/day/pr/gn/v20200710/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp370/r12i1p1f2/day/pr/gn/v20200604/"
+   },
+   "parents": {
+    "ssp126": "r12i1p1f2",
+    "ssp370": "r12i1p1f2"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "UKESM1-0-LL",
+   "institution": "MOHC",
+   "member": "r16i1p1f2",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MOHC/UKESM1-0-LL/historical/r16i1p1f2/day/pr/gn/v20191209/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp126/r16i1p1f2/day/pr/gn/v20200710/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp245/r16i1p1f2/day/pr/gn/v20210507/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp370/r16i1p1f2/day/pr/gn/v20200608/"
+   },
+   "parents": {
+    "ssp126": "r16i1p1f2",
+    "ssp245": "r16i1p1f2",
+    "ssp370": "r16i1p1f2"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "UKESM1-0-LL",
+   "institution": "MOHC",
+   "member": "r17i1p1f2",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MOHC/UKESM1-0-LL/historical/r17i1p1f2/day/pr/gn/v20191115/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp245/r17i1p1f2/day/pr/gn/v20210507/"
+   },
+   "parents": {
+    "ssp245": "r17i1p1f2"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "UKESM1-0-LL",
+   "institution": "MOHC",
+   "member": "r18i1p1f2",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MOHC/UKESM1-0-LL/historical/r18i1p1f2/day/pr/gn/v20191119/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp245/r18i1p1f2/day/pr/gn/v20210507/"
+   },
+   "parents": {
+    "ssp245": "r18i1p1f2"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MIROC6",
+   "institution": "MIROC",
+   "member": "r1i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MIROC/MIROC6/historical/r1i1p1f1/day/pr/gn/v20191016/",
+   "shape": [
+    128,
+    256
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp126/r1i1p1f1/day/pr/gn/v20191016/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r1i1p1f1/day/pr/gn/v20191016/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp370/r1i1p1f1/day/pr/gn/v20191016/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp585/r1i1p1f1/day/pr/gn/v20191016/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MIROC6",
+   "institution": "MIROC",
+   "member": "r2i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MIROC/MIROC6/historical/r2i1p1f1/day/pr/gn/v20191016/",
+   "shape": [
+    128,
+    256
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp126/r2i1p1f1/day/pr/gn/v20191016/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r2i1p1f1/day/pr/gn/v20191016/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp370/r2i1p1f1/day/pr/gn/v20191016/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp585/r2i1p1f1/day/pr/gn/v20191016/"
+   },
+   "parents": {
+    "ssp126": "r2i1p1f1",
+    "ssp245": "r2i1p1f1",
+    "ssp370": "r2i1p1f1",
+    "ssp585": "r2i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MIROC6",
+   "institution": "MIROC",
+   "member": "r3i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MIROC/MIROC6/historical/r3i1p1f1/day/pr/gn/v20191016/",
+   "shape": [
+    128,
+    256
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp126/r3i1p1f1/day/pr/gn/v20191016/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r3i1p1f1/day/pr/gn/v20191016/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp370/r3i1p1f1/day/pr/gn/v20191016/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp585/r3i1p1f1/day/pr/gn/v20191016/"
+   },
+   "parents": {
+    "ssp126": "r3i1p1f1",
+    "ssp245": "r3i1p1f1",
+    "ssp370": "r3i1p1f1",
+    "ssp585": "r3i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MIROC6",
+   "institution": "MIROC",
+   "member": "r4i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MIROC/MIROC6/historical/r4i1p1f1/day/pr/gn/v20191016/",
+   "shape": [
+    128,
+    256
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp126/r4i1p1f1/day/pr/gn/v20200817/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp585/r4i1p1f1/day/pr/gn/v20200623/"
+   },
+   "parents": {
+    "ssp126": "r4i1p1f1",
+    "ssp585": "r4i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MIROC6",
+   "institution": "MIROC",
+   "member": "r5i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MIROC/MIROC6/historical/r5i1p1f1/day/pr/gn/v20191016/",
+   "shape": [
+    128,
+    256
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp126/r5i1p1f1/day/pr/gn/v20200817/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp585/r5i1p1f1/day/pr/gn/v20200623/"
+   },
+   "parents": {
+    "ssp126": "r5i1p1f1",
+    "ssp585": "r5i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MIROC6",
+   "institution": "MIROC",
+   "member": "r6i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MIROC/MIROC6/historical/r6i1p1f1/day/pr/gn/v20191016/",
+   "shape": [
+    128,
+    256
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp126/r6i1p1f1/day/pr/gn/v20200817/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp585/r6i1p1f1/day/pr/gn/v20200623/"
+   },
+   "parents": {
+    "ssp126": "r6i1p1f1",
+    "ssp585": "r6i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MIROC6",
+   "institution": "MIROC",
+   "member": "r7i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MIROC/MIROC6/historical/r7i1p1f1/day/pr/gn/v20191016/",
+   "shape": [
+    128,
+    256
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp126/r7i1p1f1/day/pr/gn/v20200817/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp585/r7i1p1f1/day/pr/gn/v20200623/"
+   },
+   "parents": {
+    "ssp126": "r7i1p1f1",
+    "ssp585": "r7i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MIROC6",
+   "institution": "MIROC",
+   "member": "r8i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MIROC/MIROC6/historical/r8i1p1f1/day/pr/gn/v20191016/",
+   "shape": [
+    128,
+    256
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp126/r8i1p1f1/day/pr/gn/v20200817/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp585/r8i1p1f1/day/pr/gn/v20200623/"
+   },
+   "parents": {
+    "ssp126": "r8i1p1f1",
+    "ssp585": "r8i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MIROC6",
+   "institution": "MIROC",
+   "member": "r9i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MIROC/MIROC6/historical/r9i1p1f1/day/pr/gn/v20191016/",
+   "shape": [
+    128,
+    256
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp126/r9i1p1f1/day/pr/gn/v20200817/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp585/r9i1p1f1/day/pr/gn/v20200623/"
+   },
+   "parents": {
+    "ssp126": "r9i1p1f1",
+    "ssp585": "r9i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "MIROC6",
+   "institution": "MIROC",
+   "member": "r10i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/MIROC/MIROC6/historical/r10i1p1f1/day/pr/gn/v20191016/",
+   "shape": [
+    128,
+    256
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp126/r10i1p1f1/day/pr/gn/v20200817/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp585/r10i1p1f1/day/pr/gn/v20200623/"
+   },
+   "parents": {
+    "ssp126": "r10i1p1f1",
+    "ssp585": "r10i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r1i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r1i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp126/r1i1p1f1/day/pr/gr/v20190903/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp245/r1i1p1f1/day/pr/gr/v20190119/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp370/r1i1p1f1/day/pr/gr/v20190119/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp585/r1i1p1f1/day/pr/gr/v20190903/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r2i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r2i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp126/r2i1p1f1/day/pr/gr/v20190410/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp245/r2i1p1f1/day/pr/gr/v20190516/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp370/r2i1p1f1/day/pr/gr/v20190119/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp585/r2i1p1f1/day/pr/gr/v20191121/"
+   },
+   "parents": {
+    "ssp126": "r2i1p1f1",
+    "ssp245": "r2i1p1f1",
+    "ssp370": "r2i1p1f1",
+    "ssp585": "r2i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r3i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r3i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp126/r3i1p1f1/day/pr/gr/v20190410/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp245/r3i1p1f1/day/pr/gr/v20191121/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp370/r3i1p1f1/day/pr/gr/v20190119/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp585/r3i1p1f1/day/pr/gr/v20191121/"
+   },
+   "parents": {
+    "ssp126": "r3i1p1f1",
+    "ssp245": "r3i1p1f1",
+    "ssp370": "r3i1p1f1",
+    "ssp585": "r3i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r4i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r4i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp126/r4i1p1f1/day/pr/gr/v20191121/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp245/r4i1p1f1/day/pr/gr/v20191121/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp370/r4i1p1f1/day/pr/gr/v20190119/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp585/r4i1p1f1/day/pr/gr/v20191122/"
+   },
+   "parents": {
+    "ssp126": "r4i1p1f1",
+    "ssp245": "r4i1p1f1",
+    "ssp370": "r4i1p1f1",
+    "ssp585": "r4i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r5i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r5i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp245/r5i1p1f1/day/pr/gr/v20191003/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp370/r5i1p1f1/day/pr/gr/v20190119/"
+   },
+   "parents": {
+    "ssp245": "r5i1p1f1",
+    "ssp370": "r5i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r6i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r6i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp126/r6i1p1f1/day/pr/gr/v20191121/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp245/r6i1p1f1/day/pr/gr/v20191121/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp370/r6i1p1f1/day/pr/gr/v20190119/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp585/r6i1p1f1/day/pr/gr/v20191121/"
+   },
+   "parents": {
+    "ssp126": "r6i1p1f1",
+    "ssp245": "r6i1p1f1",
+    "ssp370": "r6i1p1f1",
+    "ssp585": "r6i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r7i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r7i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp370/r7i1p1f1/day/pr/gr/v20190119/"
+   },
+   "parents": {
+    "ssp370": "r7i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r8i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r8i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp370/r8i1p1f1/day/pr/gr/v20190119/"
+   },
+   "parents": {
+    "ssp370": "r8i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r9i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r9i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp370/r9i1p1f1/day/pr/gr/v20190119/"
+   },
+   "parents": {
+    "ssp370": "r9i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r10i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r10i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp245/r10i1p1f1/day/pr/gr/v20191003/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp370/r10i1p1f1/day/pr/gr/v20190119/"
+   },
+   "parents": {
+    "ssp245": "r10i1p1f1",
+    "ssp370": "r10i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r11i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r11i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp245/r11i1p1f1/day/pr/gr/v20191003/"
+   },
+   "parents": {
+    "ssp245": "r11i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r14i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r14i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp126/r14i1p1f1/day/pr/gr/v20191121/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp245/r14i1p1f1/day/pr/gr/v20191121/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp585/r14i1p1f1/day/pr/gr/v20191121/"
+   },
+   "parents": {
+    "ssp126": "r14i1p1f1",
+    "ssp245": "r14i1p1f1",
+    "ssp585": "r14i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "IPSL-CM6A-LR",
+   "institution": "IPSL",
+   "member": "r22i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/IPSL/IPSL-CM6A-LR/historical/r22i1p1f1/day/pr/gr/v20180803/",
+   "shape": [
+    143,
+    144
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/IPSL/IPSL-CM6A-LR/ssp245/r22i1p1f1/day/pr/gr/v20200218/"
+   },
+   "parents": {
+    "ssp245": "r22i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3-Veg",
+   "institution": "EC-Earth-Consortium",
+   "member": "r1i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3-Veg/historical/r1i1p1f1/day/pr/gr/v20200225/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp126/r1i1p1f1/day/pr/gr/v20200225/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp245/r1i1p1f1/day/pr/gr/v20200225/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp370/r1i1p1f1/day/pr/gr/v20200225/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp585/r1i1p1f1/day/pr/gr/v20200225/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3-Veg",
+   "institution": "EC-Earth-Consortium",
+   "member": "r2i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3-Veg/historical/r2i1p1f1/day/pr/gr/v20200226/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp126/r2i1p1f1/day/pr/gr/v20200226/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp245/r2i1p1f1/day/pr/gr/v20200226/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp370/r2i1p1f1/day/pr/gr/v20200226/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp585/r2i1p1f1/day/pr/gr/v20200226/"
+   },
+   "parents": {
+    "ssp126": "r2i1p1f1",
+    "ssp245": "r2i1p1f1",
+    "ssp370": "r2i1p1f1",
+    "ssp585": "r2i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3-Veg",
+   "institution": "EC-Earth-Consortium",
+   "member": "r3i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3-Veg/historical/r3i1p1f1/day/pr/gr/v20200226/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp126/r3i1p1f1/day/pr/gr/v20200515/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp245/r3i1p1f1/day/pr/gr/v20200515/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp370/r3i1p1f1/day/pr/gr/v20200515/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp585/r3i1p1f1/day/pr/gr/v20200515/"
+   },
+   "parents": {
+    "ssp126": "r3i1p1f1",
+    "ssp245": "r3i1p1f1",
+    "ssp370": "r3i1p1f1",
+    "ssp585": "r3i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3-Veg",
+   "institution": "EC-Earth-Consortium",
+   "member": "r4i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3-Veg/historical/r4i1p1f1/day/pr/gr/v20200425/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp126/r4i1p1f1/day/pr/gr/v20200425/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp245/r4i1p1f1/day/pr/gr/v20200425/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp370/r4i1p1f1/day/pr/gr/v20200425/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp585/r4i1p1f1/day/pr/gr/v20200425/"
+   },
+   "parents": {
+    "ssp126": "r4i1p1f1",
+    "ssp245": "r4i1p1f1",
+    "ssp370": "r4i1p1f1",
+    "ssp585": "r4i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3-Veg",
+   "institution": "EC-Earth-Consortium",
+   "member": "r5i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3-Veg/historical/r5i1p1f1/day/pr/gr/v20210615/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp245/r5i1p1f1/day/pr/gr/v20210616/"
+   },
+   "parents": {
+    "ssp245": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3-Veg",
+   "institution": "EC-Earth-Consortium",
+   "member": "r6i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3-Veg/historical/r6i1p1f1/day/pr/gr/v20200130/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp126/r6i1p1f1/day/pr/gr/v20200130/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp245/r6i1p1f1/day/pr/gr/v20200130/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp585/r6i1p1f1/day/pr/gr/v20200130/"
+   },
+   "parents": {
+    "ssp126": "r6i1p1f1",
+    "ssp245": "r6i1p1f1",
+    "ssp585": "r6i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3-Veg",
+   "institution": "EC-Earth-Consortium",
+   "member": "r12i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3-Veg/historical/r12i1p1f1/day/pr/gr/v20200925/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp126/r12i1p1f1/day/pr/gr/v20200925/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp245/r12i1p1f1/day/pr/gr/v20200925/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp585/r12i1p1f1/day/pr/gr/v20200925/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "EC-Earth3-Veg",
+   "institution": "EC-Earth-Consortium",
+   "member": "r14i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3-Veg/historical/r14i1p1f1/day/pr/gr/v20200925/",
+   "shape": [
+    256,
+    512
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp126/r14i1p1f1/day/pr/gr/v20200925/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp245/r14i1p1f1/day/pr/gr/v20200925/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3-Veg/ssp585/r14i1p1f1/day/pr/gr/v20200925/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "ACCESS-CM2",
+   "institution": "CSIRO-ARCCSS",
+   "member": "r1i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CSIRO-ARCCSS/ACCESS-CM2/historical/r1i1p1f1/day/pr/gn/v20191108/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp245/r1i1p1f1/day/pr/gn/v20191108/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp370/r1i1p1f1/day/pr/gn/v20191108/"
+   },
+   "parents": {
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "ACCESS-CM2",
+   "institution": "CSIRO-ARCCSS",
+   "member": "r2i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CSIRO-ARCCSS/ACCESS-CM2/historical/r2i1p1f1/day/pr/gn/v20191125/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp126/r2i1p1f1/day/pr/gn/v20200303/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp245/r2i1p1f1/day/pr/gn/v20200303/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp370/r2i1p1f1/day/pr/gn/v20200303/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp585/r2i1p1f1/day/pr/gn/v20200303/"
+   },
+   "parents": {
+    "ssp126": "r2i1p1f1",
+    "ssp245": "r2i1p1f1",
+    "ssp370": "r2i1p1f1",
+    "ssp585": "r2i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "ACCESS-CM2",
+   "institution": "CSIRO-ARCCSS",
+   "member": "r3i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CSIRO-ARCCSS/ACCESS-CM2/historical/r3i1p1f1/day/pr/gn/v20200306/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp126/r3i1p1f1/day/pr/gn/v20200428/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp245/r3i1p1f1/day/pr/gn/v20200428/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp370/r3i1p1f1/day/pr/gn/v20200428/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp585/r3i1p1f1/day/pr/gn/v20200428/"
+   },
+   "parents": {
+    "ssp126": "r3i1p1f1",
+    "ssp245": "r3i1p1f1",
+    "ssp370": "r3i1p1f1",
+    "ssp585": "r3i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "ACCESS-CM2",
+   "institution": "CSIRO-ARCCSS",
+   "member": "r4i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CSIRO-ARCCSS/ACCESS-CM2/historical/r4i1p1f1/day/pr/gn/v20210607/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp245/r4i1p1f1/day/pr/gn/v20210712/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp585/r4i1p1f1/day/pr/gn/v20210712/"
+   },
+   "parents": {
+    "ssp245": "r4i1p1f1",
+    "ssp585": "r4i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "ACCESS-CM2",
+   "institution": "CSIRO-ARCCSS",
+   "member": "r5i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/CSIRO-ARCCSS/ACCESS-CM2/historical/r5i1p1f1/day/pr/gn/v20210607/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "proleptic_gregorian",
+   "scenarios": {
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp245/r5i1p1f1/day/pr/gn/v20210802/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp585/r5i1p1f1/day/pr/gn/v20210802/"
+   },
+   "parents": {
+    "ssp245": "r5i1p1f1",
+    "ssp585": "r5i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "CESM2",
+   "institution": "NCAR",
+   "member": "r4i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/NCAR/CESM2/historical/r4i1p1f1/day/pr/gn/v20190401/",
+   "shape": [
+    192,
+    288
+   ],
+   "calendar": "noleap",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/NCAR/CESM2/ssp126/r4i1p1f1/day/pr/gn/v20200528/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/NCAR/CESM2/ssp245/r4i1p1f1/day/pr/gn/v20200528/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/NCAR/CESM2/ssp370/r4i1p1f1/day/pr/gn/v20200528/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/NCAR/CESM2/ssp585/r4i1p1f1/day/pr/gn/v20200528/"
+   },
+   "parents": {
+    "ssp126": "r4i1p1f1",
+    "ssp245": "r4i1p1f1",
+    "ssp370": "r4i1p1f1",
+    "ssp585": "r4i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "CESM2",
+   "institution": "NCAR",
+   "member": "r11i1p1f1",
+   "grid": "gn",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/NCAR/CESM2/historical/r11i1p1f1/day/pr/gn/v20190514/",
+   "shape": [
+    192,
+    288
+   ],
+   "calendar": "noleap",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/NCAR/CESM2/ssp126/r11i1p1f1/day/pr/gn/v20200528/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/NCAR/CESM2/ssp245/r11i1p1f1/day/pr/gn/v20200528/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/NCAR/CESM2/ssp370/r11i1p1f1/day/pr/gn/v20200528/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/NCAR/CESM2/ssp585/r11i1p1f1/day/pr/gn/v20200528/"
+   },
+   "parents": {
+    "ssp126": "r11i1p1f1",
+    "ssp245": "r11i1p1f1",
+    "ssp370": "r11i1p1f1",
+    "ssp585": "r11i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "KACE-1-0-G",
+   "institution": "NIMS-KMA",
+   "member": "r1i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/NIMS-KMA/KACE-1-0-G/historical/r1i1p1f1/day/pr/gr/v20190911/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/KACE-1-0-G/ssp126/r1i1p1f1/day/pr/gr/v20191011/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/KACE-1-0-G/ssp245/r1i1p1f1/day/pr/gr/v20191125/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/KACE-1-0-G/ssp370/r1i1p1f1/day/pr/gr/v20191125/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/KACE-1-0-G/ssp585/r1i1p1f1/day/pr/gr/v20190920/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "KACE-1-0-G",
+   "institution": "NIMS-KMA",
+   "member": "r2i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/NIMS-KMA/KACE-1-0-G/historical/r2i1p1f1/day/pr/gr/v20190920/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/KACE-1-0-G/ssp126/r2i1p1f1/day/pr/gr/v20191011/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/KACE-1-0-G/ssp245/r2i1p1f1/day/pr/gr/v20191125/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/KACE-1-0-G/ssp370/r2i1p1f1/day/pr/gr/v20191128/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/KACE-1-0-G/ssp585/r2i1p1f1/day/pr/gr/v20191011/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  },
+  {
+   "model": "KACE-1-0-G",
+   "institution": "NIMS-KMA",
+   "member": "r3i1p1f1",
+   "grid": "gr",
+   "historical": "s3://cmip6-pds/CMIP6/CMIP/NIMS-KMA/KACE-1-0-G/historical/r3i1p1f1/day/pr/gr/v20190920/",
+   "shape": [
+    144,
+    192
+   ],
+   "calendar": "360_day",
+   "scenarios": {
+    "ssp126": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/KACE-1-0-G/ssp126/r3i1p1f1/day/pr/gr/v20191011/",
+    "ssp245": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/KACE-1-0-G/ssp245/r3i1p1f1/day/pr/gr/v20191125/",
+    "ssp370": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/KACE-1-0-G/ssp370/r3i1p1f1/day/pr/gr/v20191128/",
+    "ssp585": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/KACE-1-0-G/ssp585/r3i1p1f1/day/pr/gr/v20191013/"
+   },
+   "parents": {
+    "ssp126": "r1i1p1f1",
+    "ssp245": "r1i1p1f1",
+    "ssp370": "r1i1p1f1",
+    "ssp585": "r1i1p1f1"
+   },
+   "shift_days": {}
+  }
+ ],
+ "incomplete": [
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r13i1p1f1/day/pr/gr/v20200201/",
+   "first": "1850-01-01",
+   "last": "2014-12-31",
+   "steps": 60264,
+   "contiguous": false,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r120i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r114i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r102i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r101i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r118i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r119i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r107i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r106i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r109i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r110i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r111i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r112i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r113i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r115i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r117i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r122i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r121i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r116i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r134i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r140i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r143i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r142i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r125i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r135i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r124i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r126i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r130i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r133i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r132i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r136i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r131i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r141i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r138i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r104i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r137i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r149i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r150i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r145i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r148i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r147i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r127i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r129i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r128i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r144i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r146i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r105i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r103i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r123i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r108i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/CMIP/EC-Earth-Consortium/EC-Earth3/historical/r139i1p1f1/day/pr/gr/v20200412/",
+   "first": "1970-01-01",
+   "last": "2014-12-31",
+   "steps": 16436,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r41i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r29i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r15i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r48i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r12i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r47i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r11i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r10i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r30i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r44i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r46i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r28i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r45i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r6i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r5i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r13i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r36i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r34i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r37i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r39i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r49i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r7i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r40i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r35i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r50i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r38i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r4i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r19i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r14i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r20i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r23i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r43i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r42i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r31i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r33i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r21i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r24i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r32i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r25i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r17i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r27i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r16i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r22i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r18i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r26i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r8i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MIROC/MIROC6/ssp245/r9i1p1f1/day/pr/gn/v20200623/",
+   "first": "2015-01-01",
+   "last": "2039-12-31",
+   "steps": 9131,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r2i1p1f2/day/pr/gr/v20201015/",
+   "first": "2015-01-01",
+   "last": "2050-12-31",
+   "steps": 13149,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r27i1p1f2/day/pr/gr/v20201015/",
+   "first": "2020-01-01",
+   "last": "2024-12-31",
+   "steps": 1827,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r25i1p1f2/day/pr/gr/v20201015/",
+   "first": "2020-01-01",
+   "last": "2024-12-31",
+   "steps": 1827,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r29i1p1f2/day/pr/gr/v20201015/",
+   "first": "2020-01-01",
+   "last": "2024-12-31",
+   "steps": 1827,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r17i1p1f2/day/pr/gr/v20201015/",
+   "first": "2020-01-01",
+   "last": "2050-12-31",
+   "steps": 11323,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r8i1p1f2/day/pr/gr/v20201015/",
+   "first": "2020-01-01",
+   "last": "2050-12-31",
+   "steps": 11323,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r19i1p1f2/day/pr/gr/v20201015/",
+   "first": "2020-01-01",
+   "last": "2050-12-31",
+   "steps": 11323,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r30i1p1f2/day/pr/gr/v20201015/",
+   "first": "2020-01-01",
+   "last": "2024-12-31",
+   "steps": 1827,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r12i1p1f2/day/pr/gr/v20201015/",
+   "first": "2020-01-01",
+   "last": "2050-12-31",
+   "steps": 11323,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r1i1p1f2/day/pr/gr/v20201015/",
+   "first": "2020-01-01",
+   "last": "2050-12-31",
+   "steps": 11323,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r21i1p1f2/day/pr/gr/v20201015/",
+   "first": "2020-01-01",
+   "last": "2024-12-31",
+   "steps": 1827,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r15i1p1f2/day/pr/gr/v20201015/",
+   "first": "2020-01-01",
+   "last": "2050-12-31",
+   "steps": 11323,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r23i1p1f2/day/pr/gr/v20201015/",
+   "first": "2020-01-01",
+   "last": "2024-12-31",
+   "steps": 1827,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp245/r10i1p1f2/day/pr/gn/v20201104/",
+   "first": "2019-01-01",
+   "last": "2050-12-30",
+   "steps": 11520,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/MOHC/UKESM1-0-LL/ssp245/r12i1p1f2/day/pr/gn/v20201113/",
+   "first": "2019-01-01",
+   "last": "2050-12-30",
+   "steps": 11520,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r7i1p1f2/day/pr/gr/v20210218/",
+   "first": "2015-01-01",
+   "last": "2050-12-31",
+   "steps": 13149,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp585/r1i1p1f1/day/pr/gn/v20210317/",
+   "first": "2251-01-01",
+   "last": "2300-12-31",
+   "steps": 18262,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/CSIRO-ARCCSS/ACCESS-CM2/ssp126/r1i1p1f1/day/pr/gn/v20210317/",
+   "first": "2251-01-01",
+   "last": "2300-12-31",
+   "steps": 18262,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r20i1p1f2/day/pr/gr/v20210407/",
+   "first": "2015-01-01",
+   "last": "2050-12-31",
+   "steps": 13149,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r10i1p1f2/day/pr/gr/v20210407/",
+   "first": "2015-01-01",
+   "last": "2050-12-31",
+   "steps": 13149,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r16i1p1f2/day/pr/gr/v20210407/",
+   "first": "2015-01-01",
+   "last": "2050-12-31",
+   "steps": 13149,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r4i1p1f2/day/pr/gr/v20210407/",
+   "first": "2020-01-01",
+   "last": "2050-12-31",
+   "steps": 11323,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r18i1p1f2/day/pr/gr/v20210407/",
+   "first": "2015-01-01",
+   "last": "2050-12-31",
+   "steps": 13149,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r28i1p1f2/day/pr/gr/v20210407/",
+   "first": "2015-01-01",
+   "last": "2050-12-31",
+   "steps": 13149,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r26i1p1f2/day/pr/gr/v20210407/",
+   "first": "2015-01-01",
+   "last": "2050-12-31",
+   "steps": 13149,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r13i1p1f2/day/pr/gr/v20210407/",
+   "first": "2015-01-01",
+   "last": "2050-12-31",
+   "steps": 13149,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r22i1p1f2/day/pr/gr/v20210407/",
+   "first": "2015-01-01",
+   "last": "2050-12-31",
+   "steps": 13149,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/EC-Earth-Consortium/EC-Earth3/ssp245/r24i1p1f2/day/pr/gr/v20210407/",
+   "first": "2015-01-01",
+   "last": "2050-12-31",
+   "steps": 13149,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/UKESM1-0-LL/ssp585/r15i1p1f2/day/pr/gn/v20210428/",
+   "first": "2015-01-01",
+   "last": "2099-12-30",
+   "steps": 30600,
+   "contiguous": true,
+   "error": null
+  },
+  {
+   "store": "s3://cmip6-pds/CMIP6/ScenarioMIP/NIMS-KMA/UKESM1-0-LL/ssp585/r13i1p1f2/day/pr/gn/v20210428/",
+   "first": "2015-01-01",
+   "last": "2099-12-30",
+   "steps": 30600,
+   "contiguous": true,
+   "error": null
+  }
+ ]
+}

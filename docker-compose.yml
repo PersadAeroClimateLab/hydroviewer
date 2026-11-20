@@ -68,3 +68,22 @@ services:
     volumes:
       - ./prep:/prep:ro
 
+
+  # The real-data pipeline (docs/llm/PREP_PIPELINE_PLAN.md, prep/pipeline/README.md): cmip6-pds daily pr to the
+  # bucket in $DATA_DIR, work files in $WORK_DIR. Mounts prep/, so edits need no rebuild and `select` writes
+  # prep/pipeline/runs.json into the repo:  docker compose --profile prep run --rm pipeline all
+  pipeline:
+    profiles: [prep]
+    build:
+      context: prep
+      dockerfile: pipeline/Dockerfile
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment: [HTTP_PROXY, HTTPS_PROXY, NO_PROXY]
+    volumes:
+      - ./prep:/prep
+      - ${DATA_DIR:-./data}:/data
+      - ${WORK_DIR:-./work}:/work
