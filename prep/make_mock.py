@@ -10,64 +10,33 @@ frequency: PRCPTOT, SDII, Rx1day, Rx5day, R95p, R99p, R10mm, R20mm, CDD, CWD (an
 its own bias and climate sensitivity, each scenario its own forcing after 2015, and each member its own
 year-to-year variability. Ensemble statistics are computed from the members, as real prep will do.
 
-Writes, under the CMIP6 key path:
-- per model and scenario, the first --map-members members: <member>/annual.zarr with each metric (year, lat, lon)
-  and its global mean (year);
-- per model and scenario, ensemble/annual.zarr: the mean of all members, `<metric>_agreement` and
-  `<metric>_spread` across them, and the mean's global mean;
-- per scenario, multimodel/<scenario>/annual.zarr: the mean of the model means, with agreement and spread across
-  models;
-- members.zarr: every member's global mean (member run, year) and every ensemble mean's (run, year), for plumes;
-- catalog.json, which lists all of it.
-
-Change (for agreement and spread) is measured from each run's own 1961-1990 mean. Re-running replaces a previous
-mock in --out; it refuses to write over a catalog that is not a mock's.
+Writes the layout in bucket.py (shared with the real-data pipeline), with map stores for the first --map-members
+members of each model and scenario. Re-running replaces a previous mock in --out; it refuses to write over a
+catalog that is not a mock's.
 """
 
 import argparse
 import json
 import shutil
 import time
-import warnings
 import zlib
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import numpy as np
-import xarray as xr
-from zarr.codecs import GzipCodec
 
-YEARS = np.arange(1950, 2101)
-LON = np.arange(-179.5, 180)
-LAT = np.arange(-89.5, 90)
-RAD = np.pi / 180
-BASELINE = (YEARS >= 1961) & (YEARS <= 1990)
+from bucket import LAT, LON, METRICS, RAD, SCENARIOS, YEARS, Spread, finish, member_variables, multimodel, statistics, write
+
 ENSEMBLES = Path(__file__).with_name("mock_ensembles.json")
 
-# id, label, forcing after 2015 relative to SSP2-4.5
-SCENARIOS = [("ssp126", "SSP1-2.6", 0.45), ("ssp245", "SSP2-4.5", 1.0), ("ssp370", "SSP3-7.0", 1.45), ("ssp585", "SSP5-8.5", 1.9)]
-# id, name (no commas: the app cuts names at the first one), group, units, display range of the field, display
-# range of the spread (its stipple threshold is half). ETCCDI indices by their short names.
-TOTALS, EXTREMES, DAYS, SPELLS = "Totals and intensity", "Extremes", "Heavy-precipitation days", "Spells"
-METRICS = [
-    ("pr", "Precipitation", TOTALS, "mm/day", [0, 14], 1.6),  # the annual mean
-    ("prcptot", "Wet-day total (PRCPTOT)", TOTALS, "mm", [0, 5000], 600),
-    ("sdii", "Wet-day intensity (SDII)", TOTALS, "mm/day", [0, 25], 2.4),
-    ("rx1day", "Wettest day (Rx1day)", EXTREMES, "mm", [0, 70], 8),
-    ("rx5day", "Wettest 5 days (Rx5day)", EXTREMES, "mm", [0, 150], 18),
-    ("r95p", "Very wet days total (R95p)", EXTREMES, "mm", [0, 1800], 240),
-    ("r99p", "Extremely wet days total (R99p)", EXTREMES, "mm", [0, 700], 90),
-    ("r10mm", "Heavy days (R10mm)", DAYS, "days", [0, 140], 20),
-    ("r20mm", "Very heavy days (R20mm)", DAYS, "days", [0, 90], 14),
-    ("cdd", "Longest dry spell (CDD)", SPELLS, "days", [0, 120], 32),
-    ("cwd", "Longest wet spell (CWD)", SPELLS, "days", [0, 12], 1.5),
-]
+ABOUT = {"title": "hydroviewer mock (analytic formulas, not real data)", "source": "prep/make_mock.py"}
+# Forcing after 2015 relative to SSP2-4.5.
+FORCING = {"ssp126": 0.45, "ssp245": 1.0, "ssp370": 1.45, "ssp585": 1.9}
 
 # Broadcast as (year, lat, lon).
 year = YEARS[:, None, None].astype("float64")
 lat = LAT[None, :, None]
 lon = LON[None, None, :]
-AREA = np.cos(LAT * RAD)
 
 
 def rng(*names: str) -> np.random.Generator:
@@ -130,89 +99,6 @@ def fields(model: str, member: str, forcing: float) -> dict[str, np.ndarray]:
     return {k: np.broadcast_to(v, shape).astype("float32") for k, v in out.items()}
 
 
-def lower(name: str) -> str:
-    """A name inside a sentence: only its first letter lowered, so "Wettest day (Rx1day)" keeps its index name."""
-    return name[:1].lower() + name[1:]
-
-
-def global_mean(values: np.ndarray) -> np.ndarray:
-    """Area-weighted (cos(lat)) mean of (year, lat, lon) per year."""
-    return (np.einsum("ylx,l->y", values, AREA) / (AREA.sum() * values.shape[2])).astype("float32")
-
-
-class Spread:
-    """Mean of runs, and agreement and spread of their change from the baseline, accumulated one run at a time."""
-
-    def __init__(self):
-        self.n = 0
-
-    def add(self, values: np.ndarray):
-        change = values - values[BASELINE].mean(axis=0)
-        if not self.n:  # in place from here on: allocating per run cost a third of the time
-            # float32 (11 metrics of float64 sums would need ~3 GB per worker), so the variance is Welford's running
-            # one: a sum of squares minus the squared mean lost 0.2% of the spread to cancellation in float32.
-            self.total, self.mean, self.m2 = (np.zeros(values.shape, "float32") for _ in range(3))
-            self.rising = np.zeros(values.shape, "int16")
-        self.n += 1
-        self.total += values
-        delta = change - self.mean
-        self.mean += delta / self.n
-        self.m2 += delta * (change - self.mean)
-        self.rising += change > 0
-
-    def result(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Mean, agreement (fraction of runs on the side of the majority's sign of change, 0.5-1) and spread
-        (standard deviation of the change)."""
-        n = self.n
-        agreement = np.maximum(self.rising, n - self.rising) / n
-        spread = np.sqrt(np.maximum(0, self.m2 / n))
-        return (self.total / n).astype("float32"), agreement.astype("float32"), spread.astype("float32")
-
-
-def attrs(metric: tuple, kind: str = "") -> dict:
-    """CF attributes of a metric's field, or of its statistic `kind` ('agreement' or 'spread') across members or
-    models."""
-    id, name, group, units, display_range, spread = metric
-    if kind == "agreement":
-        return {"units": "fraction of runs", "long_name": "Agreement on the sign of change", "display_range": [0.5, 1], "stipple_threshold": 0.8}
-    if kind == "spread":
-        return {"units": units, "long_name": "Spread of change", "display_range": [0, spread], "stipple_threshold": spread / 2}
-    return {"units": units, "long_name": name, "display_range": display_range}
-
-
-def write(path: Path, variables: dict, **node):
-    """One node's store: Zarr v3, gzip, consolidated, one year per chunk."""
-    ds = xr.Dataset(
-        variables,
-        coords={
-            "year": ("year", YEARS.astype("int32"), {"long_name": "year"}),
-            "lat": ("lat", LAT.astype("float32"), {"units": "degrees_north", "long_name": "latitude"}),
-            "lon": ("lon", LON.astype("float32"), {"units": "degrees_east", "long_name": "longitude"}),
-        },
-        attrs={"title": "hydroviewer mock (analytic formulas, not real data)", "source": "prep/make_mock.py"} | node,
-    )
-    gzip = [GzipCodec(level=5)]
-    encoding = {n: {"compressors": gzip} | ({"chunks": (1, len(LAT), len(LON))} if ds[n].ndim == 3 else {}) for n in ds.variables}
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message="Consolidated metadata")
-        ds.to_zarr(path, mode="w", zarr_format=3, consolidated=True, encoding=encoding)
-
-
-def statistics(spreads: dict, by: str) -> dict:
-    """Variables of an aggregate node: per metric its mean, agreement, spread and the mean's global mean."""
-    out = {}
-    for metric in METRICS:
-        mean, agreement, spread = spreads[metric[0]].result()
-        dims = ("year", "lat", "lon")
-        out[metric[0]] = (dims, mean, attrs(metric) | {"long_name": f"{metric[1]}, mean of {by}"})
-        # actual_range (min, max over all years) bounds the app's threshold slider without reading every year.
-        extent = lambda a: {"actual_range": [float(a.min()), float(a.max())]}  # noqa: E731
-        out[f"{metric[0]}_agreement"] = (dims, agreement, attrs(metric, "agreement") | {"long_name": f"Agreement of {by}"} | extent(agreement))
-        out[f"{metric[0]}_spread"] = (dims, spread, attrs(metric, "spread") | {"long_name": f"Spread of {by}"} | extent(spread))
-        out[f"{metric[0]}_global_mean"] = (("year",), global_mean(mean), {"units": metric[3], "long_name": f"Global mean {lower(metric[1])}, mean of {by}"})
-    return out
-
-
 def ensemble(task: tuple) -> dict[str, np.ndarray]:
     """One model and scenario: map stores for the first members, the ensemble store, and every member's global
     mean per metric (member, year)."""
@@ -221,28 +107,14 @@ def ensemble(task: tuple) -> dict[str, np.ndarray]:
     series = {m[0]: [] for m in METRICS}
     for member in run["members"]:
         values = fields(run["model"], member, forcing)
-        variables = {}
-        for metric in METRICS:
-            id = metric[0]
-            spreads[id].add(values[id])
-            series[id].append(global_mean(values[id]))
-            variables[id] = (("year", "lat", "lon"), values[id], attrs(metric))
-            variables[f"{id}_global_mean"] = (("year",), series[id][-1], {"units": metric[3], "long_name": f"Global mean {lower(metric[1])}"})
+        variables, means = member_variables(values)
+        for id, v in values.items():
+            spreads[id].add(v)
+            series[id].append(means[id])
         if member in run["maps"]:
-            write(out / run["store"].format(member=member), variables, scenario=run["scenario"], model=run["model"], member=member)
-    write(out / run["ensemble"], statistics(spreads, f"{len(run['members'])} members"), scenario=run["scenario"], model=run["model"])
+            write(out / run["store"].format(member=member), variables, ABOUT, scenario=run["scenario"], model=run["model"], member=member)
+    write(out / run["ensemble"], statistics(spreads, f"{len(run['members'])} members"), ABOUT, scenario=run["scenario"], model=run["model"])
     return {k: np.stack(v) for k, v in series.items()}
-
-
-def multimodel(task: tuple):
-    """One scenario: the mean of the model ensemble means, with agreement and spread across models."""
-    out, scenario, stores, path = task
-    spreads = {m[0]: Spread() for m in METRICS}
-    for store in stores:
-        ds = xr.open_zarr(out / store, consolidated=True)
-        for metric in METRICS:
-            spreads[metric[0]].add(ds[metric[0]].values)
-    write(out / path, statistics(spreads, f"{len(stores)} models"), scenario=scenario)
 
 
 def main() -> None:
@@ -263,9 +135,8 @@ def main() -> None:
             shutil.rmtree(out / old, ignore_errors=True)
 
     models = json.loads(ENSEMBLES.read_text())["models"][: args.models]
-    forcing = {id: f for id, _, f in SCENARIOS}
     runs = []
-    for id, _, _ in SCENARIOS:
+    for id, _ in SCENARIOS:
         for model in models:
             members = model["members"].get(id)
             if not members:
@@ -280,41 +151,16 @@ def main() -> None:
     with ProcessPoolExecutor(args.workers) as pool:
         # Largest ensembles first, so no worker is left with a big one at the end.
         order = sorted(range(len(runs)), key=lambda i: -len(runs[i]["members"]))
-        done = dict(zip(order, pool.map(ensemble, [(out, runs[i], forcing[runs[i]["scenario"]]) for i in order])))
+        done = dict(zip(order, pool.map(ensemble, [(out, runs[i], FORCING[runs[i]["scenario"]]) for i in order])))
         series = [done[i] for i in range(len(runs))]
         multi = {}
-        for id, _, _ in SCENARIOS:
+        for id, _ in SCENARIOS:
             stores = [r["ensemble"] for r in runs if r["scenario"] == id]
             if stores:
                 multi[id] = {"store": f"CMIP6/ScenarioMIP/multimodel/{id}/annual.zarr", "models": len(stores)}
-        list(pool.map(multimodel, [(out, id, [r["ensemble"] for r in runs if r["scenario"] == id], m["store"]) for id, m in multi.items()]))
-
-    # Plumes: every member's global mean, rows in catalog order (a run's members start at its `series` row), and
-    # every ensemble mean's, one row per run.
-    row = 0
-    for run, s in zip(runs, series):
-        run["series"] = row
-        row += len(run["members"])
-    plumes = {}
-    for metric in METRICS:
-        id, units, name = metric[0], metric[3], lower(metric[1])
-        plumes[f"{id}_global_mean"] = (("member_run", "year"), np.concatenate([s[id] for s in series]), {"units": units, "long_name": f"Global mean {name}"})
-        plumes[f"{id}_ensemble_global_mean"] = (("run", "year"), np.stack([s[id].mean(axis=0) for s in series]), {"units": units, "long_name": f"Global mean {name}, ensemble mean"})
-    ds = xr.Dataset(plumes, coords={"year": ("year", YEARS.astype("int32"), {"long_name": "year"})})
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message="Consolidated metadata")
-        ds.to_zarr(out / "members.zarr", mode="w", zarr_format=3, consolidated=True, encoding={n: {"compressors": [GzipCodec(level=5)]} for n in ds.variables})
-
-    catalog = {
-        "mock": True,
-        "facets": ["scenario", "model", "member"],
-        "scenarios": [{"id": id, "label": label} for id, label, _ in SCENARIOS if id in multi],
-        "metrics": [{"id": m[0], "group": m[2], "statistics": ["agreement", "spread"]} for m in METRICS],
-        "series": "members.zarr",
-        "multimodel": multi,
-        "runs": runs,
-    }
-    catalog_path.write_text(json.dumps(catalog, ensure_ascii=False, indent=1) + "\n")
+        tasks = [(out, id, [r["ensemble"] for r in runs if r["scenario"] == id], m["store"], ABOUT) for id, m in multi.items()]
+        list(pool.map(multimodel, *zip(*tasks)))
+    row = finish(out, runs, series, multi, {"mock": True})
     print(
         f"wrote {len(models)} models, {len(runs)} model-scenario runs, {row} members "
         f"({sum(len(r['maps']) for r in runs)} with maps) into {out} in {time.time() - started:.0f} s"

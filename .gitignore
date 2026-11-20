@@ -11,3 +11,4 @@ __pycache__/
 *.pyc
 # reference papers kept locally, not committed
 /Contour_Boxplots_*.md
+/work/

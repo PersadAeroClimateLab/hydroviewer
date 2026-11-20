@@ -147,7 +147,9 @@ same). Not done: greying out metrics a node lacks (every mock node has all four)
 
 Shared state is `{ colormap, metric, insetLeft, insetTop, insetBottom, spin, globes, focus, selected, stipple, columnScale, columnMultiplier, columnColormap, stippleSize, thresholds, ranges, columnRanges }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
 registry). Next: real data in the same layout as the mock (prep for CMIP6 writing `catalog.json` and annual
-metrics). No URL-hash state yet.
+metrics from daily `pr`; model set decided 2026-11-19: 10 models in all four SSPs, at most 10
+members each, `docs/llm/DATA_VOLUME.md` §4b; built 2026-11-20 into `.../cmip6-full`, not yet viewed in the app:
+display ranges are still the mock's table, which real CWD and the spreads exceed). No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).
 
 **Removed (2026-11-17):** the trame/ParaView server and its iframe viewport, and the earlier analysis/layout grid
@@ -198,7 +200,7 @@ docker compose build web                          # after changing package.json 
   `CMIP6/<activity>/<institution>/<model>/<experiment>/<member>/<table>/<variable>/<grid>/<version>/`.
 - **Data directory:** the emulator serves, and prep writes into, `$DATA_DIR` (set in `.env`, gitignored; default
   `./data`). Each data directory is one bucket root. Here they live outside the repo, because home is snapshotted:
-  `/home/oxygen/Downloads/hydroviewer_data/mock` (the mock, the current `.env`), `.../cmip6` (the GFDL-CM4 slice
+  `/home/oxygen/Downloads/hydroviewer_data/mock` (the mock, the current `.env`), `.../cmip6-full` (the real bucket from the pipeline, 52.5 GB; its work files in `.../work-full`, 53 GB), `.../cmip6` (the GFDL-CM4 slice
   below; no `catalog.json`, so the app cannot open it yet) and `.../colormaps` (ColorMoves test files). To switch,
   edit `.env` (or prefix a command with `DATA_DIR=...`) and run `docker compose up -d data`.
 - **Mock:** `docker compose --profile prep run --rm mock [--models 8] [--map-members 3] [--workers 4]`
@@ -219,6 +221,21 @@ docker compose build web                          # after changing package.json 
   years), `lat`, `lon`. `catalog.json`: `scenarios`, `metrics` (`id`, `group`, statistic ids), `multimodel` per
   scenario, and `runs` (scenario, model, institution, `members`, `maps`, store paths, first `series` row); names,
   units and ranges come from the arrays' CF attributes.
+- **Pipeline** (`prep/pipeline/`, its README, `docs/llm/PREP_PIPELINE_PLAN.md`; branch `prep-pipeline`): the real
+  data, one-time and reproducible. `runs.json` (committed, from `run.py select`) fixes the source stores: 10 models,
+  up to 10 members per model and scenario whose historical covers 1950–2014 and scenario 2015–2100 without gaps
+  (latest covering version; EC-Earth3 historical r11/r15 are stamped a day early and shifted, `shift_days`).
+  `docker compose --profile prep run --rm pipeline all [--models M --max-members N]` (image `pipeline`, mounts
+  `prep/`, `$DATA_DIR` and `$WORK_DIR`, the latter in `.env`): `members` streams each run's daily `pr` (own
+  retrying downloader, `source.py`, into a scratch copy that xarray opens), computes the 11 metrics per calendar
+  year on the native grid (`indices.py`, R95p/R99p from the member's 1961–1990 wet-day percentiles) and regrids
+  them conservatively to 1° (`regrid.py`, separable, rectilinear grids only), one Dask task per historical or
+  scenario run; `publish` writes the bucket with `prep/bucket.py` (the layout, statistics and writer, shared with
+  `make_mock.py`), bit-rounded to 7 bits; `verify` checks it and writes `SHA256SUMS`. The deployment machine runs
+  Apptainer only: a SIF built from the exported image (README; tested here with the `ghcr.io/apptainer/apptainer`
+  image, `--unsquash` since this VM has no FUSE). Full run here: 1.53 TB read, 5.7 core-hours, network-bound,
+  6 h with 6 workers x 48 connections (README). Tests:
+  `docker compose --profile prep run --rm --entrypoint python pipeline -m unittest discover -s pipeline/tests`.
 - **Prep** (`prep/`, Python in Docker, opt-in profile) converts a slice into our bucket format under
   the same key path, as `.../<version>/map.zarr` plus `aggregates.zarr` in `$DATA_DIR`:
   `docker compose --profile prep build prep`, then
