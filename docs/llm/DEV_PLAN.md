@@ -124,6 +124,16 @@ No multiscale pyramids at 1°. Revisit if 0.25° data (e.g. native ERA5, ~4 MB p
 - v3 consolidated metadata (verified with zarrita).
 - A static `catalog.json` at the bucket root lists the scenario › model › member tree, the metrics and every store, so the app discovers content instead of hard-coding it (format: `docs/llm/DATA_TREE_PLAN.md` §7); names, units and ranges come from the arrays' CF attributes.
 
+### Bandwidth
+
+The viewer's connection is the primary constraint (no server reduces data; R2 egress is free). Estimates per
+visualization at annual, monthly and daily frequency, measured on the mock and the GFDL-CM4 slice, are in
+`docs/llm/BANDWIDTH.md` (2026-11-18): every click today is under ~1.2 MB and a session ~30–50 MB; what grows with
+frequency is reading a whole time axis (century scrubs, plumes, region series), which needs layouts chunked along
+it. Proposals there, not yet decided: one month per chunk for monthly maps, bit-rounding to ~0.4%, a summed-area
+table for region series from monthly upward, daily data reduced to indices except for day steps, bounded playback
+and point or region series.
+
 ### Mock dataset
 
 Decided 2026-11-17: the mock is data in the bucket, not formulas in the browser, so the app reads mock and real data through one path and switching data directories switches between them. `prep/make_mock.py` (`docker compose --profile prep run --rm mock`) writes a multi-model, multi-scenario ensemble (real model and member names, analytic values, statistics computed from the members) in the data tree's layout: one store per node (member, model ensemble, multi-model mean), a series store for plumes and a tree-shaped `catalog.json` (`docs/llm/DATA_TREE_PLAN.md` §7–8; about 13 minutes and 59 GB for the defaults). Real data should be written in the same layout (`src/data/catalog.ts` reads it).
@@ -199,6 +209,10 @@ Next:
 
 - Bucket provider details and CDN, and who owns CORS and access configuration.
 - Colour range per year (fixed across the timeline, as now) or per field.
+- Stored precision (bit-round to ~0.4% or quantise to uint16, about half the bytes), the monthly map chunking, and
+  whether daily data ships at all and in which layouts (`docs/llm/BANDWIDTH.md`).
+- Region tool (scoped 2026-11-18, not planned yet): latitude/longitude box or screen rectangle, time-series tiles
+  (option A) or a summed-area table (option B), size control, hover value, fixed-region (IPCC AR6) plumes.
 - Resolved for now: one store per variable per version, at the mirrored CMIP6 key path. Ensembles, scenarios and models are separate stores identified by the key path; multi-member views would need catalog support.
 
 ## 10. Out of scope for now

@@ -318,6 +318,8 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
 - float32, no NaN in data read by shaders (use a fill value or mask), CF attributes on all arrays,
   and a root `catalog.json`.
 - Bucket needs public read and CORS with `Range`. Do not depend on `Content-Encoding` for chunks.
+- Bandwidth to the viewer is the primary constraint: per-visualization download estimates (annual, monthly,
+  daily) and proposals are in `docs/llm/BANDWIDTH.md`.
 - Ensemble statistics (agreement, spread, ...) for stippling and columns: one float32 grid per time step on the
   field's grid and time axis, no NaN, `units`, `long_name`, `display_range`, `stipple_threshold`, `actual_range`
   (plan step 7).
