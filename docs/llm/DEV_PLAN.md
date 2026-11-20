@@ -94,7 +94,7 @@ Our bucket mirrors its key path: `CMIP6/<activity>/<institution>/<model>/<experi
 
 ### Dev bucket emulator
 
-Each data directory is one bucket root. `$DATA_DIR` (in `.env`, default `./data`) picks the one the emulator serves and prep writes into; data lives outside the repo (decided 2026-11-17: in the sandbox, `/home/oxygen/Downloads/hydroviewer_data/{mock,cmip6}`, because home is snapshotted), and switching is `docker compose up -d data` after changing it. The `data` compose service is nginx serving `$DATA_DIR` with S3-style read behaviour (config in `tools/bucket/default.conf`): `Access-Control-Allow-Origin: *`, preflight, `Range`, ETag, `Content-Range` exposed, no compression, 404 for missing keys. Its access log shows which keys a page reads, i.e. what must be uploaded. Measured 2026-11-16 with the removed grid shell: 19 keys, 3.4 MB of the 352 MB store (all of `aggregates.zarr` plus one `map.zarr` chunk); a time control will need every `map.zarr` chunk.
+Each data directory is one bucket root. `$DATA_DIR` (in `.env`, default `./data`) is the one prep writes into and, by default, the emulator serves (the mock); `$CMIP6_DIR`, when set and holding a `catalog.json`, is served instead (decided 2026-11-20, `tools/bucket/choose-bucket.sh`); data lives outside the repo (decided 2026-11-17: in the sandbox, `/home/oxygen/Downloads/hydroviewer_data/{mock,cmip6}`, because home is snapshotted), and switching is `docker compose up -d data` after changing it. The `data` compose service is nginx serving that bucket with S3-style read behaviour (config in `tools/bucket/default.conf`): `Access-Control-Allow-Origin: *`, preflight, `Range`, ETag, `Content-Range` exposed, no compression, 404 for missing keys, `Cache-Control: no-cache` (2026-11-20: without it a browser kept the mock's catalog and stores for hours after a switch to the real data, by its heuristic from `Last-Modified`). Its access log shows which keys a page reads, i.e. what must be uploaded. Measured 2026-11-16 with the removed grid shell: 19 keys, 3.4 MB of the 352 MB store (all of `aggregates.zarr` plus one `map.zarr` chunk); a time control will need every `map.zarr` chunk.
 
 ### Sizes (float32, 1°)
 
@@ -123,6 +123,16 @@ No multiscale pyramids at 1°. Revisit if 0.25° data (e.g. native ERA5, ~4 MB p
 - CF attributes (`units`, `long_name`) on every array so the UI labels itself.
 - v3 consolidated metadata (verified with zarrita).
 - A static `catalog.json` at the bucket root lists the scenario › model › member tree, the metrics and every store, so the app discovers content instead of hard-coding it (format: `docs/llm/DATA_TREE_PLAN.md` §7); names, units and ranges come from the arrays' CF attributes.
+
+### Bandwidth
+
+The viewer's connection is the primary constraint (no server reduces data; R2 egress is free). Estimates per
+visualization at annual, monthly and daily frequency, measured on the mock and the GFDL-CM4 slice, are in
+`docs/llm/BANDWIDTH.md` (2026-11-18): every click today is under ~1.2 MB and a session ~30–50 MB; what grows with
+frequency is reading a whole time axis (century scrubs, plumes, region series), which needs layouts chunked along
+it. Proposals there, not yet decided: one month per chunk for monthly maps, bit-rounding to ~0.4%, a summed-area
+table for region series from monthly upward, daily data reduced to indices except for day steps, bounded playback
+and point or region series.
 
 ### Mock dataset
 
@@ -197,8 +207,14 @@ Next:
 
 ## 9. Open questions
 
-- Bucket provider details and CDN, and who owns CORS and access configuration.
+- Bucket provider details and CDN, and who owns CORS and access configuration. Also the cache policy: a rebuilt
+  bucket under the same keys can be mixed with cached old chunks unless objects carry `Cache-Control` (or keys are
+  versioned).
 - Colour range per year (fixed across the timeline, as now) or per field.
+- Stored precision (bit-round to ~0.4% or quantise to uint16, about half the bytes), the monthly map chunking, and
+  whether daily data ships at all and in which layouts (`docs/llm/BANDWIDTH.md`).
+- Region tool (scoped 2026-11-18, not planned yet): latitude/longitude box or screen rectangle, time-series tiles
+  (option A) or a summed-area table (option B), size control, hover value, fixed-region (IPCC AR6) plumes.
 - Resolved for now: one store per variable per version, at the mirrored CMIP6 key path. Ensembles, scenarios and models are separate stores identified by the key path; multi-member views would need catalog support.
 
 ## 10. Out of scope for now

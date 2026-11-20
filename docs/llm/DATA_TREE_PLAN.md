@@ -148,6 +148,7 @@ Catalog (as written by the mock; replaces the earlier flat `datasets` list):
 ```json
 {
   "mock": true,
+  "dataset": { "label": "Mock data" },
   "facets": ["scenario", "model", "member"],
   "scenarios": [{ "id": "ssp245", "label": "SSP2-4.5" }],
   "metrics": [{ "id": "pr", "group": "Precipitation", "statistics": ["agreement", "spread"] }],
@@ -165,7 +166,9 @@ Catalog (as written by the mock; replaces the earlier flat `datasets` list):
 `maps` lists the members that have map stores. Every member has a series. Real prep will probably not write maps for
 all 1288 runs (about 72 MB each in this layout: roughly 90 GB), so the UI must handle a member without maps: the
 cell is shown hollow, and clicking it shows the ensemble plus that member's line. `mock: true` lets the generator
-replace a previous mock and refuse to write over anything else.
+replace a previous mock and refuse to write over anything else. `dataset.label` (added 2026-11-20) names what the
+bucket holds, for the tree's first column: "CMIP6 · AWS" from the pipeline, "Mock data" from the mock; a catalog
+without it is named by `mock` (`datasetLabel()` in `src/data/catalog.ts`).
 
 ## 8. Mock
 

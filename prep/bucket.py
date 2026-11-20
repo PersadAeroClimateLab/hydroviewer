@@ -34,20 +34,24 @@ AREA = np.cos(LAT * RAD)
 
 SCENARIOS = [("ssp126", "SSP1-2.6"), ("ssp245", "SSP2-4.5"), ("ssp370", "SSP3-7.0"), ("ssp585", "SSP5-8.5")]
 # id, name (no commas: the app cuts names at the first one), group, units, display range of the field, display
-# range of the spread (its stipple threshold is half). ETCCDI indices by their short names.
+# range of the spread (its stipple threshold is half). ETCCDI indices by their short names. The ranges are the real
+# data's (2026-11-20, the pipeline's full bucket, area-weighted over every 5th year): the field's top is the 99th
+# percentile of member values and the spread's the 99th percentile of ensemble spreads, rounded up. The 99th, not
+# the maximum: a few cells per model (orographic hotspots, New Guinea in IPSL-CM6A-LR at ~100 mm/day) are far
+# beyond the rest and would leave every other map in the bottom of the colour bar.
 TOTALS, EXTREMES, DAYS, SPELLS = "Totals and intensity", "Extremes", "Heavy-precipitation days", "Spells"
 METRICS = [
-    ("pr", "Precipitation", TOTALS, "mm/day", [0, 14], 1.6),  # the annual mean
-    ("prcptot", "Wet-day total (PRCPTOT)", TOTALS, "mm", [0, 5000], 600),
-    ("sdii", "Wet-day intensity (SDII)", TOTALS, "mm/day", [0, 25], 2.4),
-    ("rx1day", "Wettest day (Rx1day)", EXTREMES, "mm", [0, 70], 8),
-    ("rx5day", "Wettest 5 days (Rx5day)", EXTREMES, "mm", [0, 150], 18),
-    ("r95p", "Very wet days total (R95p)", EXTREMES, "mm", [0, 1800], 240),
-    ("r99p", "Extremely wet days total (R99p)", EXTREMES, "mm", [0, 700], 90),
-    ("r10mm", "Heavy days (R10mm)", DAYS, "days", [0, 140], 20),
-    ("r20mm", "Very heavy days (R20mm)", DAYS, "days", [0, 90], 14),
-    ("cdd", "Longest dry spell (CDD)", SPELLS, "days", [0, 120], 32),
-    ("cwd", "Longest wet spell (CWD)", SPELLS, "days", [0, 12], 1.5),
+    ("pr", "Precipitation", TOTALS, "mm/day", [0, 12], 2),  # the annual mean
+    ("prcptot", "Wet-day total (PRCPTOT)", TOTALS, "mm", [0, 4000], 800),
+    ("sdii", "Wet-day intensity (SDII)", TOTALS, "mm/day", [0, 16], 3.5),
+    ("rx1day", "Wettest day (Rx1day)", EXTREMES, "mm", [0, 160], 60),
+    ("rx5day", "Wettest 5 days (Rx5day)", EXTREMES, "mm", [0, 350], 120),
+    ("r95p", "Very wet days total (R95p)", EXTREMES, "mm", [0, 1200], 450),
+    ("r99p", "Extremely wet days total (R99p)", EXTREMES, "mm", [0, 600], 300),
+    ("r10mm", "Heavy days (R10mm)", DAYS, "days", [0, 140], 30),
+    ("r20mm", "Very heavy days (R20mm)", DAYS, "days", [0, 60], 15),
+    ("cdd", "Longest dry spell (CDD)", SPELLS, "days", [0, 250], 60),
+    ("cwd", "Longest wet spell (CWD)", SPELLS, "days", [0, 120], 35),
 ]
 GZIP = [GzipCodec(level=5)]
 # gzip stamps the current time into every chunk's header (numcodecs' GZip, behind zarr's GzipCodec, passes none),

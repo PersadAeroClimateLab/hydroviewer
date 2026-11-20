@@ -1,13 +1,19 @@
 services:
-  # Stand-in for the data bucket: serves $DATA_DIR (default ./data) on http://localhost:9000 with S3-style
-  # headers. Switch data with DATA_DIR in .env, then `docker compose up -d data`.
+  # Stand-in for the data bucket on http://localhost:9000 with S3-style headers. Serves the mock ($DATA_DIR,
+  # default ./data), or the real CMIP6 bucket when CMIP6_DIR is set and holds a catalog.json
+  # (tools/bucket/choose-bucket.sh). After changing either in .env: `docker compose up -d data`.
   data:
     image: nginx:1.29-alpine
     ports:
       - "9000:9000"
+    environment:
+      CMIP6_DIR: ${CMIP6_DIR:-}
     volumes:
       - ./tools/bucket:/etc/nginx/conf.d:ro
-      - ${DATA_DIR:-./data}:/data:ro
+      - ./tools/bucket/choose-bucket.sh:/docker-entrypoint.d/40-choose-bucket.sh:ro
+      - ${DATA_DIR:-./data}:/mock:ro
+      # Unset, the mock again (a path that exists, so Docker creates no empty directory).
+      - ${CMIP6_DIR:-${DATA_DIR:-./data}}:/cmip6:ro
 
   # Dev server with hot reload: http://localhost:5173
   web:

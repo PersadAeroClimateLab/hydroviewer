@@ -27,8 +27,12 @@ table in the README). **Apptainer** (the deployment machine has only that): SIF 
 exported image (`docker-archive://`), run with `--cleanenv` from another directory, the image read-only: tests and
 `all` on one CanESM5 member pass. For it the entrypoint is absolute, `PYTHONNOUSERSITE` set, `/work` and `/data`
 exist in the image, the base image pinned (`python:3.13.18-slim`), `--workers` defaults to the allowed cores.
-**Full run** (2026-11-19/20, here, 6 workers x 48 connections): 6.0 h, no failures; 1.45 TB new (the benchmark's 20 runs reused) at 70 MB/s on average, publish 10 min; `WORK/runs` 53 GB, the bucket 52.5 GB (305 stores, verify 0 problems), in `hydroviewer_data/cmip6-full`. Not yet seen in a run: a 10 Gbit link. Display ranges are still the mock's
-table (`bucket.METRICS`): real CWD (global mean ~17 days) and the spreads exceed them; tune them from the full set.
+**Full run** (2026-11-19/20, here, 6 workers x 48 connections): 6.0 h, no failures; 1.45 TB new (the benchmark's 20 runs reused) at 70 MB/s on average, publish 10 min; `WORK/runs` 53 GB, the bucket 52.5 GB (305 stores, verify 0 problems), in `hydroviewer_data/cmip6-full`. Not yet seen in a run: a 10 Gbit link. **Display ranges** (2026-11-20) are
+now the real data's, in `bucket.METRICS` (shared with the mock): per metric the 99th percentile of member values
+and of ensemble spreads, area-weighted over every 5th year, rounded up; the mock's had Rx1day at 0–70 mm and CWD
+at 0–12 days against real 99th percentiles of ~150 mm and ~115 days. Not the maximum: a few cells per model are
+orographic hotspots far beyond the rest (IPSL-CM6A-LR ~100 mm/day annual mean over New Guinea; Rx1day 800–900 mm
+over Meghalaya in ACCESS-CM2 and KACE-1-0-G). Republished from the work files (publish and verify, no download).
 
 Decided: the §4b set with **KACE-1-0-G in place of MRI-ESM2-0**, complete runs only, at most
 10 members, every kept member with maps, **bit-rounded to 7 mantissa bits** + gzip. That is 261 SSP runs and 84
@@ -144,8 +148,8 @@ plenty. HTTP errors: fsspec retries, and a failed member is retried by rerunning
   agreement (fraction of members on the majority's side of the change from each run's 1961–1990 mean) and spread
   (standard deviation of that change), as `make_mock.py`'s `Spread`; per scenario the multi-model store over the
   10 models' ensemble means. `actual_range` per statistic (min and max over all years), `display_range` and
-  `stipple_threshold` (rules as the mock's, recomputed from real values: a percentile of the spread, not the
-  mock's fixed table). Small: reads ~65 GB of work stores, writes into `/work/ensembles/`.
+  `stipple_threshold` (the fixed table in `bucket.METRICS`, set from the real values'
+  99th percentiles, see Test runs). Small: reads ~65 GB of work stores, writes into `/work/ensembles/`.
 - **publish**: the bucket under the CMIP6 key path, exactly the mock's layout: per member `annual.zarr`, per model
   × scenario `ensemble/annual.zarr`, per scenario `multimodel/<ssp>/annual.zarr`, `members.zarr`, `catalog.json`
   (`"mock": false`, plus `source: runs.json`'s hash and the pipeline's git commit). Encoding: Zarr v3, `bytes` +

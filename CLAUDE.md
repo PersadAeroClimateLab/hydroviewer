@@ -33,8 +33,8 @@ same). Not done: greying out metrics a node lacks (every mock node has all four)
   the pane; its + adds a globe (a copy of the focused one, placed after it and focused, so the tree then edits it;
   `add()` in `src/state/globes.ts`; at most 6, 3 on phones, `MAX_GLOBES`). Open, the pane takes a row under the top
   row (right of the metric pane) and the globes stay below it (`shared.insetTop` from the pane's lower edge, or the
-  chip's when closed). Columns: scenarios
-  (with model counts), models (sorted by ensemble size, "All models" first; sub-columns of 9 to 14 rows, scrolling
+  chip's when closed). Columns: the dataset (one entry, the catalog's `dataset.label`, e.g. "CMIP6 · AWS", with the
+  scenario count; a label, not a button, linked to the scenario shown), scenarios (with model counts), models (sorted by ensemble size, "All models" first; sub-columns of 9 to 14 rows, scrolling
   sideways when there is no room, the picked one scrolled into view), members (an "Ensemble mean" button and a grid
   of 14 px cells: solid with maps, hollow without, blue when picked, the id in the heading on hover). Links are
   SVG curves measured from the items' boxes after each change, thicker for bundles; one that would cross other
@@ -148,8 +148,9 @@ same). Not done: greying out metrics a node lacks (every mock node has all four)
 Shared state is `{ colormap, metric, insetLeft, insetTop, insetBottom, spin, globes, focus, selected, stipple, columnScale, columnMultiplier, columnColormap, stippleSize, thresholds, ranges, columnRanges }` (`src/state/shared.svelte.ts`; the colormap object itself, so viewports need no
 registry). Next: real data in the same layout as the mock (prep for CMIP6 writing `catalog.json` and annual
 metrics from daily `pr`; model set decided 2026-11-19: 10 models in all four SSPs, at most 10
-members each, `docs/llm/DATA_VOLUME.md` §4b; built 2026-11-20 into `.../cmip6-full`, not yet viewed in the app:
-display ranges are still the mock's table, which real CWD and the spreads exceed). No URL-hash state yet.
+members each, `docs/llm/DATA_VOLUME.md` §4b; built 2026-11-20 into `.../cmip6-full`, served in dev with `CMIP6_DIR` and loads in the app;
+display ranges in `prep/bucket.py`'s `METRICS` set from its 99th percentiles, shared with the mock, whose bucket
+keeps the old ranges until regenerated). No URL-hash state yet.
 The Pages workflow exists but has not run on GitHub yet (see Deploy).
 
 **Removed (2026-11-17):** the trame/ParaView server and its iframe viewport, and the earlier analysis/layout grid
@@ -198,11 +199,15 @@ docker compose build web                          # after changing package.json 
 - **Source:** the public `cmip6-pds` S3 bucket (Zarr v2, blosc, chunks of ~100 MB). It is only a
   source: the app cannot use it directly. Keys are
   `CMIP6/<activity>/<institution>/<model>/<experiment>/<member>/<table>/<variable>/<grid>/<version>/`.
-- **Data directory:** the emulator serves, and prep writes into, `$DATA_DIR` (set in `.env`, gitignored; default
-  `./data`). Each data directory is one bucket root. Here they live outside the repo, because home is snapshotted:
-  `/home/oxygen/Downloads/hydroviewer_data/mock` (the mock, the current `.env`), `.../cmip6-full` (the real bucket from the pipeline, 52.5 GB; its work files in `.../work-full`, 53 GB), `.../cmip6` (the GFDL-CM4 slice
-  below; no `catalog.json`, so the app cannot open it yet) and `.../colormaps` (ColorMoves test files). To switch,
-  edit `.env` (or prefix a command with `DATA_DIR=...`) and run `docker compose up -d data`.
+- **Data directory:** prep writes into `$DATA_DIR` (set in `.env`, gitignored; default `./data`), the mock. The
+  emulator serves the real CMIP6 bucket `$CMIP6_DIR` instead when that is set and holds a `catalog.json`, else
+  `$DATA_DIR` (`tools/bucket/choose-bucket.sh`; `docker compose logs data` says which). Each data directory is one
+  bucket root. Here they live outside the repo, because home is snapshotted:
+  `/home/oxygen/Downloads/hydroviewer_data/mock` (the mock, `DATA_DIR`), `.../cmip6-full` (the real bucket from the
+  pipeline, 52.5 GB, `CMIP6_DIR` in the current `.env`; its work files in `.../work-full`, 53 GB), `.../cmip6` (the
+  GFDL-CM4 slice below; no `catalog.json`, so the app cannot open it yet) and `.../colormaps` (ColorMoves test
+  files). To switch, edit `.env` (comment out `CMIP6_DIR` for the mock) or prefix a command with `CMIP6_DIR=`, then
+  `docker compose up -d data`.
 - **Mock:** `docker compose --profile prep run --rm mock [--models 8] [--map-members 3] [--workers 4]`
   (`prep/make_mock.py`, about 13 minutes and 59 GB for the defaults) writes a mock multi-model ensemble into
   `$DATA_DIR`, replacing a previous mock (it refuses to overwrite a catalog without `"mock": true`). Real model and
@@ -218,7 +223,7 @@ docker compose build web                          # after changing package.json 
   `display_range` and `stipple_threshold`); per scenario a multi-model store
   (`CMIP6/ScenarioMIP/multimodel/<ssp>/annual.zarr`, the same across model means); `members.zarr` with every
   member's and ensemble mean's global mean (rows in catalog order, for plumes); coordinates `year` (int32 calendar
-  years), `lat`, `lon`. `catalog.json`: `scenarios`, `metrics` (`id`, `group`, statistic ids), `multimodel` per
+  years), `lat`, `lon`. `catalog.json`: `dataset` (`label`), `scenarios`, `metrics` (`id`, `group`, statistic ids), `multimodel` per
   scenario, and `runs` (scenario, model, institution, `members`, `maps`, store paths, first `series` row); names,
   units and ranges come from the arrays' CF attributes.
 - **Pipeline** (`prep/pipeline/`, its README, `docs/llm/PREP_PIPELINE_PLAN.md`; branch `prep-pipeline`): the real
@@ -247,9 +252,10 @@ docker compose build web                          # after changing package.json 
   `pr_wettest_month_hist` over `bin`; and a contour boxplot of the June–August rain band (`contour_boxplot()`,
   `pr_jja_*`). `map.zarr` also holds `uncertainty`, synthetic noise from `dummy_uncertainty()` that only the removed
   relief globe used. Nothing in the current app reads these stores.
-- **Bucket emulator:** the `data` service is nginx serving `$DATA_DIR` with S3-style headers (any-origin
+- **Bucket emulator:** the `data` service is nginx serving the chosen bucket (above) with S3-style headers (any-origin
   CORS incl. preflight, byte ranges, ETag, `Content-Range` exposed, no compression, 404 for missing
-  keys). Config: `tools/bucket/default.conf`. Use its access log to see which keys a page reads, i.e. what
+  keys, `Cache-Control: no-cache` so a data switch is never hidden by a browser's cached catalog). Config:
+  `tools/bucket/default.conf`. Use its access log to see which keys a page reads, i.e. what
   must be uploaded to R2.
 - **App side:** `src/data/config.ts` picks the bucket URL (`?data=URL` > `VITE_DATA_URL` >
   `http://localhost:9000`); `src/data/catalog.ts` reads `catalog.json` and `openNode(catalog, { scenario, model?,
@@ -318,6 +324,8 @@ docker compose --profile tools run --rm browser URL [--shot name.png] [--clip SE
 - float32, no NaN in data read by shaders (use a fill value or mask), CF attributes on all arrays,
   and a root `catalog.json`.
 - Bucket needs public read and CORS with `Range`. Do not depend on `Content-Encoding` for chunks.
+- Bandwidth to the viewer is the primary constraint: per-visualization download estimates (annual, monthly,
+  daily) and proposals are in `docs/llm/BANDWIDTH.md`.
 - Ensemble statistics (agreement, spread, ...) for stippling and columns: one float32 grid per time step on the
   field's grid and time axis, no NaN, `units`, `long_name`, `display_range`, `stipple_threshold`, `actual_range`
   (plan step 7).
